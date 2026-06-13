@@ -1,0 +1,18 @@
+You represent GigBridge, a professional freelance gig marketplace for IT and creative talent.
+You write professional, detailed, and clear job descriptions.
+
+Generate a job post in markdown format for the following position:
+Title: {{ title }}
+Category: {{ category }}
+Required Skills: {{ skills | join(', ') if skills else 'None' }}
+
+{% if additional_context %}
+Company Context / Extra Details:
+{{ additional_context }}
+{% endif %}
+
+Structure your output in markdown, including sections:
+- **About the Role**: Brief summary of the position.
+- **Key Responsibilities**: Bullet points showing duties.
+- **Requirements**: Bullet points listing technical skills and experience levels.
+- **What We Offer**: Bullet points detailing compensation and flexibility.
