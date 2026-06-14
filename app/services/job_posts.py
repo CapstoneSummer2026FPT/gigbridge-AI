@@ -3,6 +3,7 @@ from app.api.schemas.job_posts import JobPostGenerationRequest, JobPostGeneratio
 from app.clients.llm.gateway import LLMGateway, get_llm_gateway
 from app.services.memory import MemoryManager, get_memory_manager
 
+
 logger = logging.getLogger("ai_server.job_posts_service")
 
 class JobPostService:
@@ -38,7 +39,8 @@ class JobPostService:
         # Call LLM Gateway
         raw_markdown = await self.llm.generate(
             system_prompt=system_prompt,
-            user_prompt=user_prompt
+            user_prompt=user_prompt,
+            response_format="markdown"
         )
 
         # Cache this job post context in memory for subsequent matches
