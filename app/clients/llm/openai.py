@@ -11,7 +11,7 @@ class OpenAIClient(BaseLLMClient):
         self.api_key = settings.OPENAI_API_KEY
         # Initialize client only if API key is provided
         self.client = AsyncOpenAI(api_key=self.api_key) if self.api_key else None
-        self.model_name = "gpt-4o"  # Default model
+        self.model_name = "gpt-4o-mini"  # Default model
 
     async def generate(
         self,

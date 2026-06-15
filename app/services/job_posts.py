@@ -2,6 +2,7 @@ import logging
 from app.api.schemas.job_posts import JobPostGenerationRequest, JobPostGenerationResponse
 from app.clients.llm.gateway import LLMGateway, get_llm_gateway
 from app.services.memory import MemoryManager, get_memory_manager
+from app.prompts.manager import PromptManager, get_prompt_manager
 
 
 logger = logging.getLogger("ai_server.job_posts_service")
@@ -12,10 +13,12 @@ class JobPostService:
     def __init__(
         self,
         llm_gateway: LLMGateway = get_llm_gateway(),
-        memory_manager: MemoryManager = get_memory_manager()
+        memory_manager: MemoryManager = get_memory_manager(),
+        prompt_manager: PromptManager = get_prompt_manager()
     ):
         self.llm = llm_gateway
         self.memory = memory_manager
+        self.prompt = prompt_manager
 
     async def generate_job_description(self, request: JobPostGenerationRequest) -> JobPostGenerationResponse:
         logger.info(f"Generating job description for title: {request.title}")
@@ -27,20 +30,17 @@ class JobPostService:
             "Adhere to the requested skills and context provided."
         )
 
-        user_prompt = (
-            f"Please generate a job post description for the following position:\n"
-            f"Title: {request.title}\n"
-            f"Category: {request.category}\n"
-            f"Required Skills: {', '.join(request.skills) if request.skills else 'None specified'}\n"
-        )
-        if request.additional_context:
-            user_prompt += f"Company Context / Extra Details: {request.additional_context}\n"
+        user_prompt = self.prompt.render_prompt("job_posts.txt", {
+            "title": request.title,
+            "category": request.category,
+            "skills": request.skills,
+            "client_questions_and_freelancer_answers": request.client_questions_and_freelancer_answers
+        })
 
         # Call LLM Gateway
         raw_markdown = await self.llm.generate(
             system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            response_format="markdown"
+            user_prompt=user_prompt
         )
 
         # Cache this job post context in memory for subsequent matches
@@ -49,6 +49,10 @@ class JobPostService:
             "title": request.title,
             "category": request.category,
             "skills": request.skills,
+            "client_questions_and_freelancer_answers": [
+                {"question": qa.question, "answer": qa.answer}
+                for qa in request.client_questions_and_freelancer_answers
+            ],
             "description": raw_markdown
         })
 
@@ -60,3 +64,4 @@ class JobPostService:
 # Dependency helper
 def get_job_post_service() -> JobPostService:
     return JobPostService()
+

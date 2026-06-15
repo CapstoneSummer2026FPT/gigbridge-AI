@@ -82,4 +82,3 @@ _memory_manager = MemoryManager()
 
 def get_memory_manager() -> MemoryManager:
     return _memory_manager
- Rama = _memory_manager

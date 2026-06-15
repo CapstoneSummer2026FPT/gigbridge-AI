@@ -6,9 +6,12 @@ Title: {{ title }}
 Category: {{ category }}
 Required Skills: {{ skills | join(', ') if skills else 'None' }}
 
-{% if additional_context %}
-Company Context / Extra Details:
-{{ additional_context }}
+{% if client_questions_and_freelancer_answers %}
+Client Questions and Freelancer Answers:
+{% for pair in client_questions_and_freelancer_answers %}
+Question: {{ pair.question }}
+Answer: {{ pair.answer }}
+{% endfor %}
 {% endif %}
 
 Structure your output in markdown, including sections:
@@ -16,3 +19,4 @@ Structure your output in markdown, including sections:
 - **Key Responsibilities**: Bullet points showing duties.
 - **Requirements**: Bullet points listing technical skills and experience levels.
 - **What We Offer**: Bullet points detailing compensation and flexibility.
+

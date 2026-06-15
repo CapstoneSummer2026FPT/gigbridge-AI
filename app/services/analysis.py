@@ -69,4 +69,3 @@ class AnalysisService:
 # Dependency helper
 def get_analysis_service() -> AnalysisService:
     return AnalysisService()
- Rama = get_analysis_service
