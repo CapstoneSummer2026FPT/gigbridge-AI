@@ -6,9 +6,16 @@ Client's candidate vetting questions:
 - {{ question }}
 {% endfor %}
 
+Available active categories that you MUST choose from (pick the single most relevant one):
+{% for category in allowed_categories %}
+{% if category.is_active %}
+- ID: {{ category.categories_id }} | Name: {{ category.name }}{% if category.parent_category_name %} (Parent: {{ category.parent_category_name }}){% endif %}
+{% endif %}
+{% endfor %}
+
 Based on these questions:
 1. Infer a suitable Job Title (title).
-2. Infer a suitable Job Category (catgory, e.g. Web Development, Mobile Development, DevOps, Design, Data Science, etc.).
+2. Choose the most suitable Job Category. You MUST select one of the categories listed in the "Available active categories" section above. Set "category_id" to the corresponding ID (GUID) and "category_name" to the exact Name of your chosen category.
 3. Infer the list of required Skills (skills).
 4. Generate the detailed Job Description in markdown format (description), containing sections:
    - **About the Role**

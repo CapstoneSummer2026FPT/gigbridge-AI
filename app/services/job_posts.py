@@ -23,6 +23,20 @@ class JobPostService:
     async def generate_job_description(self, request: JobPostGenerationRequest) -> JobPostGenerationResponse:
         logger.info(f"Generating job description from {len(request.client_questions)} client questions")
         
+        # Build category ID to name map for parent name resolution
+        id_to_name = {cat.categories_id: cat.name for cat in request.allowed_categories}
+        
+        # Create resolved category payload with parent name strings
+        resolved_categories = []
+        for cat in request.allowed_categories:
+            parent_name = id_to_name.get(cat.parent_category_id) if cat.parent_category_id else None
+            resolved_categories.append({
+                "categories_id": cat.categories_id,
+                "name": cat.name,
+                "is_active": cat.is_active,
+                "parent_category_name": parent_name
+            })
+            
         system_prompt = (
             "You represent GigBridge, a professional freelance gig marketplace for IT and creative talent.\n"
             "You help clients write professional, detailed, and clear job descriptions.\n"
@@ -31,7 +45,8 @@ class JobPostService:
         )
 
         user_prompt = self.prompt.render_prompt("job_posts.txt", {
-            "client_questions": request.client_questions
+            "client_questions": request.client_questions,
+            "allowed_categories": resolved_categories
         })
 
         # Call LLM Gateway with response_format to get structured JSON output
@@ -49,7 +64,9 @@ class JobPostService:
         await self.memory.save_domain_context("job_posts", job_id, {
             "title": response_data.title,
             "major": response_data.major,
-            "category": response_data.category,
+            "category": response_data.category_name,  # for backward compatibility
+            "category_id": response_data.category_id,
+            "category_name": response_data.category_name,
             "skills": response_data.skills,
             "client_questions": request.client_questions,
             "description": response_data.description
