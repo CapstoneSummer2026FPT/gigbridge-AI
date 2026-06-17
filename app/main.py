@@ -28,25 +28,25 @@ register_exception_handlers(app)
 # Include routers (protected by default at API router inclusion level, or inside routes)
 app.include_router(
     job_posts.router,
-    prefix="/api/v1/ai",
+    prefix="/api/ai",
     tags=["Job Posts"],
     dependencies=[Depends(verify_api_key)]
 )
 app.include_router(
     interviews.router,
-    prefix="/api/v1/ai",
+    prefix="/api/ai",
     tags=["AI Interviews"],
     dependencies=[Depends(verify_api_key)]
 )
 app.include_router(
     matching.router,
-    prefix="/api/v1/ai",
+    prefix="/api/ai",
     tags=["Talent Matching"],
     dependencies=[Depends(verify_api_key)]
 )
 app.include_router(
     analysis.router,
-    prefix="/api/v1/ai",
+    prefix="/api/ai",
     tags=["AI Analysis"],
     dependencies=[Depends(verify_api_key)]
 )
