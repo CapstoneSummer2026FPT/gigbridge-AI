@@ -33,7 +33,7 @@ Based on the client's questions and project title context:
 3. Select the single most appropriate Category. Set "category_id" to its exact ID from the list. 
    CRITICAL CONSTRAINT: The chosen Category MUST belong to the chosen Major (i.e. category.major_id == chosen major_id).
 4. Identify matching System Skills from the "Available System Skills" list. Set "system_skill_ids" to a list containing their exact IDs.
-5. Create a list of new/custom skill strings in "custom_skills" ONLY if the required skill name is missing from the "Available System Skills" list. Do not duplicate system skills here.
+5. Identify all key skills, frameworks, and technologies required for the project (e.g., specialized AI/RAG tools, libraries, or concepts mentioned or implied by the title/questions). If any of these required skills are NOT present in the "Available System Skills" list, you MUST list them as custom skill strings in "custom_skills". Do not duplicate system skills here.
 6. Generate the detailed Job Description in markdown format (description), containing sections:
    - **About the Role**
    - **Key Responsibilities**

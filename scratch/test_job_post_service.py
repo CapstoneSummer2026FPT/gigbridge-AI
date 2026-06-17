@@ -12,43 +12,66 @@ async def test_generation():
     service = get_job_post_service()
     
     # Define a request payload with major, category, and skills options
+    # Note: RAG/AI-related skills are intentionally excluded from available_skills
     request = JobPostGenerationRequest(
-        title="Build a real-time analytics dashboard",
+        title="Build an AI-powered document question-answering system using RAG",
         client_questions=[
             {
-                "question": "What type of application do you need?"
+                "question": "What type of documents will users upload?"
+            },
+            {
+                "question": "Should the system answer questions based only on uploaded documents?"
+            },
+            {
+                "question": "Does the system need to show the source document for each answer?"
+            },
+            {
+                "question": "How many documents should the system support?"
             }
         ],
         allowed_majors=[
             {
                 "major_id": "major-1",
                 "name": "Information Technology"
+            },
+            {
+                "major_id": "major-2",
+                "name": "Computer Science"
             }
         ],
         allowed_categories=[
             {
                 "category_id": "category-1",
                 "major_id": "major-1",
-                "name": "Web Development"
+                "name": "Backend Development"
             },
             {
                 "category_id": "category-2",
-                "major_id": "major-1",
-                "name": "Mobile Development"
+                "major_id": "major-2",
+                "name": "Artificial Intelligence"
+            },
+            {
+                "category_id": "category-3",
+                "major_id": "major-2",
+                "name": "Data Science"
             }
         ],
         available_skills=[
             {
                 "skill_id": "skill-1",
-                "name": "React"
+                "name": "Python"
             },
             {
                 "skill_id": "skill-2",
-                "name": "TypeScript"
+                "name": "FastAPI"
             },
             {
                 "skill_id": "skill-3",
-                "name": "WebSocket"
+                "name": "PostgreSQL"
+            },
+            {
+                "skill_id": "skill-4",
+                "name": "Docker"
             }
         ]
     )
