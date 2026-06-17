@@ -11,7 +11,8 @@ class JobPostGenerationRequest(BaseModel):
 
 class JobPostGenerationResponse(BaseModel):
     title: str = Field(..., description="The job title")
-    catgory: str = Field(..., description="The job category")
+    major: str = Field(..., description="The major or field of the job")
+    category: str = Field(..., description="The job category")
     skills : List[str] = Field(..., description="A list of required skills for the job")
     description: str = Field(..., description="Generated job description in markdown format")
     is_ai_generated: bool = Field(default=True, description="Indicates the description was AI-generated")

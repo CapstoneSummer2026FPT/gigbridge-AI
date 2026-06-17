@@ -26,7 +26,7 @@ class JobPostService:
         system_prompt = (
             "You represent GigBridge, a professional freelance gig marketplace for IT and creative talent.\n"
             "You help clients write professional, detailed, and clear job descriptions.\n"
-            "Analyze the client's questions to infer the job title, job category, required skills, and write a detailed job description.\n"
+            "Analyze the client's questions to infer the job title, job category, major, required skills, and write a detailed job description.\n"
             "The job description must be in markdown format, containing sections: **About the Role**, **Key Responsibilities**, **Requirements**, and **What We Offer**."
         )
 
@@ -48,7 +48,8 @@ class JobPostService:
         job_id = f"job_post_gen_{response_data.title.lower().replace(' ', '_')}"
         await self.memory.save_domain_context("job_posts", job_id, {
             "title": response_data.title,
-            "category": response_data.catgory,
+            "major": response_data.major,
+            "category": response_data.category,
             "skills": response_data.skills,
             "client_questions": request.client_questions,
             "description": response_data.description
