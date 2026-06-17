@@ -21,45 +21,40 @@ class JobPostService:
         self.prompt = prompt_manager
 
     async def generate_job_description(self, request: JobPostGenerationRequest) -> JobPostGenerationResponse:
-        logger.info(f"Generating job description for title: {request.title}")
+        logger.info(f"Generating job description from {len(request.client_questions)} client questions")
         
         system_prompt = (
             "You represent GigBridge, a professional freelance gig marketplace for IT and creative talent.\n"
             "You help clients write professional, detailed, and clear job descriptions.\n"
-            "Structure your output in markdown, including sections: **About the Role**, **Key Responsibilities**, **Requirements**, and **What We Offer**.\n"
-            "Adhere to the requested skills and context provided."
+            "Analyze the client's questions to infer the job title, job category, required skills, and write a detailed job description.\n"
+            "The job description must be in markdown format, containing sections: **About the Role**, **Key Responsibilities**, **Requirements**, and **What We Offer**."
         )
 
         user_prompt = self.prompt.render_prompt("job_posts.txt", {
-            "title": request.title,
-            "category": request.category,
-            "skills": request.skills,
-            "client_questions_and_freelancer_answers": request.client_questions_and_freelancer_answers
+            "client_questions": request.client_questions
         })
 
-        # Call LLM Gateway
-        raw_markdown = await self.llm.generate(
+        # Call LLM Gateway with response_format to get structured JSON output
+        response_json = await self.llm.generate(
             system_prompt=system_prompt,
-            user_prompt=user_prompt
+            user_prompt=user_prompt,
+            response_format=JobPostGenerationResponse
         )
+
+        # Parse structured response
+        response_data = JobPostGenerationResponse.model_validate_json(response_json)
 
         # Cache this job post context in memory for subsequent matches
-        job_id = f"job_post_gen_{request.title.lower().replace(' ', '_')}"
+        job_id = f"job_post_gen_{response_data.title.lower().replace(' ', '_')}"
         await self.memory.save_domain_context("job_posts", job_id, {
-            "title": request.title,
-            "category": request.category,
-            "skills": request.skills,
-            "client_questions_and_freelancer_answers": [
-                {"question": qa.question, "answer": qa.answer}
-                for qa in request.client_questions_and_freelancer_answers
-            ],
-            "description": raw_markdown
+            "title": response_data.title,
+            "category": response_data.catgory,
+            "skills": response_data.skills,
+            "client_questions": request.client_questions,
+            "description": response_data.description
         })
 
-        return JobPostGenerationResponse(
-            description=raw_markdown,
-            is_ai_generated=True
-        )
+        return response_data
 
 # Dependency helper
 def get_job_post_service() -> JobPostService:
