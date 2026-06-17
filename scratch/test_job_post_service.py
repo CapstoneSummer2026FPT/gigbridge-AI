@@ -11,31 +11,45 @@ from app.services.job_posts import get_job_post_service
 async def test_generation():
     service = get_job_post_service()
     
-    # Define a request payload with client_questions and allowed_categories
+    # Define a request payload with major, category, and skills options
     request = JobPostGenerationRequest(
-        client_questions=[
-            "Have you built complex interactive dashboards before using React, TypeScript and Redux?",
-            "What is your experience with setting up Tailwind CSS and layout frameworks in Next.js?",
-            "Can you write clean, reusable custom hooks and components that adhere to strict type checks?"
+        title="Build a real-time analytics dashboard",
+        client_questions_and_answers=[
+            {
+                "question": "What type of application do you need?",
+                "answer": "A React dashboard with real-time data."
+            }
+        ],
+        allowed_majors=[
+            {
+                "major_id": "major-1",
+                "name": "Information Technology"
+            }
         ],
         allowed_categories=[
             {
-                "categories_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6", 
-                "name": "Software Development",
-                "is_active": True,
-                "parent_category_id": None
+                "category_id": "category-1",
+                "major_id": "major-1",
+                "name": "Web Development"
             },
             {
-                "categories_id": "cb1c7fa1-e63d-4299-8d76-f831bfa2833a", 
-                "name": "Frontend Development",
-                "is_active": True,
-                "parent_category_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                "category_id": "category-2",
+                "major_id": "major-1",
+                "name": "Mobile Development"
+            }
+        ],
+        available_skills=[
+            {
+                "skill_id": "skill-1",
+                "name": "React"
             },
             {
-                "categories_id": "97e68cfb-6078-4395-8d59-cf2c125df93e", 
-                "name": "Legacy COBOL Development",
-                "is_active": False,
-                "parent_category_id": None
+                "skill_id": "skill-2",
+                "name": "TypeScript"
+            },
+            {
+                "skill_id": "skill-3",
+                "name": "WebSocket"
             }
         ]
     )
@@ -44,9 +58,10 @@ async def test_generation():
     response = await service.generate_job_description(request)
     print("\n--- GENERATED RESPONSE ---")
     print(f"Title: {response.title}")
+    print(f"Major ID: {response.major_id}")
     print(f"Category ID: {response.category_id}")
-    print(f"Category Name: {response.category_name}")
-    print(f"Skills: {response.skills}")
+    print(f"System Skill IDs: {response.system_skill_ids}")
+    print(f"Custom Skills: {response.custom_skills}")
     print("\n--- GENERATED DESCRIPTION ---\n")
     print(response.description)
     print("\n-----------------------------\n")

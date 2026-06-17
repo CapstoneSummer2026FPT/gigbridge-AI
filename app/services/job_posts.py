@@ -21,32 +21,22 @@ class JobPostService:
         self.prompt = prompt_manager
 
     async def generate_job_description(self, request: JobPostGenerationRequest) -> JobPostGenerationResponse:
-        logger.info(f"Generating job description from {len(request.client_questions)} client questions")
+        logger.info(f"Generating job description for: {request.title or 'Unnamed project'}")
         
-        # Build category ID to name map for parent name resolution
-        id_to_name = {cat.categories_id: cat.name for cat in request.allowed_categories}
-        
-        # Create resolved category payload with parent name strings
-        resolved_categories = []
-        for cat in request.allowed_categories:
-            parent_name = id_to_name.get(cat.parent_category_id) if cat.parent_category_id else None
-            resolved_categories.append({
-                "categories_id": cat.categories_id,
-                "name": cat.name,
-                "is_active": cat.is_active,
-                "parent_category_name": parent_name
-            })
-            
         system_prompt = (
             "You represent GigBridge, a professional freelance gig marketplace for IT and creative talent.\n"
             "You help clients write professional, detailed, and clear job descriptions.\n"
-            "Analyze the client's questions to infer the job title, job category, major, required skills, and write a detailed job description.\n"
-            "The job description must be in markdown format, containing sections: **About the Role**, **Key Responsibilities**, **Requirements**, and **What We Offer**."
+            "Review the client's questions, answers, and the lists of allowed database fields. "
+            "Select the single best matching Major ID and Category ID. "
+            "Identify matching System Skill IDs and supply relevant custom skills if needed."
         )
 
         user_prompt = self.prompt.render_prompt("job_posts.txt", {
-            "client_questions": request.client_questions,
-            "allowed_categories": resolved_categories
+            "title": request.title,
+            "client_questions_and_answers": request.client_questions_and_answers,
+            "allowed_majors": request.allowed_majors,
+            "allowed_categories": request.allowed_categories,
+            "available_skills": request.available_skills
         })
 
         # Call LLM Gateway with response_format to get structured JSON output
@@ -59,16 +49,22 @@ class JobPostService:
         # Parse structured response
         response_data = JobPostGenerationResponse.model_validate_json(response_json)
 
+        # Map system skill IDs to names to maintain backward-compatible combined `skills` list in memory cache
+        skill_id_to_name = {s.skill_id: s.name for s in request.available_skills}
+        combined_skills = [
+            skill_id_to_name[sid] for sid in response_data.system_skill_ids if sid in skill_id_to_name
+        ] + response_data.custom_skills
+
         # Cache this job post context in memory for subsequent matches
         job_id = f"job_post_gen_{response_data.title.lower().replace(' ', '_')}"
         await self.memory.save_domain_context("job_posts", job_id, {
             "title": response_data.title,
-            "major": response_data.major,
-            "category": response_data.category_name,  # for backward compatibility
+            "major_id": response_data.major_id,
             "category_id": response_data.category_id,
-            "category_name": response_data.category_name,
-            "skills": response_data.skills,
-            "client_questions": request.client_questions,
+            "skills": combined_skills,  # For backward-compatible matching service
+            "system_skill_ids": response_data.system_skill_ids,
+            "custom_skills": response_data.custom_skills,
+            "client_questions": [qa.question for qa in request.client_questions_and_answers],
             "description": response_data.description
         })
 
