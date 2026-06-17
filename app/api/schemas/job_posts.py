@@ -20,7 +20,6 @@ class SkillOption(BaseModel):
     name: str = Field(..., description="The display name of the skill")
 
 class JobPostGenerationRequest(BaseModel):
-    title: Optional[str] = Field(default=None, description="The client's suggested job title or project name")
     client_questions: List[ClientQuestion] = Field(
         default=[],
         description="A list of vetting questions."

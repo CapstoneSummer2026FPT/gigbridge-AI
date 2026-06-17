@@ -14,7 +14,6 @@ async def test_generation():
     # Define a request payload with major, category, and skills options
     # Note: RAG/AI-related skills are intentionally excluded from available_skills
     request = JobPostGenerationRequest(
-        title="Build an AI-powered document question-answering system using RAG",
         client_questions=[
             {
                 "question": "What type of documents will users upload?"

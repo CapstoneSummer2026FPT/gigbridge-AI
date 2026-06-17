@@ -21,7 +21,7 @@ class JobPostService:
         self.prompt = prompt_manager
 
     async def generate_job_description(self, request: JobPostGenerationRequest) -> JobPostGenerationResponse:
-        logger.info(f"Generating job description for: {request.title or 'Unnamed project'}")
+        logger.info("Generating job description")
         
         system_prompt = (
             "You represent GigBridge, a professional freelance gig marketplace for IT and creative talent.\n"
@@ -32,7 +32,6 @@ class JobPostService:
         )
 
         user_prompt = self.prompt.render_prompt("job_posts.txt", {
-            "title": request.title,
             "client_questions": request.client_questions,
             "allowed_majors": request.allowed_majors,
             "allowed_categories": request.allowed_categories,
