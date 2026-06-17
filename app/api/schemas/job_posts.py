@@ -3,9 +3,8 @@ from pydantic import BaseModel, Field
 
 
 
-class ClientQuestionAnswer(BaseModel):
+class ClientQuestion(BaseModel):
     question: str = Field(..., description="The vetting question asked to the client")
-    answer: str = Field(..., description="The client's answer to the vetting question")
 
 class MajorOption(BaseModel):
     major_id: str = Field(..., description="The unique database identifier of the major")
@@ -22,9 +21,9 @@ class SkillOption(BaseModel):
 
 class JobPostGenerationRequest(BaseModel):
     title: Optional[str] = Field(default=None, description="The client's suggested job title or project name")
-    client_questions_and_answers: List[ClientQuestionAnswer] = Field(
+    client_questions: List[ClientQuestion] = Field(
         default=[],
-        description="A list of vetting questions and the client's corresponding answers."
+        description="A list of vetting questions."
     )
     allowed_majors: List[MajorOption] = Field(
         ...,

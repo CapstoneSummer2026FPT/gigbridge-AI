@@ -6,10 +6,9 @@ Suggested Project/Job Title Context:
 {{ title }}
 {% endif %}
 
-Client's candidate vetting questions and answers:
-{% for qa in client_questions_and_answers %}
-Question: {{ qa.question }}
-Answer: {{ qa.answer }}
+Client's candidate vetting questions:
+{% for q in client_questions %}
+Question: {{ q.question }}
 ---
 {% endfor %}
 
@@ -28,7 +27,7 @@ Available System Skills:
 - ID: {{ skill.skill_id }} | Name: {{ skill.name }}
 {% endfor %}
 
-Based on the client's questions, answers, and project title context:
+Based on the client's questions and project title context:
 1. Refine the suitable Job Title (title).
 2. Select the single most appropriate Major. Set "major_id" to its exact ID from the list.
 3. Select the single most appropriate Category. Set "category_id" to its exact ID from the list. 

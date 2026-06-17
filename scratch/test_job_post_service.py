@@ -14,10 +14,9 @@ async def test_generation():
     # Define a request payload with major, category, and skills options
     request = JobPostGenerationRequest(
         title="Build a real-time analytics dashboard",
-        client_questions_and_answers=[
+        client_questions=[
             {
-                "question": "What type of application do you need?",
-                "answer": "A React dashboard with real-time data."
+                "question": "What type of application do you need?"
             }
         ],
         allowed_majors=[

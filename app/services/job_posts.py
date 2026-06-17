@@ -26,14 +26,14 @@ class JobPostService:
         system_prompt = (
             "You represent GigBridge, a professional freelance gig marketplace for IT and creative talent.\n"
             "You help clients write professional, detailed, and clear job descriptions.\n"
-            "Review the client's questions, answers, and the lists of allowed database fields. "
+            "Review the client's questions and the lists of allowed database fields. "
             "Select the single best matching Major ID and Category ID. "
             "Identify matching System Skill IDs and supply relevant custom skills if needed."
         )
 
         user_prompt = self.prompt.render_prompt("job_posts.txt", {
             "title": request.title,
-            "client_questions_and_answers": request.client_questions_and_answers,
+            "client_questions": request.client_questions,
             "allowed_majors": request.allowed_majors,
             "allowed_categories": request.allowed_categories,
             "available_skills": request.available_skills
@@ -64,7 +64,7 @@ class JobPostService:
             "skills": combined_skills,  # For backward-compatible matching service
             "system_skill_ids": response_data.system_skill_ids,
             "custom_skills": response_data.custom_skills,
-            "client_questions": [qa.question for qa in request.client_questions_and_answers],
+            "client_questions": [q.question for q in request.client_questions],
             "description": response_data.description
         })
 
