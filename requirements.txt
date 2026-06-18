@@ -10,3 +10,28 @@ tiktoken>=0.6.0
 numpy>=1.26.0
 python-multipart>=0.0.9
 jinja2>=3.1.3
+
+# ── Voice / Interview Dependencies ─────────────────────────────
+# Google Cloud STT (async) — primary STT provider, free 60min/mo
+google-cloud-speech>=2.30.0
+
+# Google Cloud TTS (async) — fallback TTS provider, free 1M chars/mo
+google-cloud-texttospeech>=2.18.0
+
+# Edge TTS — primary TTS (free, Microsoft neural voices, excellent Vietnamese)
+edge-tts>=6.1.10
+
+# Redis — session state, draft storage, TTS cache, conversation history
+redis[hiredis]>=5.0.0
+
+# PyAV — universal audio decoder (webm/opus → WAV PCM)
+# This is the CENTRAL piece that fixes all format issues:
+# - Makes silence detection meaningful (RMS on decoded PCM)
+# - Makes Faster-Whisper work without system ffmpeg
+# - Makes Google STT use LINEAR16 (no WEBM_OPUS issues)
+av>=12.0.0
+
+# Faster-Whisper — local-dev fallback STT (CPU/int8)
+# NOT installed by default on Render (512MB OOM risk).
+# Install manually for local dev: pip install faster-whisper
+# faster-whisper>=1.0.0
