@@ -48,6 +48,14 @@ class JobPostService:
         # Parse structured response
         response_data = JobPostGenerationResponse.model_validate_json(response_json)
 
+        # Ensure total skills (system + custom) do not exceed 10, prioritizing system skills
+        total_system = len(response_data.system_skill_ids)
+        if total_system > 10:
+            response_data.system_skill_ids = response_data.system_skill_ids[:10]
+            response_data.custom_skills = []
+        elif total_system + len(response_data.custom_skills) > 10:
+            response_data.custom_skills = response_data.custom_skills[:(10 - total_system)]
+
         # Map system skill IDs to names to maintain backward-compatible combined `skills` list in memory cache
         skill_id_to_name = {s.skill_id: s.name for s in request.available_skills}
         combined_skills = [
