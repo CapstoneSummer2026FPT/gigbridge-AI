@@ -29,7 +29,7 @@ class PromptManager:
     def _get_fallback_prompt(self, template_name: str, variables: Dict[str, Any]) -> str:
         if "job_posts" in template_name:
             return (
-                f"Generate a professional, structured markdown job post based on these client questions: {variables.get('client_questions', [])}."
+                f"Generate a professional, structured plain text job post based on this client prompt: {variables.get('client_prompt', '')}."
             )
         elif "interviews" in template_name:
             return (

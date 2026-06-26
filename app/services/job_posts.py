@@ -32,7 +32,7 @@ class JobPostService:
         )
 
         user_prompt = self.prompt.render_prompt("job_posts.txt", {
-            "client_questions": request.client_questions,
+            "client_prompt": request.client_prompt,
             "allowed_majors": request.allowed_majors,
             "allowed_categories": request.allowed_categories,
             "available_skills": request.available_skills
@@ -71,7 +71,8 @@ class JobPostService:
             "skills": combined_skills,  # For backward-compatible matching service
             "system_skill_ids": response_data.system_skill_ids,
             "custom_skills": response_data.custom_skills,
-            "client_questions": [q.question for q in request.client_questions],
+            "client_prompt": request.client_prompt,
+            "question_recruitment": response_data.question_recruitment,
             "description": response_data.description
         })
 
