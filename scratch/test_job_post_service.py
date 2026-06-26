@@ -14,20 +14,7 @@ async def test_generation():
     # Define a request payload with major, category, and skills options
     # Note: RAG/AI-related skills are intentionally excluded from available_skills
     request = JobPostGenerationRequest(
-        client_questions=[
-            {
-                "question": "What type of documents will users upload?"
-            },
-            {
-                "question": "Should the system answer questions based only on uploaded documents?"
-            },
-            {
-                "question": "Does the system need to show the source document for each answer?"
-            },
-            {
-                "question": "How many documents should the system support?"
-            }
-        ],
+        client_prompt="Looking for a Python/FastAPI backend developer to build a secure document management system using PostgreSQL, Docker, and FastAPI. Needs to support document upload, vector search (RAG) with source tracking, and scalability.",
         allowed_majors=[
             {
                 "major_id": "major-1",
@@ -83,6 +70,7 @@ async def test_generation():
     print(f"Category ID: {response.category_id}")
     print(f"System Skill IDs: {response.system_skill_ids}")
     print(f"Custom Skills: {response.custom_skills}")
+    print(f"Question Recruitment: {response.question_recruitment}")
     print("\n--- GENERATED DESCRIPTION ---\n")
     print(response.description)
     print("\n-----------------------------\n")
