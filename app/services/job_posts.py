@@ -7,6 +7,10 @@ from app.prompts.manager import PromptManager, get_prompt_manager
 
 logger = logging.getLogger("ai_server.job_posts_service")
 
+def is_vietnamese(text: str) -> bool:
+    vietnamese_chars = set("áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđĐ")
+    return any(char in vietnamese_chars for char in text)
+
 class JobPostService:
     """Service handling AI-assisted job description writing workflows"""
     
@@ -23,20 +27,29 @@ class JobPostService:
     async def generate_job_description(self, request: JobPostGenerationRequest) -> JobPostGenerationResponse:
         logger.info("Generating job description")
         
+        target_lang = "Vietnamese" if is_vietnamese(request.client_prompt) else "English"
+
         system_prompt = (
             "You represent GigBridge, a professional freelance gig marketplace for IT and creative talent.\n"
             "You help clients write professional, detailed, and clear job descriptions.\n"
             "Review the client's questions and the lists of allowed database fields. "
             "Select the single best matching Major ID and Category ID. "
-            "Identify matching System Skill IDs and supply relevant custom skills if needed."
+            "Identify matching System Skill IDs and supply relevant custom skills if needed.\n"
+            "LANGUAGE CONSTRAINTS:\n"
+            f"- You MUST generate BOTH the 'description' and 'question_recruitment' fields strictly in {target_lang}.\n"
+            "- All other fields (specifically 'title' and 'custom_skills') MUST ALWAYS be generated in English, regardless of the prompt's language."
         )
 
         user_prompt = self.prompt.render_prompt("job_posts.txt", {
             "client_prompt": request.client_prompt,
             "allowed_majors": request.allowed_majors,
             "allowed_categories": request.allowed_categories,
-            "available_skills": request.available_skills
+            "available_skills": request.available_skills,
+            "target_language": target_lang
         })
+
+        logger.debug(f"SYSTEM PROMPT:\n{system_prompt}")
+        logger.debug(f"USER PROMPT:\n{user_prompt}")
 
         # Call LLM Gateway with response_format to get structured JSON output
         response_json = await self.llm.generate(
