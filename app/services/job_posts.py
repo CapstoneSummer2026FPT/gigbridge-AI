@@ -3,6 +3,7 @@ from app.api.schemas.job_posts import JobPostGenerationRequest, JobPostGeneratio
 from app.clients.llm.gateway import LLMGateway, get_llm_gateway
 from app.services.memory import MemoryManager, get_memory_manager
 from app.prompts.manager import PromptManager, get_prompt_manager
+from app.core.exceptions import AIServerException
 
 
 logger = logging.getLogger("ai_server.job_posts_service")
@@ -35,6 +36,9 @@ class JobPostService:
             "Review the client's questions and the lists of allowed database fields. "
             "Select the single best matching Major ID and Category ID. "
             "Identify matching System Skill IDs and supply relevant custom skills if needed.\n"
+            "SAFETY POLICY:\n"
+            "- You MUST NOT generate job posts for illegal, harmful, or dangerous jobs (e.g., selling illegal substances/drugs, weapons, violence, hacking/cyberattacks, human trafficking, fraud, etc.).\n"
+            "- If the client's prompt requests any such illegal activity, you MUST return title='POLICY_VIOLATION' and set the other fields as specified in the template.\n"
             "LANGUAGE CONSTRAINTS:\n"
             f"- You MUST generate BOTH the 'description' and 'question_recruitment' fields strictly in {target_lang}.\n"
             "- All other fields (specifically 'title' and 'custom_skills') MUST ALWAYS be generated in English, regardless of the prompt's language."
@@ -60,6 +64,15 @@ class JobPostService:
 
         # Parse structured response
         response_data = JobPostGenerationResponse.model_validate_json(response_json)
+
+        # Check for policy violation sentinel
+        if response_data.title == "POLICY_VIOLATION":
+            logger.warning(f"Safety policy violation detected in prompt: {request.client_prompt}")
+            raise AIServerException(
+                message="The request violates platform safety guidelines against illegal or harmful activities.",
+                status_code=400,
+                errors=["policy_violation"]
+            )
 
         # Ensure total skills (system + custom) do not exceed 10, prioritizing system skills
         total_system = len(response_data.system_skill_ids)
