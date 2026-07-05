@@ -3,9 +3,14 @@ from app.api.schemas.job_posts import JobPostGenerationRequest, JobPostGeneratio
 from app.clients.llm.gateway import LLMGateway, get_llm_gateway
 from app.services.memory import MemoryManager, get_memory_manager
 from app.prompts.manager import PromptManager, get_prompt_manager
+from app.core.exceptions import AIServerException
 
 
 logger = logging.getLogger("ai_server.job_posts_service")
+
+def is_vietnamese(text: str) -> bool:
+    vietnamese_chars = set("áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđĐ")
+    return any(char in vietnamese_chars for char in text)
 
 class JobPostService:
     """Service handling AI-assisted job description writing workflows"""
@@ -23,20 +28,32 @@ class JobPostService:
     async def generate_job_description(self, request: JobPostGenerationRequest) -> JobPostGenerationResponse:
         logger.info("Generating job description")
         
+        target_lang = "Vietnamese" if is_vietnamese(request.client_prompt) else "English"
+
         system_prompt = (
             "You represent GigBridge, a professional freelance gig marketplace for IT and creative talent.\n"
             "You help clients write professional, detailed, and clear job descriptions.\n"
             "Review the client's questions and the lists of allowed database fields. "
             "Select the single best matching Major ID and Category ID. "
-            "Identify matching System Skill IDs and supply relevant custom skills if needed."
+            "Identify matching System Skill IDs and supply relevant custom skills if needed.\n"
+            "SAFETY POLICY:\n"
+            "- You MUST NOT generate job posts for illegal, harmful, or dangerous jobs (e.g., selling illegal substances/drugs, weapons, violence, hacking/cyberattacks, human trafficking, fraud, etc.).\n"
+            "- If the client's prompt requests any such illegal activity, you MUST return title='POLICY_VIOLATION' and set the other fields as specified in the template.\n"
+            "LANGUAGE CONSTRAINTS:\n"
+            f"- You MUST generate BOTH the 'description' and 'question_recruitment' fields strictly in {target_lang}.\n"
+            "- All other fields (specifically 'title' and 'custom_skills') MUST ALWAYS be generated in English, regardless of the prompt's language."
         )
 
         user_prompt = self.prompt.render_prompt("job_posts.txt", {
-            "client_questions": request.client_questions,
+            "client_prompt": request.client_prompt,
             "allowed_majors": request.allowed_majors,
             "allowed_categories": request.allowed_categories,
-            "available_skills": request.available_skills
+            "available_skills": request.available_skills,
+            "target_language": target_lang
         })
+
+        logger.debug(f"SYSTEM PROMPT:\n{system_prompt}")
+        logger.debug(f"USER PROMPT:\n{user_prompt}")
 
         # Call LLM Gateway with response_format to get structured JSON output
         response_json = await self.llm.generate(
@@ -47,6 +64,23 @@ class JobPostService:
 
         # Parse structured response
         response_data = JobPostGenerationResponse.model_validate_json(response_json)
+
+        # Check for policy violation sentinel
+        if response_data.title == "POLICY_VIOLATION":
+            logger.warning(f"Safety policy violation detected in prompt: {request.client_prompt}")
+            raise AIServerException(
+                message="The request violates platform safety guidelines against illegal or harmful activities.",
+                status_code=400,
+                errors=["policy_violation"]
+            )
+
+        # Ensure total skills (system + custom) do not exceed 10, prioritizing system skills
+        total_system = len(response_data.system_skill_ids)
+        if total_system > 10:
+            response_data.system_skill_ids = response_data.system_skill_ids[:10]
+            response_data.custom_skills = []
+        elif total_system + len(response_data.custom_skills) > 10:
+            response_data.custom_skills = response_data.custom_skills[:(10 - total_system)]
 
         # Map system skill IDs to names to maintain backward-compatible combined `skills` list in memory cache
         skill_id_to_name = {s.skill_id: s.name for s in request.available_skills}
@@ -63,7 +97,8 @@ class JobPostService:
             "skills": combined_skills,  # For backward-compatible matching service
             "system_skill_ids": response_data.system_skill_ids,
             "custom_skills": response_data.custom_skills,
-            "client_questions": [q.question for q in request.client_questions],
+            "client_prompt": request.client_prompt,
+            "question_recruitment": response_data.question_recruitment,
             "description": response_data.description
         })
 
