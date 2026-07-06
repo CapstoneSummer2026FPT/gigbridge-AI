@@ -112,7 +112,7 @@ class AudioProcessor:
             )
 
         try:
-            input_container = _av.open(_av.io.BufferReader(audio_bytes))
+            input_container = _av.open(io.BytesIO(audio_bytes))
         except Exception as exc:
             raise AudioValidationError(
                 "audio_decode_failed", 400,

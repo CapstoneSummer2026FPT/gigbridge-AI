@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Dict
 from pydantic import BaseModel, Field
 
 
@@ -7,8 +7,20 @@ from pydantic import BaseModel, Field
 class StartInterviewRequest(BaseModel):
     job_id: str = Field(..., description="ID of the job post being applied for")
     freelancer_id: str = Field(..., description="ID of the freelancer candidate")
+    job_title: str = Field(..., min_length=1, description="Title from the job post")
+    job_description: Optional[str] = Field(
+        None, description="Job post description or requirements summary"
+    )
+    job_skills: List[str] = Field(
+        default_factory=list,
+        description="Required skills, tools, technologies, or keywords from the job post",
+    )
+    job_phonetic_aliases: Dict[str, List[str]] = Field(
+        default_factory=dict,
+        description="Optional job-scoped phonetic aliases keyed by canonical term",
+    )
     mode: str = Field(default="text", description="Interview mode: 'text' or 'voice'")
-    language: str = Field(default="vi", description="BCP-47 language code (vi, en)")
+    language: str = Field(default="auto", description="Primary BCP-47 language code (auto, vi, en)")
 
 
 class SubmitAnswerRequest(BaseModel):
@@ -63,7 +75,7 @@ class DraftDataResponse(BaseModel):
     session_id: str = Field(..., description="Session identifier")
     draft_id: str = Field(..., description="Draft identifier for the transcription")
     question_index: int = Field(..., description="Question index this draft belongs to")
-    transcript: str = Field(..., description="Transcribed text from STT")
+    transcript: str = Field(..., description="Corrected transcript text from STT")
     language: str = Field(..., description="Detected or requested language")
     stt_provider: str = Field(..., description="STT provider used (google_stt, faster_whisper)")
     confidence: float = Field(..., description="Confidence score (0.0–1.0)")

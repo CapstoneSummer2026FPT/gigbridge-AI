@@ -82,6 +82,13 @@ class VoiceSessionManager:
             "mode": data.get("mode", "voice"),
             "language": data.get("language", "vi"),
             "question_index": str(data.get("question_index", 1)),
+            "job_title": data.get("job_title", ""),
+            "job_description": data.get("job_description", ""),
+            "job_skills": json.dumps(data.get("job_skills", []), ensure_ascii=False),
+            "hotwords": json.dumps(data.get("hotwords", []), ensure_ascii=False),
+            "job_phonetic_aliases": json.dumps(
+                data.get("job_phonetic_aliases", {}), ensure_ascii=False
+            ),
         }
 
         key = f"session:{session_id}"
@@ -96,6 +103,11 @@ class VoiceSessionManager:
             mode=mapping["mode"],
             language=mapping["language"],
             question_index=int(mapping["question_index"]),
+            job_title=mapping["job_title"],
+            job_description=mapping["job_description"],
+            job_skills=json.loads(mapping["job_skills"]),
+            hotwords=json.loads(mapping["hotwords"]),
+            job_phonetic_aliases=json.loads(mapping["job_phonetic_aliases"]),
         )
 
     async def load_or_expire(self, session_id: str) -> Optional[InterviewSession]:
@@ -117,6 +129,13 @@ class VoiceSessionManager:
             mode=data.get("mode", "text"),
             language=data.get("language", "vi"),
             question_index=int(data.get("question_index", 1)),
+            job_title=data.get("job_title", ""),
+            job_description=data.get("job_description", ""),
+            job_skills=self._json_list(data.get("job_skills")),
+            hotwords=self._json_list(data.get("hotwords")),
+            job_phonetic_aliases=self._json_dict_of_lists(
+                data.get("job_phonetic_aliases")
+            ),
         )
 
     async def delete_session(self, session_id: str) -> None:
@@ -296,3 +315,36 @@ class VoiceSessionManager:
             "created_at": draft.created_at,
             "confirmed": draft.confirmed,
         }
+
+    @staticmethod
+    def _json_list(raw: Optional[str]) -> list[str]:
+        if not raw:
+            return []
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return []
+        if not isinstance(parsed, list):
+            return []
+        return [str(item).strip() for item in parsed if str(item).strip()]
+
+    @staticmethod
+    def _json_dict_of_lists(raw: Optional[str]) -> dict[str, list[str]]:
+        if not raw:
+            return {}
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return {}
+        if not isinstance(parsed, dict):
+            return {}
+
+        result: dict[str, list[str]] = {}
+        for key, value in parsed.items():
+            if isinstance(value, list):
+                aliases = [str(item).strip() for item in value if str(item).strip()]
+            else:
+                aliases = [str(value).strip()] if str(value).strip() else []
+            if aliases:
+                result[str(key).strip()] = aliases
+        return result

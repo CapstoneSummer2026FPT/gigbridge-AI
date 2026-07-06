@@ -29,6 +29,9 @@ class LLMGateway(BaseLLMClient):
         """
         Determines the priority order for failovers.
         """
+        if self.default_provider == "local":
+            return ["local"]
+
         # Place default provider first, then maintain standard sequence
         order = [self.default_provider]
         standard_sequence = ["gemini", "openai", "claude", "local"]

@@ -31,7 +31,9 @@ redis[hiredis]>=5.0.0
 # - Makes Google STT use LINEAR16 (no WEBM_OPUS issues)
 av>=12.0.0
 
-# Faster-Whisper — local-dev fallback STT (CPU/int8)
-# NOT installed by default on Render (512MB OOM risk).
-# Install manually for local dev: pip install faster-whisper
-# faster-whisper>=1.0.0
+# Faster-Whisper — cheap local/testing STT (CPU/int8)
+# Production can set STT_PRIMARY_PROVIDER=google if memory is constrained.
+faster-whisper>=1.0.0
+
+# RapidFuzz — local deterministic typo correction for technical terms
+rapidfuzz>=3.9.0

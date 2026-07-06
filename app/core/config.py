@@ -1,6 +1,8 @@
-import os
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
+
+ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 
 
 class Settings(BaseSettings):
@@ -17,9 +19,9 @@ class Settings(BaseSettings):
     ELEVENLABS_API_KEY: str = Field(default="")
 
     # LLM Router Configurations
-    DEFAULT_LLM_PROVIDER: str = Field(default="gemini")
+    DEFAULT_LLM_PROVIDER: str = Field(default="local")
     LOCAL_OLLAMA_URL: str = Field(default="http://localhost:11434")
-    LOCAL_MODEL_NAME: str = Field(default="llama3.2")
+    LOCAL_MODEL_NAME: str = Field(default="minimax-m3:cloud")
 
     # RAG Settings
     CHROMA_DB_PATH: str = Field(default="./chroma_db")
@@ -34,11 +36,14 @@ class Settings(BaseSettings):
     REDIS_HISTORY_TTL: int = 7200           # 2 hours
 
     # STT
-    STT_PRIMARY_PROVIDER: str = Field(default="google")
-    STT_FALLBACK_PROVIDER: str = Field(default="faster_whisper")
+    STT_PRIMARY_PROVIDER: str = Field(default="faster_whisper")
+    STT_FALLBACK_PROVIDER: str = Field(default="google")
     FASTER_WHISPER_MODEL: str = Field(default="base")
     FASTER_WHISPER_DEVICE: str = Field(default="cpu")
     FASTER_WHISPER_COMPUTE_TYPE: str = Field(default="int8")
+    FASTER_WHISPER_CHUNK_SECONDS: int = Field(default=30)
+    FASTER_WHISPER_CHUNK_OVERLAP_SECONDS: int = Field(default=2)
+    GOOGLE_STT_HOTWORD_BOOST: float = Field(default=5.0)
 
     # Audio Decode — ALL formats decoded to WAV 16kHz mono PCM before STT
     AUDIO_DECODE_SAMPLE_RATE: int = 16000
@@ -49,6 +54,9 @@ class Settings(BaseSettings):
     EDGE_TTS_TIMEOUT: int = 5               # seconds
     EDGE_TTS_VOICE_VI: str = Field(default="vi-VN-HoaiMyNeural")
     EDGE_TTS_VOICE_EN: str = Field(default="en-US-JennyNeural")
+    TTS_STITCH_SAMPLE_RATE: int = Field(default=24000)
+    TTS_STITCH_CROSSFADE_MS: int = Field(default=35)
+    TTS_STITCH_PEAK: float = Field(default=0.95)
 
     # Audio Validation
     AUDIO_MAX_SIZE_BYTES: int = 3_145_728   # 3 MB
@@ -66,7 +74,7 @@ class Settings(BaseSettings):
     GOOGLE_APPLICATION_CREDENTIALS: str = Field(default="")
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=ENV_FILE,
         env_file_encoding="utf-8",
         extra="ignore"
     )

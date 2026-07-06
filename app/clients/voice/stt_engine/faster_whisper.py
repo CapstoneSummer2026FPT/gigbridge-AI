@@ -1,45 +1,31 @@
-"""Faster-Whisper STT engine — local-dev fallback (NOT for Render 512MB).
-
-Loads the model LAZILY on the first transcribe() call — importing this module
-does NOT allocate 150MB+ of RAM. This class is only instantiated when
-STT_PRIMARY_PROVIDER or STT_FALLBACK_PROVIDER is set to "faster_whisper".
-
-Receives pre-decoded WAV 16kHz mono PCM bytes from AudioProcessor.
-Writes to a tempfile internally since CTranslate2 needs a file path for its decoder.
-No system ffmpeg required because input is already WAV.
-"""
+"""Faster-Whisper STT engine with optional long-audio chunking."""
 
 import asyncio
 import logging
 import os
 import tempfile
+from typing import Optional
+
 import numpy as np
 
 from app.core.config import settings
 from app.core.exceptions import VoiceProviderException
 from app.clients.voice.stt_engine.base import BaseSTTEngine
 from app.clients.voice.models import TranscriptionResult
+from app.services.audio_chunker import AudioChunker
 
 logger = logging.getLogger("ai_server.voice.faster_whisper")
 
 
 class FasterWhisperEngine(BaseSTTEngine):
-    """Faster-Whisper STT engine using CTranslate2 (CPU/int8).
-
-    Model is loaded lazily on first transcribe() call.
-    Intended for local development only — NOT suitable for Render 512MB free tier.
-    """
+    """Faster-Whisper STT engine using CTranslate2 (CPU/int8)."""
 
     def __init__(self):
         self._model = None
+        self._chunker = AudioChunker()
 
     async def _get_model(self):
-        """Lazy-load the WhisperModel on first use.
-
-        This ensures importing this module or creating the engine object
-        does NOT allocate 150MB+ of RAM. Memory is only consumed when
-        transcribe() is actually called.
-        """
+        """Lazy-load the WhisperModel on first use."""
         if self._model is not None:
             return self._model
 
@@ -69,64 +55,54 @@ class FasterWhisperEngine(BaseSTTEngine):
                 f"Failed to load Faster-Whisper model '{model_size}': {exc}"
             )
 
-    async def transcribe(self, audio: bytes, language: str) -> TranscriptionResult:
-        """Transcribe WAV PCM audio via Faster-Whisper.
-
-        Args:
-            audio: WAV 16-bit 16kHz mono PCM bytes (pre-decoded by AudioProcessor).
-            language: BCP-47 hint ('vi' or 'en').
-
-        Returns:
-            TranscriptionResult with confidence from avg_logprob.
-
-        Raises:
-            VoiceProviderException: On model load failure, decode error, or timeout.
-        """
+    async def transcribe(
+        self,
+        audio: bytes,
+        language: str,
+        hotwords: Optional[list[str]] = None,
+        primary_language: Optional[str] = None,
+    ) -> TranscriptionResult:
+        """Transcribe decoded WAV audio via Faster-Whisper."""
         model = await self._get_model()
 
-        # CTranslate2 needs a file path for audio decoding. Since audio is
-        # already WAV PCM, write to a temp file.
-        tmp_path = None
         try:
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-                tmp.write(audio)
-                tmp_path = tmp.name
+            requested = (language or "").strip().lower()
+            lang_hint = None if requested in {"auto", "mixed"} else (
+                requested or primary_language or "vi"
+            )[:2]
+            initial_prompt = self._build_initial_prompt(hotwords)
 
-            lang_hint = language[:2] if language else "vi"
+            chunks = self._chunker.split_wav(audio)
+            if len(chunks) > 1:
+                logger.info("Faster-Whisper chunking audio into %d windows", len(chunks))
 
-            # Run in a thread to avoid blocking the event loop
-            # (WhisperModel.transcribe is CPU-bound)
-            def _run():
-                segments, info = model.transcribe(
-                    tmp_path,
+            transcript_parts: list[str] = []
+            log_probs: list[float] = []
+            detected_lang = lang_hint or "auto"
+
+            for chunk in chunks:
+                text, chunk_log_probs, chunk_lang = await self._transcribe_wav_bytes(
+                    model=model,
+                    wav_bytes=chunk.wav_bytes,
                     language=lang_hint,
-                    beam_size=5,
-                    vad_filter=True,
+                    initial_prompt=initial_prompt,
                 )
-                segments_list = list(segments)
-                return segments_list, info
+                if text:
+                    transcript_parts = self._append_with_overlap_dedup(
+                        transcript_parts, text
+                    )
+                log_probs.extend(chunk_log_probs)
+                if chunk_lang and detected_lang == "auto":
+                    detected_lang = chunk_lang
 
-            segments_list, info = await asyncio.to_thread(_run)
-
-            if not segments_list:
+            if not transcript_parts:
                 raise VoiceProviderException(
-                    "Faster-Whisper returned no segments — audio may be silent"
+                    "Faster-Whisper returned no segments - audio may be silent"
                 )
-
-            # Build full transcript and compute confidence from avg_logprob
-            transcript_parts = []
-            log_probs = []
-            for seg in segments_list:
-                transcript_parts.append(seg.text)
-                if seg.avg_logprob is not None:
-                    log_probs.append(seg.avg_logprob)
 
             full_text = " ".join(transcript_parts).strip()
-            # Map avg_logprob (roughly -1.0 to 0.0) to 0-1 confidence
             avg_logprob = np.mean(log_probs) if log_probs else -1.0
-            confidence = float(max(0.0, min(1.0, (avg_logprob + 1.0) / 1.0)))
-
-            detected_lang = getattr(info, "language", lang_hint) or lang_hint
+            confidence = float(max(0.0, min(1.0, avg_logprob + 1.0)))
 
             return TranscriptionResult(
                 text=full_text,
@@ -134,13 +110,81 @@ class FasterWhisperEngine(BaseSTTEngine):
                 confidence=confidence,
                 stt_provider="faster_whisper",
             )
-
         except VoiceProviderException:
             raise
         except Exception as exc:
             raise VoiceProviderException(
                 f"Faster-Whisper transcription failed: {exc}"
             )
+
+    @staticmethod
+    def _build_initial_prompt(hotwords: Optional[list[str]]) -> Optional[str]:
+        cleaned_hotwords = [
+            word.strip() for word in (hotwords or []) if word and word.strip()
+        ]
+        if not cleaned_hotwords:
+            return None
+        return "[Context: " + ", ".join(cleaned_hotwords) + "]"
+
+    @staticmethod
+    async def _transcribe_wav_bytes(
+        model,
+        wav_bytes: bytes,
+        language: Optional[str],
+        initial_prompt: Optional[str],
+    ) -> tuple[str, list[float], Optional[str]]:
+        tmp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+                tmp.write(wav_bytes)
+                tmp_path = tmp.name
+
+            def _run():
+                segments, info = model.transcribe(
+                    tmp_path,
+                    language=language,
+                    initial_prompt=initial_prompt,
+                    beam_size=5,
+                    vad_filter=True,
+                    condition_on_previous_text=False,
+                )
+                return list(segments), info
+
+            segments_list, info = await asyncio.to_thread(_run)
+            transcript_parts: list[str] = []
+            log_probs: list[float] = []
+            for seg in segments_list:
+                transcript_parts.append(seg.text)
+                if seg.avg_logprob is not None:
+                    log_probs.append(seg.avg_logprob)
+
+            text = " ".join(transcript_parts).strip()
+            detected_language = getattr(info, "language", language) or language
+            return text, log_probs, detected_language
         finally:
             if tmp_path and os.path.exists(tmp_path):
                 os.unlink(tmp_path)
+
+    @staticmethod
+    def _append_with_overlap_dedup(parts: list[str], next_text: str) -> list[str]:
+        if not parts:
+            return [next_text]
+
+        previous_words = parts[-1].split()
+        next_words = next_text.split()
+        max_overlap = min(12, len(previous_words), len(next_words))
+        overlap = 0
+
+        for size in range(max_overlap, 0, -1):
+            left = " ".join(previous_words[-size:]).casefold()
+            right = " ".join(next_words[:size]).casefold()
+            if left == right:
+                overlap = size
+                break
+
+        if overlap:
+            deduped = " ".join(next_words[overlap:]).strip()
+            if deduped:
+                return [*parts, deduped]
+            return parts
+        return [*parts, next_text]

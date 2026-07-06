@@ -18,14 +18,22 @@ class BaseSTTEngine(ABC):
     """Abstract interface that every STT provider must implement."""
 
     @abstractmethod
-    async def transcribe(self, audio: bytes, language: str) -> TranscriptionResult:
+    async def transcribe(
+        self,
+        audio: bytes,
+        language: str,
+        hotwords: Optional[list[str]] = None,
+        primary_language: Optional[str] = None,
+    ) -> TranscriptionResult:
         """Transcribe WAV PCM audio to text.
 
         Args:
             audio: WAV 16-bit 16kHz mono PCM bytes. The AudioProcessor.decode_and_normalize()
                    step runs BEFORE this engine is called — all formats (webm/opus, mp3, mp4)
                    have been decoded to WAV PCM. Engines do NOT need ffmpeg or format handling.
-            language: BCP-47 language hint ('vi' or 'en').
+            language: BCP-47 language hint ('vi', 'en') or 'auto'/'mixed'.
+            hotwords: Optional job-specific words to bias provider decoding.
+            primary_language: Session primary language used when language is auto/mixed.
 
         Returns:
             TranscriptionResult on success.

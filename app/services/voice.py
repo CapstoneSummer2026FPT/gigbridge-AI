@@ -42,19 +42,37 @@ class VoiceService:
 
     # ── Core STT/TTS ───────────────────────────────────────────
 
-    async def speech_to_text(self, audio: bytes, language: str) -> TranscriptionResult:
+    async def speech_to_text(
+        self,
+        audio: bytes,
+        language: str,
+        hotwords: Optional[list[str]] = None,
+        primary_language: Optional[str] = None,
+    ) -> TranscriptionResult:
         """Transcribe audio to text with automatic provider fallback.
 
         Args:
             audio: WAV 16-bit 16kHz mono PCM bytes (pre-decoded by AudioProcessor).
-            language: BCP-47 hint ('vi' or 'en').
+            language: BCP-47 hint ('vi', 'en') or 'auto'/'mixed'.
+            hotwords: Optional job-specific words to bias provider decoding.
+            primary_language: Session primary language used when language is auto/mixed.
 
         Returns:
             TranscriptionResult with provider metadata.
         """
-        return await self.gateway.transcribe_with_fallback(audio, language)
+        return await self.gateway.transcribe_with_fallback(
+            audio,
+            language,
+            hotwords=hotwords,
+            primary_language=primary_language,
+        )
 
-    async def text_to_speech(self, text: str, language: str) -> SynthesisResult:
+    async def text_to_speech(
+        self,
+        text: str,
+        language: str,
+        hotwords: Optional[list[str]] = None,
+    ) -> SynthesisResult:
         """Synthesize text to speech audio with automatic provider fallback.
 
         Args:
@@ -64,7 +82,11 @@ class VoiceService:
         Returns:
             SynthesisResult with audio bytes and metadata.
         """
-        return await self.gateway.synthesize_with_fallback(text, language)
+        return await self.gateway.synthesize_with_fallback(
+            text,
+            language,
+            hotwords=hotwords,
+        )
 
     # ── Session Management ─────────────────────────────────────
 

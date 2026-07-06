@@ -25,6 +25,8 @@ from app.clients.voice.tts_engine.base import BaseTTSEngine
 from app.clients.voice.factories.stt_factory import STTFactory
 from app.clients.voice.factories.tts_factory import TTSFactory
 from app.clients.voice.session import VoiceSessionManager
+from app.services.tts_audio_stitcher import TTSAudioStitcher
+from app.services.tts_segment_router import TTSSegmentRouter
 
 logger = logging.getLogger("ai_server.voice.gateway")
 
@@ -66,6 +68,8 @@ class VoiceGateway:
 
         # Session manager (Redis-backed)
         self.session = VoiceSessionManager()
+        self.tts_router = TTSSegmentRouter()
+        self.tts_stitcher = TTSAudioStitcher()
 
         logger.info(
             "VoiceGateway initialized: STT=%s, TTS=%s",
@@ -75,7 +79,13 @@ class VoiceGateway:
 
     # ── Primary public methods ─────────────────────────────────
 
-    async def transcribe_with_fallback(self, audio: bytes, language: str) -> TranscriptionResult:
+    async def transcribe_with_fallback(
+        self,
+        audio: bytes,
+        language: str,
+        hotwords: Optional[list[str]] = None,
+        primary_language: Optional[str] = None,
+    ) -> TranscriptionResult:
         """Transcribe audio using the first available STT provider.
 
         Tries each provider in priority order. On failure, logs the error
@@ -83,7 +93,9 @@ class VoiceGateway:
 
         Args:
             audio: WAV 16-bit 16kHz mono PCM bytes (pre-decoded by AudioProcessor).
-            language: BCP-47 language hint ('vi' or 'en').
+            language: BCP-47 language hint ('vi', 'en') or 'auto'/'mixed'.
+            hotwords: Optional job-specific words to bias STT providers.
+            primary_language: Session primary language used when language is auto/mixed.
 
         Returns:
             TranscriptionResult with provider metadata set.
@@ -97,7 +109,7 @@ class VoiceGateway:
         for name, provider in self.stt_providers:
             try:
                 result = await asyncio.wait_for(
-                    provider.transcribe(audio, language),
+                    provider.transcribe(audio, language, hotwords, primary_language),
                     timeout=_PROVIDER_TIMEOUT,
                 )
                 result.stt_provider = name
@@ -115,7 +127,12 @@ class VoiceGateway:
             errors=errors,
         )
 
-    async def synthesize_with_fallback(self, text: str, language: str) -> SynthesisResult:
+    async def synthesize_with_fallback(
+        self,
+        text: str,
+        language: str,
+        hotwords: Optional[list[str]] = None,
+    ) -> SynthesisResult:
         """Synthesize speech using the first available TTS provider.
 
         Args:
@@ -128,6 +145,28 @@ class VoiceGateway:
         Raises:
             VoiceProviderException: If ALL providers fail.
         """
+        segments = self.tts_router.route(text, language, hotwords=hotwords)
+        if len(segments) > 1:
+            logger.info(
+                "TTS segmented into %d voice routes: %s",
+                len(segments),
+                [segment.language for segment in segments],
+            )
+
+        results = [
+            await self._synthesize_segment_with_fallback(segment.text, segment.language)
+            for segment in segments
+        ]
+        if not results:
+            raise VoiceProviderException("TTS text was empty")
+        if len(results) == 1:
+            return results[0]
+
+        return self.tts_stitcher.stitch(results)
+
+    async def _synthesize_segment_with_fallback(
+        self, text: str, language: str
+    ) -> SynthesisResult:
         errors: list[str] = []
         primary_name = self.tts_providers[0][0]
 

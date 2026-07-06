@@ -58,11 +58,15 @@ class STTFactory:
         """Build all available STT providers. Skips ones that fail to init.
 
         Returns:
-            List of (provider_name, engine) tuples, ordered by priority:
-            google first, then faster_whisper.
+            List of (provider_name, engine) tuples, ordered by configured priority.
         """
         providers = []
-        for name in ["google", "faster_whisper"]:
+        ordered_names = []
+        for name in [settings.STT_PRIMARY_PROVIDER, settings.STT_FALLBACK_PROVIDER]:
+            if name and name not in ordered_names:
+                ordered_names.append(name)
+
+        for name in ordered_names:
             try:
                 engine = STTFactory.create(name)
                 providers.append((name, engine))

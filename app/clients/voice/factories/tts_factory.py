@@ -1,7 +1,6 @@
 """TTS Factory — builds the configured TTS engine from environment config.
 
-Edge TTS is listed first (free, no API key).
-Google TTS is listed second (requires credentials, higher quality).
+Default settings list Edge TTS first (free, no API key), then Google TTS.
 """
 
 import logging
@@ -52,11 +51,15 @@ class TTSFactory:
         """Build all available TTS providers. Skips ones that fail to init.
 
         Returns:
-            List of (provider_name, engine) tuples, ordered by priority:
-            edge_tts first, then google.
+            List of (provider_name, engine) tuples, ordered by configured priority.
         """
         providers = []
-        for name in ["edge_tts", "google"]:
+        ordered_names = []
+        for name in [settings.TTS_PRIMARY_PROVIDER, settings.TTS_FALLBACK_PROVIDER]:
+            if name and name not in ordered_names:
+                ordered_names.append(name)
+
+        for name in ordered_names:
             try:
                 engine = TTSFactory.create(name)
                 providers.append((name, engine))
