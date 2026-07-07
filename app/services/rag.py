@@ -439,9 +439,11 @@ With this context, please answer the user's question. Be accurate, relevant and 
                 
         return answer, chunks
 
-    async def ingest_documents(self, directory_path: Optional[str] = None, collection_name: str = "docs") -> int:
+    async def ingest_documents(self, directory_path: Optional[str] = None, collection_name: str = "all") -> int:
         """
         Crawls a directory of markdown files, chunks them semantically, and embeds them.
+        If collection_name is "all", it will process each subfolder as a separate collection.
+        If collection_name is a specific string, it will only process that specific subfolder into that collection.
         """
         if not directory_path:
             parent_dir = Path(__file__).parent.parent.parent.parent
@@ -462,6 +464,9 @@ With this context, please answer the user's question. Be accurate, relevant and 
         for entry in kb_path.iterdir():
             if entry.is_dir():
                 doc_type = entry.name
+                # If specific collection requested, skip other folders
+                if collection_name != "all" and doc_type != collection_name:
+                    continue
                 for file in entry.rglob("*.md"):
                     try:
                         with open(file, "r", encoding="utf-8") as f:
@@ -473,53 +478,66 @@ With this context, please answer the user's question. Be accurate, relevant and 
                     except Exception as fe:
                         logger.error(f"Error reading file {file}: {str(fe)}")
             elif entry.is_file() and entry.suffix == ".md":
-                try:
-                    with open(entry, "r", encoding="utf-8") as f:
-                        documents.append({
-                            "type": "general",
-                            "source": entry.as_posix(),
-                            "text": f.read()
-                        })
-                except Exception as fe:
-                    logger.error(f"Error reading file {entry}: {str(fe)}")
+                # General files in root go to "docs"
+                if collection_name == "all" or collection_name == "docs":
+                    try:
+                        with open(entry, "r", encoding="utf-8") as f:
+                            documents.append({
+                                "type": "docs",
+                                "source": entry.as_posix(),
+                                "text": f.read()
+                            })
+                    except Exception as fe:
+                        logger.error(f"Error reading file {entry}: {str(fe)}")
 
-        logger.info(f"Found {len(documents)} markdown documents in {kb_path}")
+        logger.info(f"Found {len(documents)} markdown documents in {kb_path} to ingest into target: {collection_name}")
         if not documents:
             return 0
 
-        # Create semantic chunks
-        all_chunks: List[Result] = []
+        # Group documents by target collection name
+        from collections import defaultdict
+        docs_by_col = defaultdict(list)
         for doc in documents:
-            chunks = await self.process_document_semantic(doc)
-            all_chunks.extend(chunks)
+            col = doc["type"]
+            docs_by_col[col].append(doc)
 
-        if not all_chunks:
-            return 0
+        total_chunks = 0
+        for col, col_docs in docs_by_col.items():
+            logger.info(f"Indexing collection '{col}' with {len(col_docs)} documents...")
+            all_chunks: List[Result] = []
+            for doc in col_docs:
+                chunks = await self.process_document_semantic(doc)
+                all_chunks.extend(chunks)
 
-        # Generate embeddings and store in Chroma
-        texts = [c.page_content for c in all_chunks]
-        embeddings = await self.get_embeddings(texts)
-        ids = [str(uuid.uuid4()) for _ in all_chunks]
-        metadatas = [c.metadata for c in all_chunks]
+            if not all_chunks:
+                continue
 
-        # Reset collection if exists
-        try:
-            self.chroma.delete_collection(collection_name)
-        except Exception:
-            pass
+            # Generate embeddings and store in Chroma
+            texts = [c.page_content for c in all_chunks]
+            embeddings = await self.get_embeddings(texts)
+            ids = [str(uuid.uuid4()) for _ in all_chunks]
+            metadatas = [c.metadata for c in all_chunks]
 
-        try:
-            self.chroma.add_documents(
-                collection_name=collection_name,
-                ids=ids,
-                embeddings=embeddings,
-                documents=texts,
-                metadatas=metadatas
-            )
-        except Exception as e:
-            raise RAGException(f"Failed to add docs to database: {str(e)}")
+            # Reset collection if exists
+            try:
+                self.chroma.delete_collection(col)
+            except Exception:
+                pass
 
-        return len(all_chunks)
+            try:
+                self.chroma.add_documents(
+                    collection_name=col,
+                    ids=ids,
+                    embeddings=embeddings,
+                    documents=texts,
+                    metadatas=metadatas
+                )
+                logger.info(f"Vectorstore created/updated with {len(all_chunks)} chunks for collection '{col}'")
+                total_chunks += len(all_chunks)
+            except Exception as e:
+                raise RAGException(f"Failed to add docs to database for collection '{col}': {str(e)}")
+
+        return total_chunks
 
 # Dependency helper
 _rag_service = RAGService()

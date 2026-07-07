@@ -18,7 +18,7 @@ class QueryResponse(BaseModel):
 
 class IngestRequest(BaseModel):
     directory_path: Optional[str] = Field(default=None, description="Path to folder containing documents to ingest. Defaults to knowledge-base folder.")
-    collection_name: str = Field(default="docs", description="The Chroma DB collection name to ingest to")
+    collection_name: str = Field(default="all", description="The Chroma DB collection name to ingest to")
 
 class IngestResponse(BaseModel):
     success: bool = Field(default=True)

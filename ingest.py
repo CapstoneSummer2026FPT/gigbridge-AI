@@ -191,14 +191,14 @@ def create_chunks(documents):
             
     return chunks
 
-def create_embeddings(chunks):
+def create_embeddings(chunks, target_collection_name):
     if not chunks:
-        print("No chunks to index.")
+        print(f"No chunks to index for collection: {target_collection_name}.")
         return
         
     chroma = PersistentClient(path=DB_NAME)
-    if collection_name in [c.name for c in chroma.list_collections()]:
-        chroma.delete_collection(collection_name)
+    if target_collection_name in [c.name for c in chroma.list_collections()]:
+        chroma.delete_collection(target_collection_name)
 
     texts = [chunk.page_content for chunk in chunks]
     
@@ -206,7 +206,7 @@ def create_embeddings(chunks):
     if not openai:
         # Fallback to Gemini OpenAI compatible embedding endpoint if GEMINI_API_KEY exists
         if gemini_key:
-            print("Using Google Gemini API for generating embeddings...")
+            print(f"Using Google Gemini API for generating embeddings in collection '{target_collection_name}'...")
             try:
                 from openai import OpenAI as GeminiOpenAI
                 gemini_client = GeminiOpenAI(
@@ -222,23 +222,34 @@ def create_embeddings(chunks):
         else:
             raise ValueError("No API Key configured for generating embeddings. Set OPENAI_API_KEY or GEMINI_API_KEY in .env.")
     else:
-        print(f"Generating embeddings using model: {embedding_model}")
+        print(f"Generating embeddings for collection '{target_collection_name}' using model: {embedding_model}")
         emb = openai.embeddings.create(model=embedding_model, input=texts).data
         vectors = [e.embedding for e in emb]
 
-    collection = chroma.get_or_create_collection(collection_name)
+    collection = chroma.get_or_create_collection(target_collection_name)
 
     ids = [str(i) for i in range(len(chunks))]
     metas = [chunk.metadata for chunk in chunks]
 
     collection.add(ids=ids, embeddings=vectors, documents=texts, metadatas=metas)
-    print(f"Vectorstore created with {collection.count()} documents at {DB_NAME}")
+    print(f"Vectorstore created/updated with {collection.count()} documents at {DB_NAME} (Collection: {target_collection_name})")
 
 if __name__ == "__main__":
     documents = fetch_documents()
     if not documents:
         print("No documents found in knowledge-base folder. Please add markdown (*.md) files inside the knowledge-base directory.")
         sys.exit(0)
-    chunks = create_chunks(documents)
-    create_embeddings(chunks)
-    print("Ingestion complete")
+        
+    # Group documents by their folder/type
+    from collections import defaultdict
+    docs_by_collection = defaultdict(list)
+    for doc in documents:
+        col_name = doc["type"] if doc["type"] != "general" else "docs"
+        docs_by_collection[col_name].append(doc)
+        
+    for col_name, col_docs in docs_by_collection.items():
+        print(f"\nProcessing collection: '{col_name}' ({len(col_docs)} documents)...")
+        chunks = create_chunks(col_docs)
+        create_embeddings(chunks, col_name)
+        
+    print("\nIngestion complete")

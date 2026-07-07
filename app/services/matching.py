@@ -65,9 +65,36 @@ class MatchingService:
         # Rerank and evaluate alignment for each candidate
         matches = []
         for doc in candidates:
-            freelancer_id = doc["metadata"].get("freelancer_id", "unknown")
-            full_name = doc["metadata"].get("full_name", "Unknown Freelancer")
-            candidate_title = doc["metadata"].get("title", "Developer")
+            # Try parsing metadata, fallback to extracting from page_content text
+            freelancer_id = doc["metadata"].get("freelancer_id")
+            full_name = doc["metadata"].get("full_name")
+            candidate_title = doc["metadata"].get("title")
+
+            if not full_name or not freelancer_id:
+                import re
+                text = doc["page_content"]
+                
+                # Find Name/Candidate
+                name_match = re.search(r"(?:Candidate|Name):\s*([^\n\-\*#]+)", text, re.IGNORECASE)
+                if name_match:
+                    full_name = name_match.group(1).strip()
+                else:
+                    full_name = "Unknown Freelancer"
+                
+                # Find Role/Title
+                role_match = re.search(r"(?:Role|Title|Position):\s*([^\n\-\*#]+)", text, re.IGNORECASE)
+                if role_match:
+                    candidate_title = role_match.group(1).strip()
+                else:
+                    candidate_title = "Developer"
+
+                # Generate pseudo ID
+                if not freelancer_id:
+                    clean_name = "".join(c for c in full_name if c.isalnum() or c.isspace())
+                    freelancer_id = f"freelancer_{clean_name.lower().replace(' ', '_')}"
+            
+            if not candidate_title:
+                candidate_title = "Developer"
             
             # Formulate prompt for LLM profile match scoring
             system_prompt = (
