@@ -46,7 +46,7 @@ if default_db_path.startswith("."):
 else:
     DB_NAME = default_db_path
 
-collection_name = "docs"
+collection_name = "ai-chatbot"
 embedding_model = default_embedding_model
 wait = wait_exponential(multiplier=1, min=10, max=240)
 

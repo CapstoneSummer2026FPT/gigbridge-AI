@@ -20,7 +20,7 @@ class MatchingService:
         self.llm = llm_gateway
         self.rag = rag_service
         self.memory = memory_manager
-        self.collection_name = "candidates"
+        self.collection_name = "ai-candidate-matching"
 
     async def match_talent(self, request: TalentMatchingRequest) -> TalentMatchingResponse:
         logger.info(f"Running semantic matching for job post ID: {request.job_id}")

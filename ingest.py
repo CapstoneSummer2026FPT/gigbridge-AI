@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 from pathlib import Path
 from pydantic import BaseModel, Field
 from chromadb import PersistentClient
@@ -49,7 +50,7 @@ if default_db_path.startswith("."):
 else:
     DB_NAME = default_db_path
 
-collection_name = "docs"
+collection_name = "ai-chatbot"
 embedding_model = default_embedding_model
 KNOWLEDGE_BASE_PATH = Path(__file__).parent / "knowledge-base"
 AVERAGE_CHUNK_SIZE = 100
@@ -74,6 +75,8 @@ class Chunk(BaseModel):
 
     def as_result(self, document):
         metadata = {"source": document["source"], "type": document["type"]}
+        if "metadata" in document and isinstance(document["metadata"], dict):
+            metadata.update(document["metadata"])
         return Result(
             page_content=self.headline + "\n\n" + self.summary + "\n\n" + self.original_text,
             metadata=metadata,
@@ -83,7 +86,7 @@ class Chunks(BaseModel):
     chunks: list[Chunk]
 
 def fetch_documents():
-    """A homemade version of the LangChain DirectoryLoader"""
+    """A homemade version of the LangChain DirectoryLoader supporting both Markdown and JSONL"""
     documents = []
 
     if not KNOWLEDGE_BASE_PATH.exists():
@@ -91,21 +94,48 @@ def fetch_documents():
         KNOWLEDGE_BASE_PATH.mkdir(parents=True, exist_ok=True)
         return documents
 
+    def load_file(file_path, doc_type):
+        if file_path.suffix == ".md":
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    documents.append({"type": doc_type, "source": file_path.as_posix(), "text": f.read()})
+            except Exception as e:
+                print(f"Error reading file {file_path}: {e}")
+        elif file_path.suffix == ".jsonl":
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    for line_idx, line in enumerate(f):
+                        line = line.strip()
+                        if not line:
+                            continue
+                        data = json.loads(line)
+                        text = data.get("text") or data.get("content") or json.dumps(data, ensure_ascii=False)
+                        
+                        metadata = data.get("metadata", {})
+                        for k, v in data.items():
+                            if k not in ["metadata"] and not isinstance(v, (dict, list)):
+                                metadata[k] = v
+
+                        is_small = len(text) < 1000
+                        documents.append({
+                            "type": doc_type,
+                            "source": f"{file_path.as_posix()}:line_{line_idx + 1}",
+                            "text": text,
+                            "is_pre_chunked": is_small,
+                            "chunks": [Chunk(headline=doc_type.replace("-", " ").title(), summary=text[:150], original_text=text)] if is_small else [],
+                            "metadata": metadata
+                        })
+            except Exception as e:
+                print(f"Error reading file {file_path}: {e}")
+
     for folder in KNOWLEDGE_BASE_PATH.iterdir():
         if folder.is_dir():
             doc_type = folder.name
-            for file in folder.rglob("*.md"):
-                try:
-                    with open(file, "r", encoding="utf-8") as f:
-                        documents.append({"type": doc_type, "source": file.as_posix(), "text": f.read()})
-                except Exception as e:
-                    print(f"Error reading file {file}: {e}")
-        elif folder.is_file() and folder.suffix == ".md":
-            try:
-                with open(folder, "r", encoding="utf-8") as f:
-                    documents.append({"type": "general", "source": folder.as_posix(), "text": f.read()})
-            except Exception as e:
-                print(f"Error reading file {folder}: {e}")
+            for ext in ["*.md", "*.jsonl"]:
+                for file in folder.rglob(ext):
+                    load_file(file, doc_type)
+        elif folder.is_file() and folder.suffix in [".md", ".jsonl"]:
+            load_file(folder, "ai-chatbot")
 
     print(f"Loaded {len(documents)} documents")
     return documents
@@ -145,6 +175,9 @@ def make_messages(document):
     reraise=True
 )
 def process_document(document):
+    if document.get("is_pre_chunked"):
+        return [chunk.as_result(document) for chunk in document["chunks"]]
+
     messages = make_messages(document)
     try:
         response = completion(model=MODEL, messages=messages, response_format=Chunks)
@@ -244,7 +277,7 @@ if __name__ == "__main__":
     from collections import defaultdict
     docs_by_collection = defaultdict(list)
     for doc in documents:
-        col_name = doc["type"] if doc["type"] != "general" else "docs"
+        col_name = doc["type"] if doc["type"] != "general" else "ai-chatbot"
         docs_by_collection[col_name].append(doc)
         
     for col_name, col_docs in docs_by_collection.items():

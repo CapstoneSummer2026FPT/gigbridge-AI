@@ -35,6 +35,8 @@ class Chunk(BaseModel):
 
     def as_result(self, document: Dict[str, Any]) -> Result:
         metadata = {"source": document.get("source", ""), "type": document.get("type", "")}
+        if "metadata" in document and isinstance(document["metadata"], dict):
+            metadata.update(document["metadata"])
         return Result(
             page_content=self.headline + "\n\n" + self.summary + "\n\n" + self.original_text,
             metadata=metadata,
@@ -120,6 +122,9 @@ Respond with the chunks.
         """
         Splits a document semantically using LLM structure generation.
         """
+        if document.get("is_pre_chunked"):
+            return [chunk.as_result(document) for chunk in document["chunks"]]
+
         prompt = self.make_chunk_prompt(document)
         messages = [{"role": "user", "content": prompt}]
         
@@ -380,7 +385,7 @@ Reply only with the list of ranked chunk ids, nothing else. Include all the chun
         self,
         question: str,
         history: List[Dict[str, str]] = [],
-        collection_name: str = "docs",
+        collection_name: str = "ai-chatbot",
         style: str = "precision"
     ) -> tuple[str, List[Result]]:
         """
@@ -461,34 +466,58 @@ With this context, please answer the user's question. Be accurate, relevant and 
                     return 0
 
         documents = []
+        
+        def load_file(file_path: Path, doc_type: str):
+            if file_path.suffix == ".md":
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        documents.append({
+                            "type": doc_type,
+                            "source": file_path.as_posix(),
+                            "text": f.read()
+                        })
+                except Exception as fe:
+                    logger.error(f"Error reading file {file_path}: {str(fe)}")
+            elif file_path.suffix == ".jsonl":
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        for line_idx, line in enumerate(f):
+                            line = line.strip()
+                            if not line:
+                                continue
+                            data = json.loads(line)
+                            text = data.get("text") or data.get("content") or json.dumps(data, ensure_ascii=False)
+                            
+                            metadata = data.get("metadata", {})
+                            for k, v in data.items():
+                                if k not in ["metadata"] and not isinstance(v, (dict, list)):
+                                    metadata[k] = v
+                                    
+                            is_small = len(text) < 1000
+                            documents.append({
+                                "type": doc_type,
+                                "source": f"{file_path.as_posix()}:line_{line_idx + 1}",
+                                "text": text,
+                                "is_pre_chunked": is_small,
+                                "chunks": [Chunk(headline=doc_type.replace("-", " ").title(), summary=text[:150], original_text=text)] if is_small else [],
+                                "metadata": metadata
+                            })
+                except Exception as fe:
+                    logger.error(f"Error reading file {file_path}: {str(fe)}")
+
         for entry in kb_path.iterdir():
             if entry.is_dir():
                 doc_type = entry.name
                 # If specific collection requested, skip other folders
                 if collection_name != "all" and doc_type != collection_name:
                     continue
-                for file in entry.rglob("*.md"):
-                    try:
-                        with open(file, "r", encoding="utf-8") as f:
-                            documents.append({
-                                "type": doc_type,
-                                "source": file.as_posix(),
-                                "text": f.read()
-                            })
-                    except Exception as fe:
-                        logger.error(f"Error reading file {file}: {str(fe)}")
-            elif entry.is_file() and entry.suffix == ".md":
-                # General files in root go to "docs"
-                if collection_name == "all" or collection_name == "docs":
-                    try:
-                        with open(entry, "r", encoding="utf-8") as f:
-                            documents.append({
-                                "type": "docs",
-                                "source": entry.as_posix(),
-                                "text": f.read()
-                            })
-                    except Exception as fe:
-                        logger.error(f"Error reading file {entry}: {str(fe)}")
+                for ext in ["*.md", "*.jsonl"]:
+                    for file in entry.rglob(ext):
+                        load_file(file, doc_type)
+            elif entry.is_file() and entry.suffix in [".md", ".jsonl"]:
+                # General files in root go to "ai-chatbot"
+                if collection_name == "all" or collection_name == "ai-chatbot":
+                    load_file(entry, "ai-chatbot")
 
         logger.info(f"Found {len(documents)} markdown documents in {kb_path} to ingest into target: {collection_name}")
         if not documents:

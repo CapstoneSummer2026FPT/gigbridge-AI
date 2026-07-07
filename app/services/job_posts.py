@@ -28,6 +28,26 @@ class JobPostService:
     async def generate_job_description(self, request: JobPostGenerationRequest) -> JobPostGenerationResponse:
         logger.info("Generating job description")
         
+        # Auto-capture taxonomy data on first API call
+        from pathlib import Path
+        import json
+        kb_dir = Path(__file__).parent.parent.parent / "knowledge-base" / "ai-create-job-post"
+        kb_file = kb_dir / "categories_skills.jsonl"
+        
+        if not kb_file.exists():
+            kb_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                with open(kb_file, "w", encoding="utf-8") as f:
+                    for major in request.allowed_majors:
+                        f.write(json.dumps({"type": "major", "major_id": major.major_id, "name": major.name}, ensure_ascii=False) + "\n")
+                    for category in request.allowed_categories:
+                        f.write(json.dumps({"type": "category", "category_id": category.category_id, "major_id": category.major_id, "name": category.name}, ensure_ascii=False) + "\n")
+                    for skill in request.available_skills:
+                        f.write(json.dumps({"type": "skill", "skill_id": skill.skill_id, "name": skill.name}, ensure_ascii=False) + "\n")
+                logger.info(f"Auto-saved taxonomy data to {kb_file}")
+            except Exception as e:
+                logger.error(f"Failed to auto-save taxonomy: {e}")
+
         target_lang = "Vietnamese" if is_vietnamese(request.client_prompt) else "English"
 
         system_prompt = (
