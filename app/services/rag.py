@@ -376,17 +376,22 @@ Reply only with the list of ranked chunk ids, nothing else. Include all the chun
         reranked = await self.rerank(original_question, chunks, final_k=10)
         return reranked
 
-    async def answer_question(self, question: str, history: List[Dict[str, str]] = [], collection_name: str = "docs") -> tuple[str, List[Result]]:
+    async def answer_question(
+        self,
+        question: str,
+        history: List[Dict[str, str]] = [],
+        collection_name: str = "docs",
+        style: str = "precision"
+    ) -> tuple[str, List[Result]]:
         """
         Answers a user question about GigBridge using RAG retrieved context.
         """
-        chunks = await self.fetch_context(question, collection_name)
-        
-        context_str = "\n\n".join(
-            f"Extract from {chunk.metadata.get('source', 'unknown')}:\n{chunk.page_content}" for chunk in chunks
-        )
-        
-        system_prompt = f"""
+        if style == "fast":
+            chunks = await self.fetch_context_unranked(question, collection_name, retrieval_k=5)
+            context_str = "\n\n".join(
+                f"Extract from {chunk.metadata.get('source', 'unknown')}:\n{chunk.page_content}" for chunk in chunks
+            )
+            system_prompt = f"""
 You are a knowledgeable, friendly assistant representing the company GigBridge.
 You are chatting with a user about GigBridge.
 Your answer will be evaluated for accuracy, relevance and completeness, so make sure it only answers the question and fully answers it.
@@ -396,10 +401,29 @@ For context, here are specific extracts from the Knowledge Base that might be di
 
 With this context, please answer the user's question. Be accurate, relevant and complete.
 """
-        messages = [{"role": "system", "content": system_prompt}]
-        for msg in history:
-            messages.append({"role": msg["role"], "content": msg["content"]})
-        messages.append({"role": "user", "content": question})
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": question}
+            ]
+        else:
+            chunks = await self.fetch_context(question, collection_name)
+            context_str = "\n\n".join(
+                f"Extract from {chunk.metadata.get('source', 'unknown')}:\n{chunk.page_content}" for chunk in chunks
+            )
+            system_prompt = f"""
+You are a knowledgeable, friendly assistant representing the company GigBridge.
+You are chatting with a user about GigBridge.
+Your answer will be evaluated for accuracy, relevance and completeness, so make sure it only answers the question and fully answers it.
+If you don't know the answer, say so.
+For context, here are specific extracts from the Knowledge Base that might be directly relevant to the user's question:
+{context_str}
+
+With this context, please answer the user's question. Be accurate, relevant and complete.
+"""
+            messages = [{"role": "system", "content": system_prompt}]
+            for msg in history:
+                messages.append({"role": msg["role"], "content": msg["content"]})
+            messages.append({"role": "user", "content": question})
         
         try:
             response = await acompletion(model=self.qa_model, messages=messages)

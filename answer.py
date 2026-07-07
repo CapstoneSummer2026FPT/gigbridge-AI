@@ -4,7 +4,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from chromadb import PersistentClient
 from litellm import completion
-from tenacity import retry, wait_exponential
+from tenacity import retry, wait_exponential, stop_after_attempt
 
 # Load environment variables
 from dotenv import load_dotenv
@@ -62,7 +62,7 @@ You are chatting with a user about GigBridge.
 Your answer will be evaluated for accuracy, relevance and completeness, so make sure it only answers the question and fully answers it.
 If you don't know the answer, say so.
 For context, here are specific extracts from the Knowledge Base that might be directly relevant to the user's question:
-{{context}}
+{context}
 
 With this context, please answer the user's question. Be accurate, relevant and complete.
 """
@@ -76,7 +76,11 @@ class RankOrder(BaseModel):
         description="The order of relevance of chunks, from most relevant to least relevant, by chunk id number"
     )
 
-@retry(wait=wait)
+@retry(
+    wait=wait_exponential(multiplier=1, min=10, max=240),
+    stop=stop_after_attempt(5),
+    reraise=True
+)
 def rerank(question, chunks):
     if not chunks:
         return []
@@ -130,7 +134,11 @@ def make_rag_messages(question, history, chunks):
         + [{"role": "user", "content": question}]
     )
 
-@retry(wait=wait)
+@retry(
+    wait=wait_exponential(multiplier=1, min=10, max=240),
+    stop=stop_after_attempt(5),
+    reraise=True
+)
 def rewrite_query(question, history=[]):
     """Rewrite the user's question to be a more specific question that is more likely to surface relevant content in the Knowledge Base."""
     message = f"""
@@ -199,13 +207,29 @@ def fetch_context(original_question):
     reranked = rerank(original_question, chunks)
     return reranked[:FINAL_K]
 
-@retry(wait=wait)
-def answer_question(question: str, history: list[dict] = []) -> tuple[str, list]:
+@retry(
+    wait=wait_exponential(multiplier=1, min=10, max=240),
+    stop=stop_after_attempt(5),
+    reraise=True
+)
+def answer_question(question: str, history: list[dict] = [], style: str = "precision") -> tuple[str, list]:
     """
     Answer a question using RAG and return the answer and the retrieved context
     """
-    chunks = fetch_context(question)
-    messages = make_rag_messages(question, history, chunks)
+    if style == "fast":
+        chunks = fetch_context_unranked(question)[:5]
+        context = "\n\n".join(
+            f"Extract from {chunk.metadata.get('source', 'unknown')}:\n{chunk.page_content}" for chunk in chunks
+        )
+        system_prompt = SYSTEM_PROMPT.format(context=context)
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": question}
+        ]
+    else:
+        chunks = fetch_context(question)
+        messages = make_rag_messages(question, history, chunks)
+        
     try:
         response = completion(model=MODEL, messages=messages)
         answer = response.choices[0].message.content
@@ -223,11 +247,12 @@ def answer_question(question: str, history: list[dict] = []) -> tuple[str, list]
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ask questions to the GigBridge Knowledge Base.")
     parser.add_argument("--query", type=str, required=True, help="Question to ask")
+    parser.add_argument("--style", type=str, choices=["precision", "fast"], default="precision", help="The QA style/mode to use")
     args = parser.parse_args()
 
     try:
-        print(f"Answering query: '{args.query}'...")
-        answer, context = answer_question(args.query)
+        print(f"Answering query: '{args.query}' (Style: {args.style})...")
+        answer, context = answer_question(args.query, style=args.style)
         print("\n=== ANSWER ===")
         print(answer)
         print("\n=== SOURCES ===")

@@ -20,7 +20,8 @@ async def query_rag(
     answer, context = await service.answer_question(
         question=request.question,
         history=request.history,
-        collection_name=request.collection_name
+        collection_name=request.collection_name,
+        style=request.style
     )
     source_docs = [
         {"page_content": doc.page_content, "metadata": doc.metadata}

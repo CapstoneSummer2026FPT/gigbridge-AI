@@ -6,7 +6,7 @@ from chromadb import PersistentClient
 from tqdm import tqdm
 from litellm import completion
 from multiprocessing import Pool
-from tenacity import retry, wait_exponential
+from tenacity import retry, wait_exponential, stop_after_attempt
 
 # Load environment variables
 from dotenv import load_dotenv
@@ -139,7 +139,11 @@ def make_messages(document):
         {"role": "user", "content": make_prompt(document)},
     ]
 
-@retry(wait=wait)
+@retry(
+    wait=wait_exponential(multiplier=1, min=10, max=240),
+    stop=stop_after_attempt(5),
+    reraise=True
+)
 def process_document(document):
     messages = make_messages(document)
     try:

@@ -5,6 +5,7 @@ class QueryRequest(BaseModel):
     question: str = Field(..., description="The user question to ask")
     history: List[Dict[str, str]] = Field(default=[], description="The conversation history so far")
     collection_name: str = Field(default="docs", description="The Chroma DB collection to query")
+    style: str = Field(default="precision", description="The QA style/mode to use. E.g., 'precision' or 'fast'.")
 
 class SourceDoc(BaseModel):
     page_content: str = Field(..., description="The chunk text content")
