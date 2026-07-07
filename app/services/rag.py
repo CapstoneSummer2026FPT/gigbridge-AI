@@ -446,7 +446,7 @@ With this context, please answer the user's question. Be accurate, relevant and 
         If collection_name is a specific string, it will only process that specific subfolder into that collection.
         """
         if not directory_path:
-            parent_dir = Path(__file__).parent.parent.parent.parent
+            parent_dir = Path(__file__).parent.parent.parent
             kb_path = parent_dir / "knowledge-base"
         else:
             kb_path = Path(directory_path)

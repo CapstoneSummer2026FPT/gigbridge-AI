@@ -51,7 +51,7 @@ else:
 
 collection_name = "docs"
 embedding_model = default_embedding_model
-KNOWLEDGE_BASE_PATH = Path(__file__).parent.parent / "knowledge-base"
+KNOWLEDGE_BASE_PATH = Path(__file__).parent / "knowledge-base"
 AVERAGE_CHUNK_SIZE = 100
 wait = wait_exponential(multiplier=1, min=10, max=240)
 
