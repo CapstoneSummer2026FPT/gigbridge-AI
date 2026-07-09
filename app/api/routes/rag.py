@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status
 from app.api.schemas.base import StandardResponse
-from app.api.schemas.rag import QueryRequest, QueryResponse, IngestRequest, IngestResponse
+from app.api.schemas.rag import QueryRequest, QueryResponse, IngestRequest, IngestResponse, SourceDoc, AnswerConfig
 from app.services.rag import RAGService, get_rag_service
 
 router = APIRouter(prefix="/rag")
@@ -17,19 +17,20 @@ async def query_rag(
     """
     Perform a RAG query to search the knowledge base and return a synthesized response.
     """
-    answer, context = await service.answer_question(
-        question=request.question,
+    config = AnswerConfig(
         history=request.history,
         collection_name=request.collection_name,
         style=request.style
     )
+    result = await service.answer_question(request.question, config)
+    
     source_docs = [
-        {"page_content": doc.page_content, "metadata": doc.metadata}
-        for doc in context
+        SourceDoc(page_content=doc["page_content"], metadata=doc["metadata"])
+        for doc in result.sources
     ]
     data = QueryResponse(
         success=True,
-        answer=answer,
+        answer=result.answer,
         context=source_docs
     )
     return StandardResponse(

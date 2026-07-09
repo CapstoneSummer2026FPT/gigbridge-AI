@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Type, Union
 from pydantic import BaseModel, Field
 
 class QueryRequest(BaseModel):
@@ -24,3 +24,38 @@ class IngestResponse(BaseModel):
     success: bool = Field(default=True)
     message: str = Field(..., description="Status message of ingestion")
     count: int = Field(..., description="Number of document chunks added")
+
+class RetrievalGroup(BaseModel):
+    name: str = Field(..., description="Logical name of the retrieval group")
+    n_results: int = Field(default=10, description="Number of results for this specific group")
+    where: Optional[Dict[str, Any]] = Field(default=None, description="Metadata filtering query dict")
+
+class AnswerConfig(BaseModel):
+    # Chat & Style
+    history: List[Dict[str, str]] = Field(default=[], description="Chat conversation history")
+    style: str = Field(default="precision", description="QA Mode: 'fast' or 'precision'")
+    response_format: Optional[Type[BaseModel]] = Field(default=None, description="Pydantic model schema for structured JSON output")
+    
+    # Retrieval
+    collection_name: str = Field(default="ai-chatbot", description="Target ChromaDB collection")
+    retrieval_groups: Optional[List[RetrievalGroup]] = Field(default=None, description="Optional metadata-filtered sub-queries")
+    top_k: int = Field(default=15, description="Number of standard documents to retrieve")
+    rerank: bool = Field(default=True, description="Enable LLM-based reranking")
+    
+    # Prompt & LLM overrides (no nesting)
+    system_prompt: Optional[str] = Field(default=None, description="System instructions override")
+    user_template: Optional[str] = Field(default=None, description="Custom Jinja2 user template override")
+    provider: Optional[str] = Field(default=None, description="LLM provider: gemini, openai, claude, local")
+    model: Optional[str] = Field(default=None, description="Model override (e.g. gpt-4o-mini)")
+    temperature: Optional[float] = Field(default=None, description="Sampling temperature")
+
+class AnswerResult(BaseModel):
+    answer: Union[str, Any] = Field(..., description="Text answer string OR parsed structured Pydantic object")
+    sources: List[Dict[str, Any]] = Field(default=[], description="Source document chunks matching the query")
+    
+    # Simple Observability Metrics
+    latency_ms: float = Field(default=0.0, description="Total execution time in milliseconds")
+    retrieval_time_ms: float = Field(default=0.0, description="Time spent retrieving/merging vector db results")
+    llm_time_ms: float = Field(default=0.0, description="Time spent waiting for LLM response")
+    prompt_tokens: int = Field(default=0, description="Tokens used in LLM input prompt")
+    completion_tokens: int = Field(default=0, description="Tokens used in LLM output completion")

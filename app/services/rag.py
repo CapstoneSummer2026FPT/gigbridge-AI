@@ -384,18 +384,85 @@ Reply only with the list of ranked chunk ids, nothing else. Include all the chun
     async def answer_question(
         self,
         question: str,
-        history: List[Dict[str, str]] = [],
-        collection_name: str = "ai-chatbot",
-        style: str = "precision"
-    ) -> tuple[str, List[Result]]:
+        config: Optional[Any] = None,
+    ) -> Any:
         """
-        Answers a user question about GigBridge using RAG retrieved context.
+        Unified configuration-driven RAG answering flow.
         """
-        if style == "fast":
-            chunks = await self.fetch_context_unranked(question, collection_name, retrieval_k=5)
-            context_str = "\n\n".join(
-                f"Extract from {chunk.metadata.get('source', 'unknown')}:\n{chunk.page_content}" for chunk in chunks
-            )
+        import time
+        import asyncio
+        from app.api.schemas.rag import AnswerConfig, AnswerResult
+
+        start_time = time.perf_counter()
+
+        if config is None:
+            config = AnswerConfig()
+
+        # 1. RETRIEVAL PHASE
+        retrieval_start = time.perf_counter()
+        
+        chunks = []
+        embedding_tokens = 0
+
+        # Decide retrieval source (custom retrieval groups vs standard)
+        if config.retrieval_groups:
+            # Query multiple metadata-filtered groups in parallel
+            try:
+                prompt_embeddings = await self.get_embeddings([question])
+                query_vector = prompt_embeddings[0]
+                embedding_tokens = len(question.split()) # Estimate of token count
+
+                async def query_group(group):
+                    results = self.chroma.query_documents(
+                        collection_name=config.collection_name,
+                        query_embeddings=[query_vector],
+                        n_results=group.n_results,
+                        where=group.where
+                    )
+                    
+                    group_chunks = []
+                    if results and "documents" in results and results["documents"]:
+                        for i in range(len(results["documents"][0])):
+                            group_chunks.append(Result(
+                                page_content=results["documents"][0][i],
+                                metadata=results["metadatas"][0][i] if results["metadatas"] else {}
+                            ))
+                    return group_chunks
+
+                # Run parallel group queries
+                group_results = await asyncio.gather(*(query_group(g) for g in config.retrieval_groups))
+                
+                # Merge and deduplicate
+                seen_content = set()
+                for gr in group_results:
+                    for chunk in gr:
+                        if chunk.page_content not in seen_content:
+                            seen_content.add(chunk.page_content)
+                            chunks.append(chunk)
+            except Exception as e:
+                logger.error(f"Group retrieval failed: {e}")
+        else:
+            # Standard single-collection retrieval
+            top_k = config.top_k
+            if config.style == "fast" and config.top_k == 15:
+                top_k = 5
+            
+            if config.style == "fast":
+                chunks = await self.fetch_context_unranked(question, config.collection_name, retrieval_k=top_k)
+            else:
+                chunks = await self.fetch_context(question, config.collection_name)
+
+        retrieval_time = (time.perf_counter() - retrieval_start) * 1000.0
+
+        # 2. PROMPT ASSEMBLY
+        context_str = "\n\n".join(
+            f"Extract from {chunk.metadata.get('source', 'unknown')}:\n{chunk.page_content}" for chunk in chunks
+        )
+
+        # Build System Prompt
+        if config.system_prompt:
+            system_prompt = config.system_prompt
+        else:
             system_prompt = f"""
 You are a knowledgeable, friendly assistant representing the company GigBridge.
 You are chatting with a user about GigBridge.
@@ -406,43 +473,136 @@ For context, here are specific extracts from the Knowledge Base that might be di
 
 With this context, please answer the user's question. Be accurate, relevant and complete.
 """
+
+        # Build Messages
+        if config.user_template:
+            from app.prompts.manager import get_prompt_manager
+            pm = get_prompt_manager()
+            if config.user_template.endswith(".txt"):
+                from app.api.schemas.job_posts import MajorOption, CategoryOption, SkillOption
+                
+                allowed_majors = []
+                seen_majors = set()
+                allowed_categories = []
+                seen_categories = set()
+                available_skills = []
+                seen_skills = set()
+
+                for chunk in chunks:
+                    meta = chunk.metadata
+                    type_val = meta.get("type")
+                    if type_val == "major" and "major_id" in meta and "name" in meta:
+                        mid = meta["major_id"]
+                        if mid not in seen_majors:
+                            seen_majors.add(mid)
+                            allowed_majors.append(MajorOption(major_id=mid, name=meta["name"]))
+                    elif type_val == "category" and "category_id" in meta and "major_id" in meta and "name" in meta:
+                        cid = meta["category_id"]
+                        if cid not in seen_categories:
+                            seen_categories.add(cid)
+                            allowed_categories.append(CategoryOption(category_id=cid, major_id=meta["major_id"], name=meta["name"]))
+                    elif type_val == "skill" and "skill_id" in meta and "name" in meta:
+                        sid = meta["skill_id"]
+                        if sid not in seen_skills:
+                            seen_skills.add(sid)
+                            available_skills.append(SkillOption(skill_id=sid, name=meta["name"]))
+
+                user_prompt = pm.render_prompt(config.user_template, {
+                    "client_prompt": question,
+                    "allowed_majors": allowed_majors,
+                    "allowed_categories": allowed_categories,
+                    "available_skills": available_skills,
+                    "target_language": "Vietnamese" if any(char in "áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđĐ" for char in question) else "English"
+                })
+            else:
+                user_prompt = config.user_template
+            
             messages = [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": question}
+                {"role": "user", "content": user_prompt}
             ]
         else:
-            chunks = await self.fetch_context(question, collection_name)
-            context_str = "\n\n".join(
-                f"Extract from {chunk.metadata.get('source', 'unknown')}:\n{chunk.page_content}" for chunk in chunks
-            )
-            system_prompt = f"""
-You are a knowledgeable, friendly assistant representing the company GigBridge.
-You are chatting with a user about GigBridge.
-Your answer will be evaluated for accuracy, relevance and completeness, so make sure it only answers the question and fully answers it.
-If you don't know the answer, say so.
-For context, here are specific extracts from the Knowledge Base that might be directly relevant to the user's question:
-{context_str}
+            if config.style == "fast":
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": question}
+                ]
+            else:
+                messages = [{"role": "system", "content": system_prompt}]
+                for msg in config.history:
+                    messages.append({"role": msg["role"], "content": msg["content"]})
+                messages.append({"role": "user", "content": question})
 
-With this context, please answer the user's question. Be accurate, relevant and complete.
-"""
-            messages = [{"role": "system", "content": system_prompt}]
-            for msg in history:
-                messages.append({"role": msg["role"], "content": msg["content"]})
-            messages.append({"role": "user", "content": question})
+        # 3. LLM EXECUTION PHASE
+        llm_start = time.perf_counter()
         
+        # Determine model & provider dynamically
+        model_name = config.model or self.qa_model
+        if config.provider and "/" not in model_name:
+            model_name = f"{config.provider}/{model_name}"
+
+        completion_kwargs = {
+            "model": model_name,
+            "messages": messages
+        }
+        if config.temperature is not None:
+            completion_kwargs["temperature"] = config.temperature
+        if config.response_format is not None:
+            completion_kwargs["response_format"] = config.response_format
+
         try:
-            response = await acompletion(model=self.qa_model, messages=messages)
-            answer = response.choices[0].message.content
+            response = await acompletion(**completion_kwargs)
+            raw_answer = response.choices[0].message.content
+            usage = getattr(response, "usage", {})
+            prompt_tokens = getattr(usage, "prompt_tokens", 0)
+            completion_tokens = getattr(usage, "completion_tokens", 0)
         except Exception as e:
-            logger.warning(f"Q&A with {self.qa_model} failed: {str(e)}. Trying fallback {self.fallback_model}.")
+            logger.warning(f"LLM call with {model_name} failed: {e}. Trying fallback model {self.fallback_model}.")
             try:
-                response = await acompletion(model=self.fallback_model, messages=messages)
-                answer = response.choices[0].message.content
+                fallback_kwargs = {
+                    "model": self.fallback_model,
+                    "messages": messages
+                }
+                if config.response_format is not None:
+                    fallback_kwargs["response_format"] = config.response_format
+                response = await acompletion(**fallback_kwargs)
+                raw_answer = response.choices[0].message.content
+                usage = getattr(response, "usage", {})
+                prompt_tokens = getattr(usage, "prompt_tokens", 0)
+                completion_tokens = getattr(usage, "completion_tokens", 0)
             except Exception as e2:
-                logger.error(f"Q&A failed completely: {str(e2)}")
-                raise RAGException(f"Failed to generate answer from LLM: {str(e2)}")
-                
-        return answer, chunks
+                logger.error(f"Fallback LLM call failed: {e2}")
+                raise RAGException(f"LLM call failed: {e2}")
+
+        llm_time = (time.perf_counter() - llm_start) * 1000.0
+
+        # Validate structured JSON format if requested
+        if config.response_format is not None:
+            try:
+                answer = config.response_format.model_validate_json(raw_answer)
+            except Exception as parse_err:
+                logger.error(f"Failed to parse structured JSON response: {parse_err}")
+                answer = raw_answer
+        else:
+            answer = raw_answer
+
+        # 4. METRICS ASSEMBLY
+        total_time = (time.perf_counter() - start_time) * 1000.0
+        
+        sources_list = [
+            {"page_content": chunk.page_content, "metadata": chunk.metadata}
+            for chunk in chunks
+        ]
+
+        return AnswerResult(
+            answer=answer,
+            sources=sources_list,
+            latency_ms=total_time,
+            retrieval_time_ms=retrieval_time,
+            llm_time_ms=llm_time,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens
+        )
 
     async def ingest_documents(self, directory_path: Optional[str] = None, collection_name: str = "all") -> int:
         """

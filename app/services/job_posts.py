@@ -30,72 +30,7 @@ class JobPostService:
     async def generate_job_description(self, request: JobPostGenerationRequest) -> JobPostGenerationResponse:
         logger.info("Generating job description using RAG pipeline")
         
-        # Query Chroma DB (RAG) for matching taxonomy items based on client prompt
-        try:
-            # 1. Get query embeddings for client prompt
-            prompt_embeddings = await self.rag.get_embeddings([request.client_prompt])
-            query_vector = prompt_embeddings[0]
-
-            # 2. Query Chroma DB for each type of taxonomy item
-            majors_results = self.rag.chroma.query_documents(
-                collection_name="ai-create-job-post",
-                query_embeddings=[query_vector],
-                n_results=10,
-                where={"type": "major"}
-            )
-            categories_results = self.rag.chroma.query_documents(
-                collection_name="ai-create-job-post",
-                query_embeddings=[query_vector],
-                n_results=15,
-                where={"type": "category"}
-            )
-            skills_results = self.rag.chroma.query_documents(
-                collection_name="ai-create-job-post",
-                query_embeddings=[query_vector],
-                n_results=30,
-                where={"type": "skill"}
-            )
-
-            # 3. Parse retrieved items from metadata and deduplicate
-            from app.api.schemas.job_posts import MajorOption, CategoryOption, SkillOption
-
-            seen_majors = set()
-            allowed_majors = []
-            if majors_results and "metadatas" in majors_results and majors_results["metadatas"]:
-                for meta in majors_results["metadatas"][0]:
-                    if meta and "major_id" in meta and "name" in meta:
-                        mid = meta["major_id"]
-                        if mid not in seen_majors:
-                            seen_majors.add(mid)
-                            allowed_majors.append(MajorOption(major_id=mid, name=meta["name"]))
-
-            seen_categories = set()
-            allowed_categories = []
-            if categories_results and "metadatas" in categories_results and categories_results["metadatas"]:
-                for meta in categories_results["metadatas"][0]:
-                    if meta and "category_id" in meta and "major_id" in meta and "name" in meta:
-                        cid = meta["category_id"]
-                        if cid not in seen_categories:
-                            seen_categories.add(cid)
-                            allowed_categories.append(CategoryOption(category_id=cid, major_id=meta["major_id"], name=meta["name"]))
-
-            seen_skills = set()
-            available_skills = []
-            if skills_results and "metadatas" in skills_results and skills_results["metadatas"]:
-                for meta in skills_results["metadatas"][0]:
-                    if meta and "skill_id" in meta and "name" in meta:
-                        sid = meta["skill_id"]
-                        if sid not in seen_skills:
-                            seen_skills.add(sid)
-                            available_skills.append(SkillOption(skill_id=sid, name=meta["name"]))
-
-            logger.info(f"RAG Retrieval Complete. Found {len(allowed_majors)} majors, {len(allowed_categories)} categories, {len(available_skills)} skills.")
-
-        except Exception as e:
-            logger.error(f"Failed to query Chroma DB for RAG context: {e}")
-            allowed_majors = []
-            allowed_categories = []
-            available_skills = []
+        from app.api.schemas.rag import AnswerConfig, RetrievalGroup
 
         target_lang = "Vietnamese" if is_vietnamese(request.client_prompt) else "English"
 
@@ -113,26 +48,32 @@ class JobPostService:
             "- All other fields (specifically 'title' and 'custom_skills') MUST ALWAYS be generated in English, regardless of the prompt's language."
         )
 
-        user_prompt = self.prompt.render_prompt("job_posts.txt", {
-            "client_prompt": request.client_prompt,
-            "allowed_majors": allowed_majors,
-            "allowed_categories": allowed_categories,
-            "available_skills": available_skills,
-            "target_language": target_lang
-        })
-
-        logger.debug(f"SYSTEM PROMPT:\n{system_prompt}")
-        logger.debug(f"USER PROMPT:\n{user_prompt}")
-
-        # Call LLM Gateway with response_format to get structured JSON output
-        response_json = await self.llm.generate(
+        config = AnswerConfig(
+            style="fast",
+            collection_name="ai-create-job-post",
+            response_format=JobPostGenerationResponse,
+            retrieval_groups=[
+                RetrievalGroup(name="majors", n_results=10, where={"type": "major"}),
+                RetrievalGroup(name="categories", n_results=15, where={"type": "category"}),
+                RetrievalGroup(name="skills", n_results=30, where={"type": "skill"}),
+            ],
             system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            response_format=JobPostGenerationResponse
+            user_template="job_posts.txt"
         )
 
-        # Parse structured response
-        response_data = JobPostGenerationResponse.model_validate_json(response_json)
+        # Invoke unified configuration-driven RAG answering flow
+        result = await self.rag.answer_question(request.client_prompt, config)
+        
+        response_data = result.answer
+
+        # If LLM generation fell back to string due to parsing error, raise exception
+        if isinstance(response_data, str):
+            logger.error(f"Failed to parse job description structured output: {response_data}")
+            raise AIServerException(
+                message="The model generated an invalid job description response structure.",
+                status_code=500,
+                errors=["invalid_response_structure"]
+            )
 
         # Check for policy violation sentinel
         if response_data.title == "POLICY_VIOLATION":
@@ -152,7 +93,12 @@ class JobPostService:
             response_data.custom_skills = response_data.custom_skills[:(10 - total_system)]
 
         # Map system skill IDs to names to maintain backward-compatible combined `skills` list in memory cache
-        skill_id_to_name = {s.skill_id: s.name for s in available_skills}
+        skill_id_to_name = {}
+        for src in result.sources:
+            meta = src.get("metadata", {})
+            if meta.get("type") == "skill" and "skill_id" in meta and "name" in meta:
+                skill_id_to_name[meta["skill_id"]] = meta["name"]
+
         combined_skills = [
             skill_id_to_name[sid] for sid in response_data.system_skill_ids if sid in skill_id_to_name
         ] + response_data.custom_skills
