@@ -5,7 +5,6 @@ from app.services.memory import MemoryManager, get_memory_manager
 from app.prompts.manager import PromptManager, get_prompt_manager
 from app.core.exceptions import AIServerException
 
-
 logger = logging.getLogger("ai_server.job_posts_service")
 
 def is_vietnamese(text: str) -> bool:
@@ -19,34 +18,84 @@ class JobPostService:
         self,
         llm_gateway: LLMGateway = get_llm_gateway(),
         memory_manager: MemoryManager = get_memory_manager(),
-        prompt_manager: PromptManager = get_prompt_manager()
+        prompt_manager: PromptManager = get_prompt_manager(),
+        rag_service = None
     ):
         self.llm = llm_gateway
         self.memory = memory_manager
         self.prompt = prompt_manager
+        from app.services.rag import get_rag_service
+        self.rag = rag_service or get_rag_service()
 
     async def generate_job_description(self, request: JobPostGenerationRequest) -> JobPostGenerationResponse:
-        logger.info("Generating job description")
+        logger.info("Generating job description using RAG pipeline")
         
-        # Auto-capture taxonomy data on first API call
-        from pathlib import Path
-        import json
-        kb_dir = Path(__file__).parent.parent.parent / "knowledge-base" / "ai-create-job-post"
-        kb_file = kb_dir / "categories_skills.jsonl"
-        
-        if not kb_file.exists():
-            kb_dir.mkdir(parents=True, exist_ok=True)
-            try:
-                with open(kb_file, "w", encoding="utf-8") as f:
-                    for major in request.allowed_majors:
-                        f.write(json.dumps({"type": "major", "major_id": major.major_id, "name": major.name}, ensure_ascii=False) + "\n")
-                    for category in request.allowed_categories:
-                        f.write(json.dumps({"type": "category", "category_id": category.category_id, "major_id": category.major_id, "name": category.name}, ensure_ascii=False) + "\n")
-                    for skill in request.available_skills:
-                        f.write(json.dumps({"type": "skill", "skill_id": skill.skill_id, "name": skill.name}, ensure_ascii=False) + "\n")
-                logger.info(f"Auto-saved taxonomy data to {kb_file}")
-            except Exception as e:
-                logger.error(f"Failed to auto-save taxonomy: {e}")
+        # Query Chroma DB (RAG) for matching taxonomy items based on client prompt
+        try:
+            # 1. Get query embeddings for client prompt
+            prompt_embeddings = await self.rag.get_embeddings([request.client_prompt])
+            query_vector = prompt_embeddings[0]
+
+            # 2. Query Chroma DB for each type of taxonomy item
+            majors_results = self.rag.chroma.query_documents(
+                collection_name="ai-create-job-post",
+                query_embeddings=[query_vector],
+                n_results=10,
+                where={"type": "major"}
+            )
+            categories_results = self.rag.chroma.query_documents(
+                collection_name="ai-create-job-post",
+                query_embeddings=[query_vector],
+                n_results=15,
+                where={"type": "category"}
+            )
+            skills_results = self.rag.chroma.query_documents(
+                collection_name="ai-create-job-post",
+                query_embeddings=[query_vector],
+                n_results=30,
+                where={"type": "skill"}
+            )
+
+            # 3. Parse retrieved items from metadata and deduplicate
+            from app.api.schemas.job_posts import MajorOption, CategoryOption, SkillOption
+
+            seen_majors = set()
+            allowed_majors = []
+            if majors_results and "metadatas" in majors_results and majors_results["metadatas"]:
+                for meta in majors_results["metadatas"][0]:
+                    if meta and "major_id" in meta and "name" in meta:
+                        mid = meta["major_id"]
+                        if mid not in seen_majors:
+                            seen_majors.add(mid)
+                            allowed_majors.append(MajorOption(major_id=mid, name=meta["name"]))
+
+            seen_categories = set()
+            allowed_categories = []
+            if categories_results and "metadatas" in categories_results and categories_results["metadatas"]:
+                for meta in categories_results["metadatas"][0]:
+                    if meta and "category_id" in meta and "major_id" in meta and "name" in meta:
+                        cid = meta["category_id"]
+                        if cid not in seen_categories:
+                            seen_categories.add(cid)
+                            allowed_categories.append(CategoryOption(category_id=cid, major_id=meta["major_id"], name=meta["name"]))
+
+            seen_skills = set()
+            available_skills = []
+            if skills_results and "metadatas" in skills_results and skills_results["metadatas"]:
+                for meta in skills_results["metadatas"][0]:
+                    if meta and "skill_id" in meta and "name" in meta:
+                        sid = meta["skill_id"]
+                        if sid not in seen_skills:
+                            seen_skills.add(sid)
+                            available_skills.append(SkillOption(skill_id=sid, name=meta["name"]))
+
+            logger.info(f"RAG Retrieval Complete. Found {len(allowed_majors)} majors, {len(allowed_categories)} categories, {len(available_skills)} skills.")
+
+        except Exception as e:
+            logger.error(f"Failed to query Chroma DB for RAG context: {e}")
+            allowed_majors = []
+            allowed_categories = []
+            available_skills = []
 
         target_lang = "Vietnamese" if is_vietnamese(request.client_prompt) else "English"
 
@@ -66,9 +115,9 @@ class JobPostService:
 
         user_prompt = self.prompt.render_prompt("job_posts.txt", {
             "client_prompt": request.client_prompt,
-            "allowed_majors": request.allowed_majors,
-            "allowed_categories": request.allowed_categories,
-            "available_skills": request.available_skills,
+            "allowed_majors": allowed_majors,
+            "allowed_categories": allowed_categories,
+            "available_skills": available_skills,
             "target_language": target_lang
         })
 
@@ -103,7 +152,7 @@ class JobPostService:
             response_data.custom_skills = response_data.custom_skills[:(10 - total_system)]
 
         # Map system skill IDs to names to maintain backward-compatible combined `skills` list in memory cache
-        skill_id_to_name = {s.skill_id: s.name for s in request.available_skills}
+        skill_id_to_name = {s.skill_id: s.name for s in available_skills}
         combined_skills = [
             skill_id_to_name[sid] for sid in response_data.system_skill_ids if sid in skill_id_to_name
         ] + response_data.custom_skills
@@ -127,4 +176,3 @@ class JobPostService:
 # Dependency helper
 def get_job_post_service() -> JobPostService:
     return JobPostService()
-
