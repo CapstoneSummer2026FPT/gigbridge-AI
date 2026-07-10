@@ -43,6 +43,12 @@ Based on the client's prompt:
    - If the client's prompt is written in Vietnamese, generate the description in Vietnamese.
    - If the client's prompt is written in English or any other language, generate the description in English.
 8. Generate a list of relevant recruitment/vetting questions (question_recruitment) that the client can ask candidates to assess their fit for this role.
+   CRITICAL QUESTION GUIDELINES:
+   - Avoid general, theoretical, or definition-based questions (e.g., do NOT ask "What is RAG?", "What is Django?", or "Define dependency injection").
+   - Focus strictly on practical engineering, process, and problem-solving.
+   - Include questions about implementation process (e.g., "How would you implement...", "What specific process do you follow when...").
+   - Include questions about problem-solving (e.g., "How do you diagnose and resolve...", "Describe how you solved a performance bottleneck in...").
+   - Include questions about design choices and architecture (e.g., "Why would you choose ... architecture for this system?", "What trade-offs did you face when designing...").
    CRITICAL LANGUAGE RULE:
    - If the client's prompt is written in Vietnamese, generate these questions in Vietnamese.
    - If the client's prompt is written in English or any other language, generate these questions in English.

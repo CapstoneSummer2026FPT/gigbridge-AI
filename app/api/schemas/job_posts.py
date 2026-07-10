@@ -21,18 +21,6 @@ class JobPostGenerationRequest(BaseModel):
         ...,
         description="The user's prompt or requirements for the job post."
     )
-    allowed_majors: List[MajorOption] = Field(
-        ...,
-        description="A list of allowed majors in the system database."
-    )
-    allowed_categories: List[CategoryOption] = Field(
-        ...,
-        description="A list of allowed categories in the system database."
-    )
-    available_skills: List[SkillOption] = Field(
-        ...,
-        description="A list of available system skills in the database."
-    )
 
 class JobPostGenerationResponse(BaseModel):
     title: str = Field(..., description="The generated/refined job title. MUST be written in English.")

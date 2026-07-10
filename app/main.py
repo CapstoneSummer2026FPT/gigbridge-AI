@@ -5,7 +5,7 @@ from app.core.exceptions import register_exception_handlers
 from app.core.security import verify_api_key
 
 # Import routes (to be created)
-from app.api.routes import job_posts, interviews, matching, analysis
+from app.api.routes import job_posts, interviews, matching, analysis, rag
 
 app = FastAPI(
     title="GigBridge AI Service",
@@ -48,6 +48,12 @@ app.include_router(
     analysis.router,
     prefix="/api/ai",
     tags=["AI Analysis"],
+    dependencies=[Depends(verify_api_key)]
+)
+app.include_router(
+    rag.router,
+    prefix="/api/ai",
+    tags=["RAG Knowledge Base"],
     dependencies=[Depends(verify_api_key)]
 )
 
