@@ -33,6 +33,10 @@ cp .env.example .env
 ```
 Open `.env` and fill in your API keys (`GEMINI_API_KEY`, `OPENAI_API_KEY`, `ELEVENLABS_API_KEY`, etc.) and set the `AI_SERVER_API_KEY` for verification.
 
+Production deployments must also set `APP_ENV=production`, use a unique
+non-placeholder `AI_SERVER_API_KEY`, and provide Redis 6.2 or newer (native
+`GETDEL` is required for atomic interview confirmation).
+
 ### 2. Local Setup
 We recommend using a Python virtual environment (Python 3.11+):
 ```bash
@@ -70,3 +74,7 @@ All API endpoints are protected using a header-token authorization check. Client
 ```http
 X-API-Key: your-secure-shared-api-key-here
 ```
+
+Starting an interview also returns an `audio_access_token`. Send it as
+`X-Session-Token` when polling the session's question-audio endpoint; the
+shared server API key alone does not authorize access to candidate audio.

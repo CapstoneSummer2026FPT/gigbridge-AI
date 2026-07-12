@@ -1,14 +1,15 @@
-import asyncio
 import logging
-import sys
+from contextlib import asynccontextmanager
 
 import redis.asyncio as aioredis
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.security import verify_api_key
+from app.core.rate_limit import limiter, rate_limit_exceeded_handler
 from app.api.routes import job_posts, interviews, matching, analysis
 
 logger = logging.getLogger("ai_server")
@@ -17,20 +18,34 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Validate dependencies and cleanly drain resources."""
+    await validate_voice_dependencies()
+    try:
+        yield
+    finally:
+        await shutdown()
+
 app = FastAPI(
     title="GigBridge AI Service",
     description="Stand-alone Microservice providing NLP and AI intelligence to GigBridge platform.",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 # Register exceptions
 register_exception_handlers(app)
@@ -62,7 +77,6 @@ app.include_router(
 )
 
 
-@app.on_event("startup")
 async def validate_voice_dependencies():
     """Validate voice service dependencies at startup.
 
@@ -71,19 +85,30 @@ async def validate_voice_dependencies():
     Validates Faster-Whisper only if configured as active provider.
     """
     errors: list[str] = []
+    redis_client = None
 
     # 1. Redis — fail fast (mandatory for all interview flows)
     try:
         redis_client = aioredis.from_url(settings.REDIS_URL)
         await redis_client.ping()
-        await redis_client.aclose()
-        logger.info("✓ Redis connection OK (%s)", settings.REDIS_URL)
+        server_info = await redis_client.info("server")
+        version_text = str(server_info.get("redis_version", "0.0"))
+        version_parts = version_text.split(".")
+        redis_version = tuple(int(part) for part in version_parts[:2])
+        if redis_version < (6, 2):
+            raise RuntimeError(
+                f"Redis 6.2+ is required for atomic GETDEL (found {version_text})"
+            )
+        logger.info("Redis connection OK (version %s)", version_text)
     except Exception as exc:
         errors.append(f"Redis unavailable: {exc}")
         logger.critical(
             "STARTUP FAILED: Redis is required for session state — %s", exc
         )
-        sys.exit(1)
+        raise RuntimeError("Redis 6.2+ is required for interview state") from exc
+    finally:
+        if redis_client is not None:
+            await redis_client.aclose()
 
     # 2. Faster-Whisper — only check if configured as active provider
     if settings.STT_PRIMARY_PROVIDER == "faster_whisper" or settings.STT_FALLBACK_PROVIDER == "faster_whisper":
@@ -98,7 +123,7 @@ async def validate_voice_dependencies():
                 "STT_PRIMARY_PROVIDER or STT_FALLBACK_PROVIDER is 'faster_whisper' "
                 "but the package is not installed. Run: pip install faster-whisper"
             )
-            sys.exit(1)
+            raise RuntimeError("Configured Faster-Whisper dependency is missing")
     else:
         logger.info("• Faster-Whisper not configured — using Google STT as primary")
 
@@ -110,10 +135,7 @@ async def validate_voice_dependencies():
             "Set this env var to enable Google Cloud voice services."
         )
     else:
-        logger.info(
-            "✓ Google credentials found at: %s",
-            settings.GOOGLE_APPLICATION_CREDENTIALS,
-        )
+        logger.info("Google credentials configured")
 
     # 4. PyAV — check availability (critical for audio decode)
     try:
@@ -124,27 +146,60 @@ async def validate_voice_dependencies():
         logger.critical(
             "PyAV (av) is required for audio decode. Run: pip install av"
         )
-        sys.exit(1)
+        raise RuntimeError("PyAV dependency is missing")
 
-    # 5. edge-tts — check availability (primary TTS)
-    try:
-        import edge_tts as _  # noqa: F401
+    # 5. edge-tts — optional TTS provider
+    if settings.TTS_PRIMARY_PROVIDER == "edge_tts" or settings.TTS_FALLBACK_PROVIDER == "edge_tts":
+        try:
+            import edge_tts as _  # noqa: F401
 
-        logger.info("✓ edge-tts package found — TTS enabled")
-    except ImportError:
-        logger.warning(
-            "⚠ edge-tts not installed — TTS will fall back to Google or fail. "
-            "Run: pip install edge-tts"
-        )
+            logger.info("✓ edge-tts package found — TTS enabled")
+        except ImportError:
+            logger.warning(
+                "⚠ edge-tts is configured but not installed. "
+                "Run: pip install edge-tts"
+            )
+
+    # 6. ElevenLabs — optional paid TTS provider
+    if settings.TTS_PRIMARY_PROVIDER == "elevenlabs" or settings.TTS_FALLBACK_PROVIDER == "elevenlabs":
+        if settings.ELEVENLABS_API_KEY:
+            logger.info("✓ ELEVENLABS_API_KEY configured — ElevenLabs TTS enabled")
+        else:
+            logger.warning(
+                "⚠ ElevenLabs TTS is configured but ELEVENLABS_API_KEY is not set. "
+                "TTS will fall back to the next configured provider."
+            )
+
+    # 7. VieNeu — optional local Vietnamese/English testing TTS
+    if settings.TTS_PRIMARY_PROVIDER == "vieneu" or settings.TTS_FALLBACK_PROVIDER == "vieneu":
+        if settings.HF_TOKEN:
+            logger.info("✓ HF_TOKEN configured — Hugging Face Hub requests will be authenticated")
+        else:
+            logger.warning(
+                "⚠ HF_TOKEN not set — Hugging Face Hub downloads may be rate-limited. "
+                "Set HF_TOKEN in .env to authenticate model downloads."
+            )
+        try:
+            import vieneu as _  # noqa: F401
+
+            logger.info("✓ VieNeu package found — local TTS enabled")
+        except ImportError:
+            logger.warning(
+                "⚠ VieNeu TTS is configured but not installed. "
+                "Run: pip install vieneu"
+            )
 
     if not errors:
         logger.info("✓ Voice service dependencies validated successfully.")
 
 
-@app.on_event("shutdown")
 async def shutdown():
     """Clean up resources on shutdown."""
     from app.services.voice import _voice_service
+    from app.services.interviews import _interview_service
+
+    if _interview_service is not None:
+        await _interview_service.shutdown()
 
     if _voice_service is not None:
         await _voice_service.gateway.session.close()

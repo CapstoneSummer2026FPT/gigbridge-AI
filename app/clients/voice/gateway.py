@@ -8,13 +8,14 @@ Design decisions:
   - Build ALL known providers upfront, skip ones that fail to init.
     This avoids the trap of STT_FALLBACK_PROVIDER="faster_whisper"
     silently having no fallback because the engine failed to init.
-  - Every provider call is wrapped in asyncio.wait_for(timeout=30).
+  - Every provider call is wrapped in asyncio.wait_for using configured timeouts.
   - TimeoutError is treated the same as a provider failure — triggers fallback.
   - If ALL providers fail, raises VoiceProviderException with all error details.
 """
 
 import asyncio
 import logging
+import time
 from typing import Optional
 
 from app.core.config import settings
@@ -29,10 +30,6 @@ from app.services.tts_audio_stitcher import TTSAudioStitcher
 from app.services.tts_segment_router import TTSSegmentRouter
 
 logger = logging.getLogger("ai_server.voice.gateway")
-
-# Default timeout for individual provider calls
-_PROVIDER_TIMEOUT = 30.0
-
 
 class VoiceGateway:
     """Gateway that orchestrates STT/TTS providers with automatic fallback.
@@ -55,16 +52,10 @@ class VoiceGateway:
             logger.critical("No STT providers could be initialized")
             raise VoiceProviderException("No STT providers available")
 
-        # Build TTS providers: try all known, skip failures
+        # Build TTS providers lazily on first synthesis so interview text can
+        # return immediately without waiting for heavyweight local TTS models.
         self.tts_providers: list[tuple[str, BaseTTSEngine]] = []
-        try:
-            self.tts_providers = TTSFactory.all_providers()
-        except Exception as exc:
-            logger.error("Failed to build TTS providers: %s", exc)
-
-        if not self.tts_providers:
-            logger.critical("No TTS providers could be initialized")
-            raise VoiceProviderException("No TTS providers available")
+        self._tts_providers_lock: Optional[asyncio.Lock] = None
 
         # Session manager (Redis-backed)
         self.session = VoiceSessionManager()
@@ -74,8 +65,27 @@ class VoiceGateway:
         logger.info(
             "VoiceGateway initialized: STT=%s, TTS=%s",
             [p[0] for p in self.stt_providers],
-            [p[0] for p in self.tts_providers],
+            "lazy",
         )
+
+    async def _ensure_tts_providers(self) -> None:
+        if self.tts_providers:
+            return
+        if self._tts_providers_lock is None:
+            self._tts_providers_lock = asyncio.Lock()
+        async with self._tts_providers_lock:
+            if self.tts_providers:
+                return
+            try:
+                self.tts_providers = await asyncio.to_thread(TTSFactory.all_providers)
+            except Exception as exc:
+                logger.error("Failed to build TTS providers: %s", exc)
+
+            if not self.tts_providers:
+                logger.critical("No TTS providers could be initialized")
+                raise VoiceProviderException("No TTS providers available")
+
+            logger.info("TTS providers initialized: %s", [p[0] for p in self.tts_providers])
 
     # ── Primary public methods ─────────────────────────────────
 
@@ -110,15 +120,20 @@ class VoiceGateway:
             try:
                 result = await asyncio.wait_for(
                     provider.transcribe(audio, language, hotwords, primary_language),
-                    timeout=_PROVIDER_TIMEOUT,
+                    timeout=settings.STT_PROVIDER_TIMEOUT,
                 )
                 result.stt_provider = name
                 result.fallback_used = name != primary_name
                 if result.fallback_used:
                     logger.info("STT fallback used: %s (primary=%s)", name, primary_name)
                 return result
-            except (VoiceProviderException, asyncio.TimeoutError) as exc:
-                logger.warning("STT provider '%s' failed: %s", name, exc)
+            except asyncio.TimeoutError:
+                message = f"timed out after {settings.STT_PROVIDER_TIMEOUT:.0f}s"
+                logger.warning("STT provider '%s' failed: %s", name, message)
+                errors.append(f"{name}: {message}")
+                continue
+            except Exception as exc:
+                logger.exception("STT provider '%s' failed unexpectedly", name)
                 errors.append(f"{name}: {exc}")
                 continue
 
@@ -145,6 +160,7 @@ class VoiceGateway:
         Raises:
             VoiceProviderException: If ALL providers fail.
         """
+        await self._ensure_tts_providers()
         segments = self.tts_router.route(text, language, hotwords=hotwords)
         if len(segments) > 1:
             logger.info(
@@ -172,17 +188,38 @@ class VoiceGateway:
 
         for name, provider in self.tts_providers:
             try:
+                started_at = time.perf_counter()
+                logger.info(
+                    "TTS provider '%s' started: chars=%d language=%s timeout=%.0fs",
+                    name,
+                    len(text),
+                    language,
+                    settings.TTS_PROVIDER_TIMEOUT,
+                )
                 result = await asyncio.wait_for(
                     provider.synthesize(text, language),
-                    timeout=_PROVIDER_TIMEOUT,
+                    timeout=settings.TTS_PROVIDER_TIMEOUT,
                 )
+                elapsed_ms = (time.perf_counter() - started_at) * 1000
                 result.tts_provider = name
                 result.fallback_used = name != primary_name
+                logger.info(
+                    "TTS provider '%s' completed: elapsed=%.0fms bytes=%d mime=%s",
+                    name,
+                    elapsed_ms,
+                    len(result.audio_bytes),
+                    result.mime_type,
+                )
                 if result.fallback_used:
                     logger.info("TTS fallback used: %s (primary=%s)", name, primary_name)
                 return result
-            except (VoiceProviderException, asyncio.TimeoutError) as exc:
-                logger.warning("TTS provider '%s' failed: %s", name, exc)
+            except asyncio.TimeoutError:
+                message = f"timed out after {settings.TTS_PROVIDER_TIMEOUT:.0f}s"
+                logger.warning("TTS provider '%s' failed: %s", name, message)
+                errors.append(f"{name}: {message}")
+                continue
+            except Exception as exc:
+                logger.exception("TTS provider '%s' failed unexpectedly", name)
                 errors.append(f"{name}: {exc}")
                 continue
 

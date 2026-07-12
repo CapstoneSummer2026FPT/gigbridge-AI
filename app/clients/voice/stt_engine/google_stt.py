@@ -112,14 +112,16 @@ class GoogleSTTEngine(BaseSTTEngine):
         try:
             response = await asyncio.wait_for(
                 client.recognize(config=config, audio=recognition_audio),
-                timeout=30.0,
+                timeout=settings.STT_PROVIDER_TIMEOUT,
             )
         except asyncio.TimeoutError:
-            raise VoiceProviderException("Google STT timed out after 30s")
+            raise VoiceProviderException(
+                f"Google STT timed out after {settings.STT_PROVIDER_TIMEOUT:g}s"
+            )
         except Exception as exc:
             raise VoiceProviderException(f"Google STT failed: {exc}")
 
-        if not response.results:
+        if not response.results or not response.results[0].alternatives:
             raise VoiceProviderException("Google STT returned empty results")
 
         best = response.results[0].alternatives[0]

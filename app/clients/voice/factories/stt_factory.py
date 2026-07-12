@@ -6,6 +6,7 @@ that is the gateway's responsibility.
 """
 
 import logging
+from typing import Optional
 
 from app.core.config import settings
 from app.core.exceptions import VoiceProviderException
@@ -22,7 +23,7 @@ class STTFactory:
     """
 
     @staticmethod
-    def create(provider_name: str = None) -> BaseSTTEngine:
+    def create(provider_name: Optional[str] = None) -> BaseSTTEngine:
         """Create and return the configured STT engine.
 
         Args:

@@ -5,6 +5,11 @@
 
 # ── Base Exception ──────────────────────────────────────────────
 
+import logging
+
+logger = logging.getLogger("ai_server.exceptions")
+
+
 class AIServerException(Exception):
     """Base exception for all AI Server errors."""
     def __init__(self, message: str, status_code: int = 500, errors: list = None):
@@ -78,6 +83,24 @@ class ConfirmConflictError(AIServerException):
         super().__init__(message=message, status_code=409)
 
 
+class InvalidAnswerError(AIServerException):
+    """Raised when a submitted or corrected answer is blank."""
+    def __init__(self, message: str = "answer_text_required"):
+        super().__init__(message=message, status_code=422)
+
+
+class InvalidSessionDataError(AIServerException):
+    """Raised when required session creation data is missing."""
+    def __init__(self, message: str = "job_id_required"):
+        super().__init__(message=message, status_code=422)
+
+
+class SessionAccessDeniedError(AIServerException):
+    """Raised when a session-scoped capability token is invalid."""
+    def __init__(self, message: str = "session_access_denied"):
+        super().__init__(message=message, status_code=403)
+
+
 # ── Exception Handlers ──────────────────────────────────────────
 
 def register_exception_handlers(app) -> None:
@@ -88,13 +111,27 @@ def register_exception_handlers(app) -> None:
 
     @app.exception_handler(AIServerException)
     async def ai_server_exception_handler(request: Request, exc: AIServerException):
+        is_server_error = exc.status_code >= 500
+        if is_server_error:
+            logger.exception(
+                "AI service failure on %s %s",
+                request.method,
+                request.url.path,
+                exc_info=exc,
+            )
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "success": False,
-                "message": exc.message,
+                "message": (
+                    "Service temporarily unavailable"
+                    if exc.status_code in {502, 503}
+                    else "Internal Server Error"
+                    if is_server_error
+                    else exc.message
+                ),
                 "data": None,
-                "errors": exc.errors,
+                "errors": [] if is_server_error else exc.errors,
             },
         )
 
@@ -128,12 +165,18 @@ def register_exception_handlers(app) -> None:
 
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
+        logger.exception(
+            "Unhandled exception on %s %s",
+            request.method,
+            request.url.path,
+            exc_info=exc,
+        )
         return JSONResponse(
             status_code=500,
             content={
                 "success": False,
                 "message": "Internal Server Error",
                 "data": None,
-                "errors": [str(exc)],
+                "errors": [],
             },
         )

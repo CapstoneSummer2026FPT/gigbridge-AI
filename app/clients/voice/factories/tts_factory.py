@@ -1,9 +1,10 @@
 """TTS Factory — builds the configured TTS engine from environment config.
 
-Default settings list Edge TTS first (free, no API key), then Google TTS.
+Provider priority follows TTS_PRIMARY_PROVIDER and TTS_FALLBACK_PROVIDER.
 """
 
 import logging
+from typing import Optional
 
 from app.core.config import settings
 from app.core.exceptions import VoiceProviderException
@@ -16,7 +17,7 @@ class TTSFactory:
     """Builds TTS engine instances from config."""
 
     @staticmethod
-    def create(provider_name: str = None) -> BaseTTSEngine:
+    def create(provider_name: Optional[str] = None) -> BaseTTSEngine:
         """Create and return the configured TTS engine.
 
         Args:
@@ -35,15 +36,25 @@ class TTSFactory:
 
             return EdgeTTSEngine()
 
+        elif provider == "elevenlabs":
+            from app.clients.voice.tts_engine.elevenlabs_tts import ElevenLabsTTSEngine
+
+            return ElevenLabsTTSEngine()
+
         elif provider == "google":
             from app.clients.voice.tts_engine.google_tts import GoogleTTSEngine
 
             return GoogleTTSEngine()
 
+        elif provider == "vieneu":
+            from app.clients.voice.tts_engine.vieneu_tts import VieNeuTTSEngine
+
+            return VieNeuTTSEngine()
+
         else:
             raise VoiceProviderException(
                 f"Unknown TTS provider: {provider}. "
-                f"Supported: edge_tts, google"
+                f"Supported: edge_tts, elevenlabs, google, vieneu"
             )
 
     @staticmethod

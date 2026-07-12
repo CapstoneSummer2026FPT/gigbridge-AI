@@ -117,13 +117,51 @@ class VoiceService:
 
     # ── TTS Cache ──────────────────────────────────────────────
 
-    async def cache_tts(self, session_id: str, question_index: int, audio_bytes: bytes) -> None:
+    async def cache_tts(
+        self,
+        session_id: str,
+        question_index: int,
+        audio_bytes: bytes,
+        mime_type: str = "audio/wav",
+        tts_provider: str = "",
+        fallback_used: bool = False,
+    ) -> None:
         """Cache TTS audio for a question (15-minute TTL)."""
-        await self.gateway.session.cache_tts(session_id, question_index, audio_bytes)
+        await self.gateway.session.cache_tts(
+            session_id,
+            question_index,
+            audio_bytes,
+            mime_type=mime_type,
+            tts_provider=tts_provider,
+            fallback_used=fallback_used,
+        )
 
     async def get_cached_tts(self, session_id: str, question_index: int) -> Optional[bytes]:
         """Retrieve cached TTS audio, or None if not cached."""
         return await self.gateway.session.get_cached_tts(session_id, question_index)
+
+    async def get_cached_tts_meta(self, session_id: str, question_index: int) -> dict:
+        """Retrieve cached TTS metadata."""
+        return await self.gateway.session.get_cached_tts_meta(session_id, question_index)
+
+    async def set_tts_status(
+        self,
+        session_id: str,
+        question_index: int,
+        status: str,
+        error: Optional[str] = None,
+    ) -> None:
+        """Store background TTS status."""
+        await self.gateway.session.set_tts_status(
+            session_id,
+            question_index,
+            status,
+            error,
+        )
+
+    async def get_tts_status(self, session_id: str, question_index: int) -> dict:
+        """Retrieve background TTS status."""
+        return await self.gateway.session.get_tts_status(session_id, question_index)
 
     # ── Pointer Advancement ────────────────────────────────────
 
@@ -144,6 +182,10 @@ class VoiceService:
         """Check if this session already has a confirmed answer."""
         return await self.gateway.session.is_confirmed(session_id)
 
+    async def verify_audio_access_token(self, session_id: str, token: str) -> bool:
+        """Verify authorization for session-scoped TTS audio."""
+        return await self.gateway.session.verify_audio_access_token(session_id, token)
+
     # ── Conversation History ───────────────────────────────────
 
     async def add_history(self, session_id: str, role: str, content: str, language: str) -> None:
@@ -158,7 +200,7 @@ class VoiceService:
 # ── Dependency injection ────────────────────────────────────────
 
 _voice_service: Optional[VoiceService] = None
-_voice_service_lock = asyncio.Lock()
+_voice_service_lock: Optional[asyncio.Lock] = None
 
 
 async def get_voice_service() -> VoiceService:
@@ -167,8 +209,10 @@ async def get_voice_service() -> VoiceService:
     Uses an asyncio.Lock to prevent duplicate initialization races
     at startup. Safe for single-worker deployments.
     """
-    global _voice_service
+    global _voice_service, _voice_service_lock
     if _voice_service is None:
+        if _voice_service_lock is None:
+            _voice_service_lock = asyncio.Lock()
         async with _voice_service_lock:
             if _voice_service is None:
                 gateway = VoiceGateway()

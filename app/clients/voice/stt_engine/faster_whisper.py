@@ -4,6 +4,7 @@ import asyncio
 import logging
 import os
 import tempfile
+import time
 from typing import Optional
 
 import numpy as np
@@ -22,23 +23,22 @@ class FasterWhisperEngine(BaseSTTEngine):
 
     def __init__(self):
         self._model = None
+        self._model_load_task: Optional[asyncio.Task] = None
         self._chunker = AudioChunker()
 
-    async def _get_model(self):
-        """Lazy-load the WhisperModel on first use."""
-        if self._model is not None:
-            return self._model
-
+    async def _load_model(self):
+        """Construct the blocking model off the event loop."""
+        model_size = settings.FASTER_WHISPER_MODEL
         try:
             from faster_whisper import WhisperModel
 
-            model_size = settings.FASTER_WHISPER_MODEL
             logger.info(
                 f"Loading Faster-Whisper model '{model_size}' "
                 f"(device={settings.FASTER_WHISPER_DEVICE}, "
                 f"compute={settings.FASTER_WHISPER_COMPUTE_TYPE})"
             )
-            self._model = WhisperModel(
+            self._model = await asyncio.to_thread(
+                WhisperModel,
                 model_size,
                 device=settings.FASTER_WHISPER_DEVICE,
                 compute_type=settings.FASTER_WHISPER_COMPUTE_TYPE,
@@ -55,6 +55,19 @@ class FasterWhisperEngine(BaseSTTEngine):
                 f"Failed to load Faster-Whisper model '{model_size}': {exc}"
             )
 
+    async def _get_model(self):
+        """Lazy-load one shared model without blocking or duplicating work."""
+        if self._model is not None:
+            return self._model
+        if self._model_load_task is None:
+            self._model_load_task = asyncio.create_task(self._load_model())
+        try:
+            return await asyncio.shield(self._model_load_task)
+        except Exception:
+            if self._model_load_task.done():
+                self._model_load_task = None
+            raise
+
     async def transcribe(
         self,
         audio: bytes,
@@ -67,10 +80,20 @@ class FasterWhisperEngine(BaseSTTEngine):
 
         try:
             requested = (language or "").strip().lower()
-            lang_hint = None if requested in {"auto", "mixed"} else (
-                requested or primary_language or "vi"
-            )[:2]
+            primary_hint = (primary_language or "").strip().lower()
+            lang_hint = (
+                None
+                if requested in {"auto", "mixed"}
+                else (requested or primary_hint or "vi")[:2]
+            )
             initial_prompt = self._build_initial_prompt(hotwords)
+            logger.info(
+                "Faster-Whisper transcribe: requested=%s primary=%s lang_hint=%s audio_bytes=%d",
+                requested or "none",
+                primary_hint or "none",
+                lang_hint,
+                len(audio),
+            )
 
             chunks = self._chunker.split_wav(audio)
             if len(chunks) > 1:
@@ -103,6 +126,12 @@ class FasterWhisperEngine(BaseSTTEngine):
             full_text = " ".join(transcript_parts).strip()
             avg_logprob = np.mean(log_probs) if log_probs else -1.0
             confidence = float(max(0.0, min(1.0, avg_logprob + 1.0)))
+            logger.info(
+                "Faster-Whisper result: detected_language=%s confidence=%.2f chars=%d",
+                detected_lang,
+                confidence,
+                len(full_text),
+            )
 
             return TranscriptionResult(
                 text=full_text,
@@ -163,7 +192,18 @@ class FasterWhisperEngine(BaseSTTEngine):
             return text, log_probs, detected_language
         finally:
             if tmp_path and os.path.exists(tmp_path):
-                os.unlink(tmp_path)
+                for attempt in range(3):
+                    try:
+                        os.unlink(tmp_path)
+                        break
+                    except PermissionError as exc:
+                        if attempt == 2:
+                            logger.warning(
+                                "Could not delete temporary STT wav file yet: %s",
+                                exc,
+                            )
+                            break
+                        time.sleep(0.1)
 
     @staticmethod
     def _append_with_overlap_dedup(parts: list[str], next_text: str) -> list[str]:

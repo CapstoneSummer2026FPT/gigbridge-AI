@@ -134,6 +134,7 @@ class InterviewSession:
     mode: str
     language: str
     question_index: int
+    stt_language: str = ""
     job_title: str = ""
     job_description: str = ""
     job_skills: list[str] | None = None

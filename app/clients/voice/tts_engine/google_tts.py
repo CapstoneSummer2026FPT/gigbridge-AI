@@ -30,16 +30,16 @@ class GoogleTTSEngine(BaseTTSEngine):
     """
 
     def __init__(self):
+        if not settings.GOOGLE_APPLICATION_CREDENTIALS:
+            raise VoiceProviderException(
+                "GOOGLE_APPLICATION_CREDENTIALS not configured"
+            )
         self._client = None
 
     async def _get_client(self):
         """Lazy-init the client. Google SDK imports are deferred."""
         if self._client is not None:
             return self._client
-        if not settings.GOOGLE_APPLICATION_CREDENTIALS:
-            raise VoiceProviderException(
-                "GOOGLE_APPLICATION_CREDENTIALS not configured"
-            )
         from google.cloud.texttospeech import TextToSpeechAsyncClient
 
         self._client = TextToSpeechAsyncClient()
@@ -88,7 +88,7 @@ class GoogleTTSEngine(BaseTTSEngine):
                         voice=voice,
                         audio_config=audio_config,
                     ),
-                    timeout=30.0,
+                    timeout=settings.TTS_PROVIDER_TIMEOUT,
                 )
                 if response.audio_content:
                     return SynthesisResult(

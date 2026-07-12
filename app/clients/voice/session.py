@@ -8,9 +8,10 @@ Key schema (all keys prefixed by namespace):
   confirmed:{session_id}                  → string "1" (set after successful confirm, for conflict detection)
 """
 
-import base64
+import hashlib
 import json
 import logging
+import secrets
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
@@ -18,18 +19,10 @@ from typing import Optional
 import redis.asyncio as aioredis
 
 from app.core.config import settings
-from app.core.exceptions import VoiceProviderException
+from app.core.exceptions import InvalidSessionDataError, VoiceProviderException
 from app.clients.voice.models import DraftData, InterviewSession
 
 logger = logging.getLogger("ai_server.voice.session")
-
-# ── Lua script for GETDEL fallback (Redis < 6.2) ─────────────────
-_GETDEL_LUA = """
-local val = redis.call('GET', KEYS[1])
-if val then redis.call('DEL', KEYS[1]) end
-return val
-"""
-
 
 class VoiceSessionManager:
     """Redis-backed session manager for voice interviews.
@@ -40,7 +33,7 @@ class VoiceSessionManager:
 
     def __init__(self):
         self._redis: Optional[aioredis.Redis] = None
-        self._getdel_sha: Optional[str] = None
+        self._binary_redis: Optional[aioredis.Redis] = None
 
     # ── Public helpers ─────────────────────────────────────────
 
@@ -55,11 +48,25 @@ class VoiceSessionManager:
             )
         return self._redis
 
+    def binary_redis(self) -> aioredis.Redis:
+        """Return a binary Redis client for memory-efficient audio storage."""
+        if self._binary_redis is None:
+            if not settings.REDIS_URL:
+                raise VoiceProviderException("REDIS_URL not configured")
+            self._binary_redis = aioredis.from_url(
+                settings.REDIS_URL,
+                decode_responses=False,
+            )
+        return self._binary_redis
+
     async def close(self) -> None:
         """Close the Redis connection."""
         if self._redis is not None:
             await self._redis.aclose()
             self._redis = None
+        if self._binary_redis is not None:
+            await self._binary_redis.aclose()
+            self._binary_redis = None
 
     # ── Session CRUD ───────────────────────────────────────────
 
@@ -75,12 +82,17 @@ class VoiceSessionManager:
         """
         r = self.redis()
         session_id = data.get("session_id", f"int_{uuid.uuid4().hex[:12]}")
+        job_id = str(data.get("job_id") or "").strip()
+        if not job_id:
+            raise InvalidSessionDataError()
 
         mapping = {
-            "job_id": data["job_id"],
+            "job_id": job_id,
             "freelancer_id": data.get("freelancer_id", ""),
-            "mode": data.get("mode", "voice"),
+            "mode": data.get("mode", "text"),
             "language": data.get("language", "vi"),
+            "stt_language": data.get("stt_language", data.get("language", "vi")),
+            "audio_access_token_hash": data.get("audio_access_token_hash", ""),
             "question_index": str(data.get("question_index", 1)),
             "job_title": data.get("job_title", ""),
             "job_description": data.get("job_description", ""),
@@ -103,6 +115,7 @@ class VoiceSessionManager:
             mode=mapping["mode"],
             language=mapping["language"],
             question_index=int(mapping["question_index"]),
+            stt_language=mapping["stt_language"],
             job_title=mapping["job_title"],
             job_description=mapping["job_description"],
             job_skills=json.loads(mapping["job_skills"]),
@@ -129,6 +142,7 @@ class VoiceSessionManager:
             mode=data.get("mode", "text"),
             language=data.get("language", "vi"),
             question_index=int(data.get("question_index", 1)),
+            stt_language=data.get("stt_language") or data.get("language", "vi"),
             job_title=data.get("job_title", ""),
             job_description=data.get("job_description", ""),
             job_skills=self._json_list(data.get("job_skills")),
@@ -151,7 +165,7 @@ class VoiceSessionManager:
         cursor = 0
         while True:
             cursor, tts_keys = await r.scan(
-                cursor, match=f"tts_cache:{session_id}:q_*"
+                cursor, match=f"tts_*:{session_id}:q_*"
             )
             keys.extend(tts_keys)
             if cursor == 0:
@@ -212,35 +226,126 @@ class VoiceSessionManager:
         r = self.redis()
         return await r.exists(f"confirmed:{session_id}") > 0
 
+    async def verify_audio_access_token(self, session_id: str, token: str) -> bool:
+        """Verify the per-session audio capability token in constant time."""
+        expected = await self.redis().hget(
+            f"session:{session_id}", "audio_access_token_hash"
+        )
+        if not expected or not token:
+            return False
+        actual = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        return secrets.compare_digest(expected, actual)
+
     # ── TTS Cache ──────────────────────────────────────────────
 
-    async def cache_tts(self, session_id: str, question_index: int, audio_bytes: bytes) -> None:
+    async def cache_tts(
+        self,
+        session_id: str,
+        question_index: int,
+        audio_bytes: bytes,
+        mime_type: str = "audio/wav",
+        tts_provider: str = "",
+        fallback_used: bool = False,
+    ) -> None:
         """Cache TTS audio for a given question.
 
-        Stores as base64 to avoid decode_responses=True binary corruption.
+        Stores raw bytes with an expiring metadata record in one pipeline.
         """
-        r = self.redis()
+        r = self.binary_redis()
         key = f"tts_cache:{session_id}:q_{question_index}"
-        encoded = base64.b64encode(audio_bytes).decode("ascii")
-        await r.set(key, encoded)
-        await r.expire(key, settings.REDIS_TTS_CACHE_TTL)
+        meta_key = f"tts_meta:{session_id}:q_{question_index}"
+        async with r.pipeline(transaction=True) as pipe:
+            pipe.set(key, audio_bytes, ex=settings.REDIS_TTS_CACHE_TTL)
+            pipe.set(
+                meta_key,
+                json.dumps(
+                    {
+                        "mime_type": mime_type,
+                        "tts_provider": tts_provider,
+                        "fallback_used": fallback_used,
+                    }
+                ),
+                ex=settings.REDIS_TTS_CACHE_TTL,
+            )
+            await pipe.execute()
         logger.debug("TTS cached: %s q=%d (%d bytes raw)", session_id, question_index, len(audio_bytes))
 
     async def get_cached_tts(self, session_id: str, question_index: int) -> Optional[bytes]:
         """Retrieve cached TTS audio, or None if not cached/expired.
 
-        Decodes from base64 storage.
+        Uses a binary Redis client so bytes are not base64-inflated.
         """
-        r = self.redis()
+        r = self.binary_redis()
         key = f"tts_cache:{session_id}:q_{question_index}"
         raw = await r.get(key)
         if raw is None:
             return None
+        return bytes(raw)
+
+    async def get_cached_tts_meta(self, session_id: str, question_index: int) -> dict:
+        """Retrieve cached TTS metadata, or defaults if metadata is missing."""
+        r = self.redis()
+        raw = await r.get(f"tts_meta:{session_id}:q_{question_index}")
+        if not raw:
+            return {
+                "mime_type": "audio/wav",
+                "tts_provider": "cache",
+                "fallback_used": False,
+            }
         try:
-            return base64.b64decode(raw)
-        except (ValueError, TypeError) as exc:
-            logger.warning("Failed to decode cached TTS for %s q=%d: %s", session_id, question_index, exc)
-            return None
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            return {
+                "mime_type": "audio/wav",
+                "tts_provider": "cache",
+                "fallback_used": False,
+            }
+        return {
+            "mime_type": data.get("mime_type") or "audio/wav",
+            "tts_provider": data.get("tts_provider") or "cache",
+            "fallback_used": bool(data.get("fallback_used", False)),
+        }
+
+    async def set_tts_status(
+        self,
+        session_id: str,
+        question_index: int,
+        status: str,
+        error: Optional[str] = None,
+    ) -> None:
+        """Store background TTS job status for polling."""
+        r = self.redis()
+        key = f"tts_status:{session_id}:q_{question_index}"
+        await r.set(
+            key,
+            json.dumps(
+                {
+                    "status": status,
+                    "error": error,
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }
+            ),
+        )
+        await r.expire(key, settings.REDIS_TTS_CACHE_TTL)
+
+    async def get_tts_status(self, session_id: str, question_index: int) -> dict:
+        """Retrieve background TTS status."""
+        cached = await self.get_cached_tts(session_id, question_index)
+        if cached is not None:
+            return {"status": "ready", "error": None}
+
+        r = self.redis()
+        raw = await r.get(f"tts_status:{session_id}:q_{question_index}")
+        if not raw:
+            return {"status": "missing", "error": None}
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            return {"status": "missing", "error": None}
+        return {
+            "status": data.get("status") or "missing",
+            "error": data.get("error"),
+        }
 
     # ── Pointer Advancement ────────────────────────────────────
 
@@ -285,23 +390,14 @@ class VoiceSessionManager:
     # ── Private helpers ────────────────────────────────────────
 
     async def _atomic_getdel(self, key: str) -> Optional[str]:
-        """Perform GETDEL, with Lua fallback for Redis < 6.2."""
+        """Perform native Redis GETDEL; atomicity is a hard requirement."""
         r = self.redis()
         try:
             # Redis 6.2+ — native GETDEL
             return await r.getdel(key)
         except Exception:
-            # Fallback: try Lua script
-            try:
-                if self._getdel_sha is None:
-                    self._getdel_sha = await r.script_load(_GETDEL_LUA)
-                return await r.evalsha(self._getdel_sha, 1, key)
-            except Exception:
-                # Final fallback: GET + DEL (not atomic, but works)
-                val = await r.get(key)
-                if val is not None:
-                    await r.delete(key)
-                return val
+            logger.exception("Atomic GETDEL failed for Redis key %s", key)
+            raise
 
     @staticmethod
     def _draft_to_dict(draft: DraftData) -> dict:
