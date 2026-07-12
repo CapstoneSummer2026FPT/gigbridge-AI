@@ -107,7 +107,12 @@ def fetch_documents():
         if file_path.suffix == ".md":
             try:
                 with open(file_path, "r", encoding="utf-8") as f:
-                    documents.append({"type": doc_type, "source": file_path.as_posix(), "text": f.read()})
+                    documents.append({
+                        "type": doc_type,
+                        "source": file_path.as_posix(),
+                        "text": f.read(),
+                        "is_pre_chunked": False
+                    })
             except Exception as e:
                 print(f"Error reading file {file_path}: {e}")
         elif file_path.suffix == ".jsonl":
@@ -125,13 +130,11 @@ def fetch_documents():
                             if k not in ["metadata"] and not isinstance(v, (dict, list)):
                                 metadata[k] = v
 
-                        is_small = len(text) < 1000
                         documents.append({
                             "type": doc_type,
                             "source": f"{file_path.as_posix()}:line_{line_idx + 1}",
                             "text": text,
-                            "is_pre_chunked": is_small,
-                            "chunks": [Chunk(headline=doc_type.replace("-", " ").title(), summary=text[:150], original_text=text)] if is_small else [],
+                            "is_pre_chunked": True,
                             "metadata": metadata
                         })
             except Exception as e:
@@ -286,7 +289,10 @@ async def process_document_async(document):
 
 def process_document(document):
     if document.get("is_pre_chunked"):
-        return [chunk.as_result(document) for chunk in document["chunks"]]
+        metadata = {"source": document["source"], "type": document["type"]}
+        if "metadata" in document and isinstance(document["metadata"], dict):
+            metadata.update(document["metadata"])
+        return [Result(page_content=document["text"], metadata=metadata)]
         
     return asyncio.run(process_document_async(document))
 
