@@ -1,11 +1,12 @@
 import os
 import sys
 import json
+import asyncio
 from pathlib import Path
 from pydantic import BaseModel, Field
 from chromadb import PersistentClient
 from tqdm import tqdm
-from litellm import completion
+from litellm import completion, acompletion
 from multiprocessing import Pool
 from tenacity import retry, wait_exponential, stop_after_attempt
 
@@ -85,6 +86,14 @@ class Chunk(BaseModel):
 class Chunks(BaseModel):
     chunks: list[Chunk]
 
+class ChunkMetadata(BaseModel):
+    headline: str = Field(
+        description="A brief search-optimized heading for this chunk, typically a few words, that is most likely to match queries for this content"
+    )
+    summary: str = Field(
+        description="A 1-2 sentence summary of this chunk's key facts"
+    )
+
 def fetch_documents():
     """A homemade version of the LangChain DirectoryLoader supporting both Markdown and JSONL"""
     documents = []
@@ -140,63 +149,146 @@ def fetch_documents():
     print(f"Loaded {len(documents)} documents")
     return documents
 
-def make_prompt(document):
-    how_many = (len(document["text"]) // AVERAGE_CHUNK_SIZE) + 1
+def split_text_recursive(text: str, max_chars: int = 1200, overlap: int = 300) -> list[str]:
+    """
+    Recursively splits text using paragraph, line, sentence, and word boundaries
+    to create chunks of at most max_chars with overlap.
+    """
+    if len(text) <= max_chars:
+        return [text]
+
+    # Separators from largest to smallest
+    separators = ["\n\n", "\n", ". ", " ", ""]
+    
+    def _split(txt: str, separators: list[str]) -> list[str]:
+        if len(txt) <= max_chars or not separators:
+            return [txt]
+        
+        sep = separators[0]
+        splits = txt.split(sep)
+        
+        chunks = []
+        current_chunk = []
+        current_len = 0
+        
+        for part in splits:
+            part_len = len(part)
+            if part_len > max_chars:
+                # Flush current chunk first
+                if current_chunk:
+                    chunks.append(sep.join(current_chunk))
+                    current_chunk = []
+                    current_len = 0
+                
+                sub_chunks = _split(part, separators[1:])
+                chunks.extend(sub_chunks)
+            else:
+                added_len = part_len + (len(sep) if current_chunk else 0)
+                if current_len + added_len <= max_chars:
+                    current_chunk.append(part)
+                    current_len += added_len
+                else:
+                    if current_chunk:
+                        chunks.append(sep.join(current_chunk))
+                    current_chunk = [part]
+                    current_len = part_len
+                    
+        if current_chunk:
+            chunks.append(sep.join(current_chunk))
+            
+        return [c for c in chunks if c.strip()]
+
+    raw_chunks = _split(text, separators)
+    
+    # Apply overlap merging
+    merged_chunks = []
+    for i, chunk in enumerate(raw_chunks):
+        if i == 0:
+            merged_chunks.append(chunk)
+            continue
+            
+        prev_chunk = raw_chunks[i - 1]
+        overlap_text = prev_chunk[-overlap:]
+        space_idx = overlap_text.find(" ")
+        if space_idx != -1:
+            overlap_text = overlap_text[space_idx + 1:]
+            
+        merged_chunks.append(overlap_text + "\n" + chunk)
+        
+    return merged_chunks
+
+def make_chunk_summary_prompt(chunk_text: str, doc_type: str, source: str) -> str:
     return f"""
-You take a document and you split the document into overlapping chunks for a KnowledgeBase.
+You are an AI assistant processing documentation for a company called GigBridge.
 
-The document is from the shared drive of a company called GigBridge.
-The document is of type: {document["type"]}
-The document has been retrieved from: {document["source"]}
+Here is a specific text chunk from a document of type '{doc_type}' retrieved from '{source}':
 
-A chatbot will use these chunks to answer questions about the company.
-You should divide up the document as you see fit, being sure that the entire document is returned across the chunks - don't leave anything out.
-This document should probably be split into at least {how_many} chunks, but you can have more or less as appropriate, ensuring that there are individual chunks to answer specific questions.
-There should be overlap between the chunks as appropriate; typically about 25% overlap or about 50 words, so you have the same text in multiple chunks for best retrieval results.
+---
+{chunk_text}
+---
 
-For each chunk, you should provide a headline, a summary, and the original text of the chunk.
-Together your chunks should represent the entire document with overlap.
+Generate:
+1. A search-optimized headline (3-5 words) that is most likely to match queries for this content.
+2. A brief 1-2 sentence summary of the key facts in this chunk.
 
-Here is the document:
-
-{document["text"]}
-
-Respond with the chunks.
+Respond in JSON format matching the schema.
 """
 
-def make_messages(document):
-    return [
-        {"role": "user", "content": make_prompt(document)},
-    ]
+async def process_document_async(document):
+    raw_chunks = split_text_recursive(document["text"])
+    
+    # Limit concurrency to 15 parallel requests
+    sem = asyncio.Semaphore(15)
+    
+    async def process_single_chunk(chunk_text: str) -> Result:
+        metadata = {"source": document["source"], "type": document["type"]}
+        if "metadata" in document and isinstance(document["metadata"], dict):
+            metadata.update(document["metadata"])
+            
+        prompt = make_chunk_summary_prompt(chunk_text, document["type"], document["source"])
+        messages = [{"role": "user", "content": prompt}]
+        
+        headline = document["type"].replace("-", " ").title()
+        summary = chunk_text[:150]
+        
+        async with sem:
+            try:
+                response = await acompletion(
+                    model=MODEL,
+                    messages=messages,
+                    response_format=ChunkMetadata
+                )
+                reply = response.choices[0].message.content
+                meta = ChunkMetadata.model_validate_json(reply)
+                headline = meta.headline
+                summary = meta.summary
+            except Exception as e:
+                print(f"Warning: model {MODEL} failed ({e}) on chunk summary. Retrying with fallback model {FALLBACK_MODEL}...")
+                try:
+                    response = await acompletion(
+                        model=FALLBACK_MODEL,
+                        messages=messages,
+                        response_format=ChunkMetadata
+                    )
+                    reply = response.choices[0].message.content
+                    meta = ChunkMetadata.model_validate_json(reply)
+                    headline = meta.headline
+                    summary = meta.summary
+                except Exception as e2:
+                    print(f"Error: Fallback model failed too ({e2}) on chunk summary. Using fallback values.")
+        
+        page_content = f"{headline}\n\n{summary}\n\n{chunk_text}"
+        return Result(page_content=page_content, metadata=metadata)
+        
+    tasks = [process_single_chunk(c) for c in raw_chunks]
+    results = await asyncio.gather(*tasks)
+    return list(results)
 
-@retry(
-    wait=wait_exponential(multiplier=1, min=10, max=240),
-    stop=stop_after_attempt(5),
-    reraise=True
-)
 def process_document(document):
     if document.get("is_pre_chunked"):
         return [chunk.as_result(document) for chunk in document["chunks"]]
-
-    messages = make_messages(document)
-    try:
-        response = completion(model=MODEL, messages=messages, response_format=Chunks)
-        reply = response.choices[0].message.content
-    except Exception as e:
-        print(f"Warning: model {MODEL} failed ({e}). Retrying semantic chunking with fallback model {FALLBACK_MODEL}...")
-        try:
-            response = completion(model=FALLBACK_MODEL, messages=messages, response_format=Chunks)
-            reply = response.choices[0].message.content
-        except Exception as e2:
-            print(f"Error: Fallback model failed too ({e2}). Skipping document {document['source']}.")
-            return []
-            
-    try:
-        doc_as_chunks = Chunks.model_validate_json(reply).chunks
-        return [chunk.as_result(document) for chunk in doc_as_chunks]
-    except Exception as parse_err:
-        print(f"Error parsing JSON from response for doc {document['source']}: {parse_err}")
-        return []
+        
+    return asyncio.run(process_document_async(document))
 
 def create_chunks(documents):
     """

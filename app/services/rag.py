@@ -2,6 +2,7 @@ import uuid
 import logging
 import os
 import json
+import asyncio
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
@@ -44,6 +45,14 @@ class Chunk(BaseModel):
 
 class Chunks(BaseModel):
     chunks: List[Chunk]
+
+class ChunkMetadata(BaseModel):
+    headline: str = Field(
+        description="A brief search-optimized heading for this chunk, typically a few words, that is most likely to match queries for this content"
+    )
+    summary: str = Field(
+        description="A 1-2 sentence summary of this chunk's key facts"
+    )
 
 class RankOrder(BaseModel):
     order: List[int] = Field(
@@ -94,81 +103,151 @@ class RAGService:
                 break
         return chunks
 
-    def make_chunk_prompt(self, document: Dict[str, Any], average_chunk_size: int = 100) -> str:
-        how_many = (len(document["text"]) // average_chunk_size) + 1
+    def split_text_recursive(self, text: str, max_chars: int = 1200, overlap: int = 300) -> List[str]:
+        """
+        Recursively splits text using paragraph, line, sentence, and word boundaries
+        to create chunks of at most max_chars with overlap.
+        """
+        if len(text) <= max_chars:
+            return [text]
+
+        # Separators from largest to smallest
+        separators = ["\n\n", "\n", ". ", " ", ""]
+        
+        def _split(txt: str, separators: List[str]) -> List[str]:
+            if len(txt) <= max_chars or not separators:
+                return [txt]
+            
+            sep = separators[0]
+            splits = txt.split(sep)
+            
+            chunks = []
+            current_chunk = []
+            current_len = 0
+            
+            for part in splits:
+                part_len = len(part)
+                if part_len > max_chars:
+                    # Flush current chunk first
+                    if current_chunk:
+                        chunks.append(sep.join(current_chunk))
+                        current_chunk = []
+                        current_len = 0
+                    
+                    sub_chunks = _split(part, separators[1:])
+                    chunks.extend(sub_chunks)
+                else:
+                    added_len = part_len + (len(sep) if current_chunk else 0)
+                    if current_len + added_len <= max_chars:
+                        current_chunk.append(part)
+                        current_len += added_len
+                    else:
+                        if current_chunk:
+                            chunks.append(sep.join(current_chunk))
+                        current_chunk = [part]
+                        current_len = part_len
+                        
+            if current_chunk:
+                chunks.append(sep.join(current_chunk))
+                
+            return [c for c in chunks if c.strip()]
+
+        raw_chunks = _split(text, separators)
+        
+        # Apply overlap merging
+        merged_chunks = []
+        for i, chunk in enumerate(raw_chunks):
+            if i == 0:
+                merged_chunks.append(chunk)
+                continue
+                
+            prev_chunk = raw_chunks[i - 1]
+            overlap_text = prev_chunk[-overlap:]
+            space_idx = overlap_text.find(" ")
+            if space_idx != -1:
+                overlap_text = overlap_text[space_idx + 1:]
+                
+            merged_chunks.append(overlap_text + "\n" + chunk)
+            
+        return merged_chunks
+
+    def make_chunk_summary_prompt(self, chunk_text: str, doc_type: str, source: str) -> str:
         return f"""
-You take a document and you split the document into overlapping chunks for a KnowledgeBase.
+You are an AI assistant processing documentation for a company called GigBridge.
 
-The document is from the shared drive of a company called GigBridge.
-The document is of type: {document["type"]}
-The document has been retrieved from: {document["source"]}
+Here is a specific text chunk from a document of type '{doc_type}' retrieved from '{source}':
 
-A chatbot will use these chunks to answer questions about the company.
-You should divide up the document as you see fit, being sure that the entire document is returned across the chunks - don't leave anything out.
-This document should probably be split into at least {how_many} chunks, but you can have more or less as appropriate, ensuring that there are individual chunks to answer specific questions.
-There should be overlap between the chunks as appropriate; typically about 25% overlap or about 50 words, so you have the same text in multiple chunks for best retrieval results.
+---
+{chunk_text}
+---
 
-For each chunk, you should provide a headline, a summary, and the original text of the chunk.
-Together your chunks should represent the entire document with overlap.
+Generate:
+1. A search-optimized headline (3-5 words) that is most likely to match queries for this content.
+2. A brief 1-2 sentence summary of the key facts in this chunk.
 
-Here is the document:
-
-{document["text"]}
-
-Respond with the chunks.
+Respond in JSON format matching the schema.
 """
 
     async def process_document_semantic(self, document: Dict[str, Any]) -> List[Result]:
         """
-        Splits a document semantically using LLM structure generation.
+        Splits a document semantically using a hybrid approach: local recursive splitting
+        followed by parallelized, cheap LLM requests to generate headlines/summaries.
         """
         if document.get("is_pre_chunked"):
             return [chunk.as_result(document) for chunk in document["chunks"]]
 
-        prompt = self.make_chunk_prompt(document)
-        messages = [{"role": "user", "content": prompt}]
+        # 1. Split the text locally using the recursive character splitter
+        raw_chunks = self.split_text_recursive(document["text"])
         
-        try:
-            # Use acompletion for async LLM call
-            response = await acompletion(
-                model=self.chunk_model,
-                messages=messages,
-                response_format=Chunks
-            )
-            reply = response.choices[0].message.content
-        except Exception as e:
-            logger.warning(f"Semantic chunking with {self.chunk_model} failed: {str(e)}. Retrying with {self.fallback_model}.")
-            try:
-                response = await acompletion(
-                    model=self.fallback_model,
-                    messages=messages,
-                    response_format=Chunks
-                )
-                reply = response.choices[0].message.content
-            except Exception as e2:
-                logger.error(f"Semantic chunking failed completely: {str(e2)}")
-                # Sequentially fallback to standard word-based chunker
-                chunks = self.chunk_text(document["text"])
-                return [
-                    Result(
-                        page_content=f"Section from {document['source']}\n\n{chunk}",
-                        metadata={"source": document["source"], "type": document["type"]}
-                    ) for chunk in chunks
-                ]
-
-        try:
-            doc_as_chunks = Chunks.model_validate_json(reply).chunks
-            return [chunk.as_result(document) for chunk in doc_as_chunks]
-        except Exception as parse_err:
-            logger.error(f"Failed to parse semantic chunks JSON: {str(parse_err)}")
-            # Fallback to standard word-based chunker
-            chunks = self.chunk_text(document["text"])
-            return [
-                Result(
-                    page_content=f"Section from {document['source']}\n\n{chunk}",
-                    metadata={"source": document["source"], "type": document["type"]}
-                ) for chunk in chunks
-            ]
+        # Semaphore to limit concurrency (15 parallel requests)
+        sem = asyncio.Semaphore(15)
+        
+        async def process_single_chunk(chunk_text: str) -> Result:
+            metadata = {"source": document.get("source", ""), "type": document.get("type", "")}
+            if "metadata" in document and isinstance(document["metadata"], dict):
+                metadata.update(document["metadata"])
+                
+            prompt = self.make_chunk_summary_prompt(chunk_text, document["type"], document["source"])
+            messages = [{"role": "user", "content": prompt}]
+            
+            headline = document["type"].replace("-", " ").title()
+            summary = chunk_text[:150]
+            
+            async with sem:
+                try:
+                    response = await acompletion(
+                        model=self.chunk_model,
+                        messages=messages,
+                        response_format=ChunkMetadata
+                    )
+                    reply = response.choices[0].message.content
+                    meta = ChunkMetadata.model_validate_json(reply)
+                    headline = meta.headline
+                    summary = meta.summary
+                except Exception as e:
+                    logger.warning(
+                        f"Chunk summary with {self.chunk_model} failed: {str(e)}. Retrying with {self.fallback_model}..."
+                    )
+                    try:
+                        response = await acompletion(
+                            model=self.fallback_model,
+                            messages=messages,
+                            response_format=ChunkMetadata
+                        )
+                        reply = response.choices[0].message.content
+                        meta = ChunkMetadata.model_validate_json(reply)
+                        headline = meta.headline
+                        summary = meta.summary
+                    except Exception as e2:
+                        logger.error(f"LLM metadata generation failed completely: {str(e2)}. Using fallback values.")
+            
+            page_content = f"{headline}\n\n{summary}\n\n{chunk_text}"
+            return Result(page_content=page_content, metadata=metadata)
+            
+        # Run all chunking tasks concurrently
+        tasks = [process_single_chunk(c) for c in raw_chunks]
+        results = await asyncio.gather(*tasks)
+        return list(results)
 
     async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """
