@@ -1,18 +1,14 @@
 from typing import List, Dict, Any, Optional
-from openai import AsyncOpenAI
+import httpx
 from app.clients.llm.base import BaseLLMClient
 from app.core.config import settings
 
 class LocalModelClient(BaseLLMClient):
-    """Client for local model generation (via local Ollama OpenAI-compatible endpoint)"""
+    """Client for local model generation via Ollama's native chat API."""
     
     def __init__(self):
-        self.base_url = f"{settings.LOCAL_OLLAMA_URL.rstrip('/')}/v1/"
+        self.base_url = settings.LOCAL_OLLAMA_URL.rstrip("/")
         self.model_name = settings.LOCAL_MODEL_NAME
-        self.client = AsyncOpenAI(
-            api_key="ollama-local",  # Mock key required by SDK
-            base_url=self.base_url
-        )
 
     async def generate(
         self,
@@ -29,19 +25,21 @@ class LocalModelClient(BaseLLMClient):
                 
         messages.append({"role": "user", "content": user_prompt})
 
-        kwargs = {
+        payload: Dict[str, Any] = {
             "model": self.model_name,
             "messages": messages,
-            "temperature": 0.0
+            "stream": False,
+            "options": {
+                "temperature": 0.0
+            }
         }
 
-        # Ollama supports structured JSON output format via standard client calls if configured
         if response_format:
-            response = await self.client.beta.chat.completions.parse(
-                **kwargs,
-                response_format=response_format
-            )
-            return response.choices[0].message.content
-        else:
-            response = await self.client.chat.completions.create(**kwargs)
-            return response.choices[0].message.content
+            payload["format"] = response_format.model_json_schema()
+
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            response = await client.post(f"{self.base_url}/api/chat", json=payload)
+            response.raise_for_status()
+            data = response.json()
+
+        return data["message"]["content"]

@@ -1,4 +1,6 @@
-from fastapi import Security, HTTPException, status
+import secrets
+
+from fastapi import Security
 from fastapi.security import APIKeyHeader
 from app.core.config import settings
 from app.core.exceptions import SecurityException
@@ -12,7 +14,7 @@ async def verify_api_key(api_key: str = Security(API_KEY_HEADER)) -> str:
     if not api_key:
         raise SecurityException("API Key missing in request headers.")
     
-    if api_key != settings.AI_SERVER_API_KEY:
+    if not secrets.compare_digest(api_key, settings.AI_SERVER_API_KEY):
         raise SecurityException("Invalid API Key.")
         
     return api_key
