@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.security import verify_api_key
 from app.core.rate_limit import limiter, rate_limit_exceeded_handler
-from app.api.routes import job_posts, interviews, matching, analysis
+from app.api.routes import job_posts, interviews, matching, analysis, rag
 
 logger = logging.getLogger("ai_server")
 logging.basicConfig(
@@ -74,6 +74,12 @@ app.include_router(
     prefix="/api/ai",
     tags=["AI Analysis"],
     dependencies=[Depends(verify_api_key)],
+)
+app.include_router(
+    rag.router,
+    prefix="/api/ai",
+    tags=["RAG Knowledge Base"],
+    dependencies=[Depends(verify_api_key)]
 )
 
 

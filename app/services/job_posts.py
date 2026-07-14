@@ -5,7 +5,6 @@ from app.services.memory import MemoryManager, get_memory_manager
 from app.prompts.manager import PromptManager, get_prompt_manager
 from app.core.exceptions import AIServerException
 
-
 logger = logging.getLogger("ai_server.job_posts_service")
 
 def is_vietnamese(text: str) -> bool:
@@ -19,15 +18,20 @@ class JobPostService:
         self,
         llm_gateway: LLMGateway = get_llm_gateway(),
         memory_manager: MemoryManager = get_memory_manager(),
-        prompt_manager: PromptManager = get_prompt_manager()
+        prompt_manager: PromptManager = get_prompt_manager(),
+        rag_service = None
     ):
         self.llm = llm_gateway
         self.memory = memory_manager
         self.prompt = prompt_manager
+        from app.services.rag import get_rag_service
+        self.rag = rag_service or get_rag_service()
 
     async def generate_job_description(self, request: JobPostGenerationRequest) -> JobPostGenerationResponse:
-        logger.info("Generating job description")
+        logger.info("Generating job description using RAG pipeline")
         
+        from app.api.schemas.rag import AnswerConfig, RetrievalGroup
+
         target_lang = "Vietnamese" if is_vietnamese(request.client_prompt) else "English"
 
         system_prompt = (
@@ -44,26 +48,32 @@ class JobPostService:
             "- All other fields (specifically 'title' and 'custom_skills') MUST ALWAYS be generated in English, regardless of the prompt's language."
         )
 
-        user_prompt = self.prompt.render_prompt("job_posts.txt", {
-            "client_prompt": request.client_prompt,
-            "allowed_majors": request.allowed_majors,
-            "allowed_categories": request.allowed_categories,
-            "available_skills": request.available_skills,
-            "target_language": target_lang
-        })
-
-        logger.debug(f"SYSTEM PROMPT:\n{system_prompt}")
-        logger.debug(f"USER PROMPT:\n{user_prompt}")
-
-        # Call LLM Gateway with response_format to get structured JSON output
-        response_json = await self.llm.generate(
+        config = AnswerConfig(
+            style="fast",
+            collection_name="ai-create-job-post",
+            response_format=JobPostGenerationResponse,
+            retrieval_groups=[
+                RetrievalGroup(name="majors", n_results=10, where={"type": "major"}),
+                RetrievalGroup(name="categories", n_results=15, where={"type": "category"}),
+                RetrievalGroup(name="skills", n_results=30, where={"type": "skill"}),
+            ],
             system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            response_format=JobPostGenerationResponse
+            user_template="job_posts.txt"
         )
 
-        # Parse structured response
-        response_data = JobPostGenerationResponse.model_validate_json(response_json)
+        # Invoke unified configuration-driven RAG answering flow
+        result = await self.rag.answer_question(request.client_prompt, config)
+        
+        response_data = result.answer
+
+        # If LLM generation fell back to string due to parsing error, raise exception
+        if isinstance(response_data, str):
+            logger.error(f"Failed to parse job description structured output: {response_data}")
+            raise AIServerException(
+                message="The model generated an invalid job description response structure.",
+                status_code=500,
+                errors=["invalid_response_structure"]
+            )
 
         # Check for policy violation sentinel
         if response_data.title == "POLICY_VIOLATION":
@@ -83,7 +93,12 @@ class JobPostService:
             response_data.custom_skills = response_data.custom_skills[:(10 - total_system)]
 
         # Map system skill IDs to names to maintain backward-compatible combined `skills` list in memory cache
-        skill_id_to_name = {s.skill_id: s.name for s in request.available_skills}
+        skill_id_to_name = {}
+        for src in result.sources:
+            meta = src.get("metadata", {})
+            if meta.get("type") == "skill" and "skill_id" in meta and "name" in meta:
+                skill_id_to_name[meta["skill_id"]] = meta["name"]
+
         combined_skills = [
             skill_id_to_name[sid] for sid in response_data.system_skill_ids if sid in skill_id_to_name
         ] + response_data.custom_skills
@@ -107,4 +122,3 @@ class JobPostService:
 # Dependency helper
 def get_job_post_service() -> JobPostService:
     return JobPostService()
-

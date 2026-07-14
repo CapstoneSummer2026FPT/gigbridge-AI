@@ -1,0 +1,723 @@
+{"type": "major", "major_id": "dd491f54-221f-4b80-aa10-227f1ea49a12", "name": "Công nghệ thông tin"}
+{"type": "major", "major_id": "cb887a7d-2539-469b-98b7-a4417207242e", "name": "AI, Dữ liệu & Tự động hóa"}
+{"type": "major", "major_id": "f84d17f5-ab06-4773-8863-4da24fa8a502", "name": "Thiết kế & Sáng tạo số"}
+{"type": "major", "major_id": "78cff18c-16fd-4654-8782-f1fbe85c5e89", "name": "Marketing & Growth"}
+{"type": "major", "major_id": "5ceb0a5e-e851-4e07-90f8-edc08410af69", "name": "Nội dung, Viết lách & Dịch thuật"}
+{"type": "major", "major_id": "9e65412d-a7b8-41ef-bebf-611e555cf33a", "name": "Sản phẩm, Quản lý dự án & QA"}
+{"type": "major", "major_id": "31ebb0b3-8d48-42d2-86f3-65edc75b5a11", "name": "Kinh doanh, Vận hành & Hỗ trợ ảo"}
+{"type": "major", "major_id": "9aad2513-e82d-474f-ae10-b56fed4c6353", "name": "Tài chính, Pháp lý & Tư vấn online"}
+{"type": "major", "major_id": "10191a40-2a6b-41b4-a247-ddbbb18d6cff", "name": "Giáo dục trực tuyến & E-learning"}
+{"type": "major", "major_id": "53c6622e-0e40-4e9c-889e-b8fc0ab228fe", "name": "Blockchain, Game & XR"}
+{"type": "category", "category_id": "002e5df2-ab84-4303-88a1-5cdf08ec046d", "major_id": "31ebb0b3-8d48-42d2-86f3-65edc75b5a11", "name": "Lead Generation Specialist"}
+{"type": "category", "category_id": "008c8c0b-1d67-4549-85fe-f84ddeaf976e", "major_id": "dd491f54-221f-4b80-aa10-227f1ea49a12", "name": "Cloud Engineer"}
+{"type": "category", "category_id": "00fcd14e-15fc-490c-b8d0-88379c74a61f", "major_id": "53c6622e-0e40-4e9c-889e-b8fc0ab228fe", "name": "Game Designer"}
+{"type": "category", "category_id": "031621e6-b300-494d-8f31-df08e375063f", "major_id": "dd491f54-221f-4b80-aa10-227f1ea49a12", "name": "Cybersecurity Consultant"}
+{"type": "category", "category_id": "075697b3-61d7-4ed2-af32-a7088c588a0f", "major_id": "10191a40-2a6b-41b4-a247-ddbbb18d6cff", "name": "Online Tutor"}
+{"type": "category", "category_id": "09323372-14bb-40b9-a473-b7758d82b345", "major_id": "78cff18c-16fd-4654-8782-f1fbe85c5e89", "name": "Marketing Automation Specialist"}
+{"type": "category", "category_id": "0dddbfaf-1b52-4754-aba8-9e31627aa0bf", "major_id": "10191a40-2a6b-41b4-a247-ddbbb18d6cff", "name": "Course Video Editor"}
+{"type": "category", "category_id": "0e8bfdc2-3da3-4997-ae92-9a7376f2104d", "major_id": "31ebb0b3-8d48-42d2-86f3-65edc75b5a11", "name": "Research Assistant"}
+{"type": "category", "category_id": "161680e4-8a8b-4fd1-8695-5e65f6369fb2", "major_id": "78cff18c-16fd-4654-8782-f1fbe85c5e89", "name": "Email Marketing Specialist"}
+{"type": "category", "category_id": "1abcad7f-c486-447b-83cf-e0abeb6e1f61", "major_id": "cb887a7d-2539-469b-98b7-a4417207242e", "name": "AI Automation Specialist"}
+{"type": "category", "category_id": "1e24afaa-0b43-41d6-bf02-6114e6225cf1", "major_id": "f84d17f5-ab06-4773-8863-4da24fa8a502", "name": "Product Designer"}
+{"type": "category", "category_id": "21ee5311-30cb-4db7-9be5-a13fb173f434", "major_id": "cb887a7d-2539-469b-98b7-a4417207242e", "name": "Prompt Engineer"}
+{"type": "category", "category_id": "228165d2-f2e5-4a4b-8fe6-bd6ad3cd0e4e", "major_id": "10191a40-2a6b-41b4-a247-ddbbb18d6cff", "name": "LMS Administrator"}
+{"type": "category", "category_id": "26c44a77-b3a8-4bb2-aaef-5bb013361b4a", "major_id": "9aad2513-e82d-474f-ae10-b56fed4c6353", "name": "Tax Consultant"}
+{"type": "category", "category_id": "297fc20c-9f09-48ce-9344-f763c255d33e", "major_id": "5ceb0a5e-e851-4e07-90f8-edc08410af69", "name": "Proposal/Grant Writer"}
+{"type": "category", "category_id": "2a747fcc-93cd-4c7f-8f78-762ecba489a9", "major_id": "9aad2513-e82d-474f-ae10-b56fed4c6353", "name": "Accountant"}
+{"type": "category", "category_id": "2f85529f-8e88-456c-90d0-efb9a40478bd", "major_id": "cb887a7d-2539-469b-98b7-a4417207242e", "name": "Data Analyst"}
+{"type": "category", "category_id": "2fc4fd05-c9c7-4fdf-8ee8-42b50c4ac28f", "major_id": "dd491f54-221f-4b80-aa10-227f1ea49a12", "name": "Mobile App Developer"}
+{"type": "category", "category_id": "33b81fb2-6f52-4aa7-a857-11f0d7858e5b", "major_id": "9aad2513-e82d-474f-ae10-b56fed4c6353", "name": "Bookkeeper"}
+{"type": "category", "category_id": "33f0074a-300f-4c48-bd77-693017b38c9f", "major_id": "dd491f54-221f-4b80-aa10-227f1ea49a12", "name": "API Integration Specialist"}
+{"type": "category", "category_id": "34bc72de-b7dc-4d5f-8635-00b65376dde1", "major_id": "9e65412d-a7b8-41ef-bebf-611e555cf33a", "name": "Requirements Analyst"}
+{"type": "category", "category_id": "36e0e511-fd28-467b-86a4-b4dadd71195c", "major_id": "9aad2513-e82d-474f-ae10-b56fed4c6353", "name": "Business Consultant"}
+{"type": "category", "category_id": "370276bf-4ae4-45ec-b425-676e1b89c25c", "major_id": "f84d17f5-ab06-4773-8863-4da24fa8a502", "name": "Design System Specialist"}
+{"type": "category", "category_id": "37a1afd5-9b6e-4d87-9668-b84032492a86", "major_id": "78cff18c-16fd-4654-8782-f1fbe85c5e89", "name": "Growth Marketer"}
+{"type": "category", "category_id": "38a574bc-c8d2-497f-b664-eb6efc6dac45", "major_id": "53c6622e-0e40-4e9c-889e-b8fc0ab228fe", "name": "Game Developer"}
+{"type": "category", "category_id": "396e56c5-0bec-45e1-aa69-b3ce65cce3db", "major_id": "f84d17f5-ab06-4773-8863-4da24fa8a502", "name": "Video Editor"}
+{"type": "category", "category_id": "3b2e1f82-1074-4fd6-a2cc-562075cb7b7d", "major_id": "31ebb0b3-8d48-42d2-86f3-65edc75b5a11", "name": "Talent Sourcer/Recruiter"}
+{"type": "category", "category_id": "3b859ba4-0f70-4b1e-9740-8c5eb6e9d460", "major_id": "5ceb0a5e-e851-4e07-90f8-edc08410af69", "name": "UX Writer"}
+{"type": "category", "category_id": "3c8357a6-7886-4f56-9f44-9ca6eb88e782", "major_id": "31ebb0b3-8d48-42d2-86f3-65edc75b5a11", "name": "CRM Specialist"}
+{"type": "category", "category_id": "3d2849ff-aede-4d22-89e2-ef3c737dbb8a", "major_id": "5ceb0a5e-e851-4e07-90f8-edc08410af69", "name": "Translator"}
+{"type": "category", "category_id": "40d99ec5-6221-4c92-b007-e7de0a5422e8", "major_id": "10191a40-2a6b-41b4-a247-ddbbb18d6cff", "name": "Curriculum Designer"}
+{"type": "category", "category_id": "421f3cfd-4cba-4ae0-ab7d-0684591864b3", "major_id": "cb887a7d-2539-469b-98b7-a4417207242e", "name": "Data Engineer"}
+{"type": "category", "category_id": "47607743-570e-4c1d-9702-fdc9f2d21b7d", "major_id": "f84d17f5-ab06-4773-8863-4da24fa8a502", "name": "UX Researcher"}
+{"type": "category", "category_id": "4ebc8e14-0cfd-4b44-a8d0-ce1d04112303", "major_id": "78cff18c-16fd-4654-8782-f1fbe85c5e89", "name": "SEM/PPC Specialist"}
+{"type": "category", "category_id": "4f84dff6-c990-4195-8860-69e349a7addc", "major_id": "9aad2513-e82d-474f-ae10-b56fed4c6353", "name": "Compliance Consultant"}
+{"type": "category", "category_id": "4f87b08a-41c5-4f6f-9dd4-d0d50bed62fd", "major_id": "f84d17f5-ab06-4773-8863-4da24fa8a502", "name": "Motion Graphics Designer"}
+{"type": "category", "category_id": "5387604b-2fa0-41db-930f-9f1fc5d60cbc", "major_id": "10191a40-2a6b-41b4-a247-ddbbb18d6cff", "name": "Assessment Designer"}
+{"type": "category", "category_id": "5390630f-4ef0-4c76-87c5-14071bed9ef6", "major_id": "f84d17f5-ab06-4773-8863-4da24fa8a502", "name": "Illustrator"}
+{"type": "category", "category_id": "539af576-9b85-4557-90ee-f0c5d3f1d696", "major_id": "9e65412d-a7b8-41ef-bebf-611e555cf33a", "name": "Scrum Master"}
+{"type": "category", "category_id": "558308ab-875c-499c-9e18-84273d370faf", "major_id": "f84d17f5-ab06-4773-8863-4da24fa8a502", "name": "Brand Identity Designer"}
+{"type": "category", "category_id": "569c57f5-f316-42ed-8021-cfcdf13ff4ea", "major_id": "9e65412d-a7b8-41ef-bebf-611e555cf33a", "name": "Product Manager"}
+{"type": "category", "category_id": "5d6180e2-a1bb-4132-97ac-8f34331df510", "major_id": "9e65412d-a7b8-41ef-bebf-611e555cf33a", "name": "Technical Project Manager"}
+{"type": "category", "category_id": "5ddff7a5-b8e7-44fe-aa43-c468ed3754fc", "major_id": "f84d17f5-ab06-4773-8863-4da24fa8a502", "name": "Graphic Designer"}
+{"type": "category", "category_id": "61498c78-6e6e-4fb6-8568-a444f7d89df0", "major_id": "53c6622e-0e40-4e9c-889e-b8fc0ab228fe", "name": "Smart Contract Developer"}
+{"type": "category", "category_id": "6177cc02-513c-475a-b005-530b7e0ea0d4", "major_id": "cb887a7d-2539-469b-98b7-a4417207242e", "name": "Analytics Engineer"}
+{"type": "category", "category_id": "62533299-a302-4ce0-b247-3151d2e6f38f", "major_id": "78cff18c-16fd-4654-8782-f1fbe85c5e89", "name": "Content Marketing Strategist"}
+{"type": "category", "category_id": "631a7f1a-8e30-495c-9f24-6d8746d65c8f", "major_id": "53c6622e-0e40-4e9c-889e-b8fc0ab228fe", "name": "Tokenomics Consultant"}
+{"type": "category", "category_id": "69215357-1c6a-414e-a9a8-f7d1a7b0b963", "major_id": "cb887a7d-2539-469b-98b7-a4417207242e", "name": "Business Intelligence Developer"}
+{"type": "category", "category_id": "6de5c96d-9cae-421d-a7a0-d5baf788a235", "major_id": "53c6622e-0e40-4e9c-889e-b8fc0ab228fe", "name": "Smart Contract Auditor"}
+{"type": "category", "category_id": "772e8e8a-9144-4a64-b11c-7902110ca7e9", "major_id": "5ceb0a5e-e851-4e07-90f8-edc08410af69", "name": "Editor/Proofreader"}
+{"type": "category", "category_id": "7732fe74-3c7d-4a27-863a-f0e9e71c2c31", "major_id": "cb887a7d-2539-469b-98b7-a4417207242e", "name": "RPA Developer"}
+{"type": "category", "category_id": "7753ff5c-4fb5-401d-826c-9ab54eff6262", "major_id": "5ceb0a5e-e851-4e07-90f8-edc08410af69", "name": "Blog/Article Writer"}
+{"type": "category", "category_id": "797cef3c-0943-4d3a-868f-00074b43b737", "major_id": "dd491f54-221f-4b80-aa10-227f1ea49a12", "name": "WordPress Developer"}
+{"type": "category", "category_id": "7cf958a3-bd83-4882-86d3-8f7e53e64b62", "major_id": "78cff18c-16fd-4654-8782-f1fbe85c5e89", "name": "Community Manager"}
+{"type": "category", "category_id": "80e041d9-8020-4db6-b527-4b91ff4676b5", "major_id": "53c6622e-0e40-4e9c-889e-b8fc0ab228fe", "name": "Unreal Engine Developer"}
+{"type": "category", "category_id": "817e8d7c-2227-4596-92a6-e5f32b6e0625", "major_id": "f84d17f5-ab06-4773-8863-4da24fa8a502", "name": "Presentation Designer"}
+{"type": "category", "category_id": "82b49d3d-80ff-4276-af99-a8e570f9e653", "major_id": "53c6622e-0e40-4e9c-889e-b8fc0ab228fe", "name": "AR/VR Developer"}
+{"type": "category", "category_id": "8cfdeebe-4f4e-4a14-a33e-4155c14fd2c2", "major_id": "78cff18c-16fd-4654-8782-f1fbe85c5e89", "name": "SEO Specialist"}
+{"type": "category", "category_id": "8e92ac25-2dd6-4283-911d-38f1df56479f", "major_id": "cb887a7d-2539-469b-98b7-a4417207242e", "name": "MLOps Engineer"}
+{"type": "category", "category_id": "9030e023-84c1-4335-b748-70433fe92dfc", "major_id": "cb887a7d-2539-469b-98b7-a4417207242e", "name": "Data Scientist"}
+{"type": "category", "category_id": "93ab4476-b137-4138-840c-0fe32c234f0a", "major_id": "9aad2513-e82d-474f-ae10-b56fed4c6353", "name": "Financial Analyst"}
+{"type": "category", "category_id": "985eab02-9471-4d45-a1dc-9353c40a4a28", "major_id": "5ceb0a5e-e851-4e07-90f8-edc08410af69", "name": "Localization Specialist"}
+{"type": "category", "category_id": "9cd4d805-c4bd-4147-810e-70a96d80a228", "major_id": "cb887a7d-2539-469b-98b7-a4417207242e", "name": "Machine Learning Engineer"}
+{"type": "category", "category_id": "9da9481a-f6ee-4437-a830-d6329d0402b0", "major_id": "10191a40-2a6b-41b4-a247-ddbbb18d6cff", "name": "Learning Experience Designer"}
+{"type": "category", "category_id": "a198adb7-3813-4d7c-9659-688b81adf707", "major_id": "dd491f54-221f-4b80-aa10-227f1ea49a12", "name": "No-code/Low-code Developer"}
+{"type": "category", "category_id": "a3be8527-df8f-428e-80b8-1a83efbdc0c5", "major_id": "9aad2513-e82d-474f-ae10-b56fed4c6353", "name": "Legal Assistant"}
+{"type": "category", "category_id": "a41fdef5-b532-4c49-9edb-4e331df62841", "major_id": "5ceb0a5e-e851-4e07-90f8-edc08410af69", "name": "Technical Writer"}
+{"type": "category", "category_id": "a6a89dda-c5cf-413b-8ae4-5283dac98741", "major_id": "9e65412d-a7b8-41ef-bebf-611e555cf33a", "name": "Product Owner"}
+{"type": "category", "category_id": "aaaecbb6-6622-489b-b31a-00ac444111c2", "major_id": "78cff18c-16fd-4654-8782-f1fbe85c5e89", "name": "Analytics & Tagging Specialist"}
+{"type": "category", "category_id": "b008e8ff-2b6f-43a9-890f-f612587c813f", "major_id": "78cff18c-16fd-4654-8782-f1fbe85c5e89", "name": "Social Media Manager"}
+{"type": "category", "category_id": "b56aaeaf-6c7f-43e2-ba93-d2244e4f579e", "major_id": "dd491f54-221f-4b80-aa10-227f1ea49a12", "name": "Shopify Developer"}
+{"type": "category", "category_id": "b5ed4271-e569-4823-b032-33bd6ac7e343", "major_id": "5ceb0a5e-e851-4e07-90f8-edc08410af69", "name": "Scriptwriter"}
+{"type": "category", "category_id": "c1d44981-9ceb-4802-9da2-ad361b0dcc09", "major_id": "dd491f54-221f-4b80-aa10-227f1ea49a12", "name": "Full-stack Developer"}
+{"type": "category", "category_id": "c1de0e53-481f-4111-8756-76458d945dde", "major_id": "f84d17f5-ab06-4773-8863-4da24fa8a502", "name": "Web Designer"}
+{"type": "category", "category_id": "c3353951-24cb-471f-87d3-976ea538b15f", "major_id": "dd491f54-221f-4b80-aa10-227f1ea49a12", "name": "Desktop/Cross-platform Developer"}
+{"type": "category", "category_id": "c5eb7ab6-6c28-4106-8ca5-231aa03ee97c", "major_id": "78cff18c-16fd-4654-8782-f1fbe85c5e89", "name": "App Store Optimization Specialist"}
+{"type": "category", "category_id": "c9ffa0a1-edd3-4df3-a395-56834a663063", "major_id": "f84d17f5-ab06-4773-8863-4da24fa8a502", "name": "UI/UX Designer"}
+{"type": "category", "category_id": "cb43e90d-cf76-4eab-923e-677e1f4e11ea", "major_id": "9e65412d-a7b8-41ef-bebf-611e555cf33a", "name": "QA Manual Tester"}
+{"type": "category", "category_id": "ce327b61-dba4-4529-8e7b-d016227f8aa2", "major_id": "31ebb0b3-8d48-42d2-86f3-65edc75b5a11", "name": "Operations Coordinator"}
+{"type": "category", "category_id": "d0cc298d-71ed-4b2e-bc54-7f9970d7229a", "major_id": "31ebb0b3-8d48-42d2-86f3-65edc75b5a11", "name": "Virtual Assistant"}
+{"type": "category", "category_id": "d17c073b-609b-467d-85a5-b6b48d154959", "major_id": "9aad2513-e82d-474f-ae10-b56fed4c6353", "name": "Payroll Specialist"}
+{"type": "category", "category_id": "d3b393cc-bb6a-4a8b-ab10-0b067392a26f", "major_id": "31ebb0b3-8d48-42d2-86f3-65edc75b5a11", "name": "Sales Development Representative"}
+{"type": "category", "category_id": "d4ca37ca-38e1-45e4-b3af-4930a5601acc", "major_id": "53c6622e-0e40-4e9c-889e-b8fc0ab228fe", "name": "Web3 Frontend Developer"}
+{"type": "category", "category_id": "d6518ef3-19db-48f7-8086-510222d23d60", "major_id": "31ebb0b3-8d48-42d2-86f3-65edc75b5a11", "name": "E-commerce Operations Specialist"}
+{"type": "category", "category_id": "d729682e-bb54-4b00-b58e-90fa48a90340", "major_id": "5ceb0a5e-e851-4e07-90f8-edc08410af69", "name": "Resume/LinkedIn Writer"}
+{"type": "category", "category_id": "d984ea60-01f5-436e-9476-a9443c1dae23", "major_id": "78cff18c-16fd-4654-8782-f1fbe85c5e89", "name": "Affiliate Marketing Manager"}
+{"type": "category", "category_id": "dc50018f-6b90-423b-b001-d3c0d016334f", "major_id": "9e65412d-a7b8-41ef-bebf-611e555cf33a", "name": "Release Manager"}
+{"type": "category", "category_id": "dd3ec6b5-1dc9-4b16-b514-aad7bbb93840", "major_id": "cb887a7d-2539-469b-98b7-a4417207242e", "name": "LLM/NLP Engineer"}
+{"type": "category", "category_id": "e0326a14-ca31-4d6e-b2a6-d3c3496ae364", "major_id": "31ebb0b3-8d48-42d2-86f3-65edc75b5a11", "name": "Customer Support Specialist"}
+{"type": "category", "category_id": "e1155da0-9396-4643-b07e-61ca421981e2", "major_id": "dd491f54-221f-4b80-aa10-227f1ea49a12", "name": "Back-end Developer"}
+{"type": "category", "category_id": "eb60b56b-27e7-464c-aa24-778861bb792b", "major_id": "10191a40-2a6b-41b4-a247-ddbbb18d6cff", "name": "Instructional Designer"}
+{"type": "category", "category_id": "ec4b3a56-fef7-475a-a2f8-32069b348957", "major_id": "9e65412d-a7b8-41ef-bebf-611e555cf33a", "name": "Delivery Manager"}
+{"type": "category", "category_id": "ecc793da-8eb8-4663-85b1-4ad44d3f711d", "major_id": "53c6622e-0e40-4e9c-889e-b8fc0ab228fe", "name": "Unity Developer"}
+{"type": "category", "category_id": "ee18e7a0-4e5d-42ef-9278-35c9e116ecdd", "major_id": "cb887a7d-2539-469b-98b7-a4417207242e", "name": "Computer Vision Engineer"}
+{"type": "category", "category_id": "f0418e4d-754a-4c3c-a6dd-6918544dc2a6", "major_id": "dd491f54-221f-4b80-aa10-227f1ea49a12", "name": "Database Engineer"}
+{"type": "category", "category_id": "f224e3ef-091c-414e-a6e5-dac900b37633", "major_id": "53c6622e-0e40-4e9c-889e-b8fc0ab228fe", "name": "Blockchain Developer"}
+{"type": "category", "category_id": "f3166803-c581-45c5-9f0c-cef13a728567", "major_id": "10191a40-2a6b-41b4-a247-ddbbb18d6cff", "name": "E-learning Developer"}
+{"type": "category", "category_id": "f46e18d5-06ca-4e66-8b99-bd1f9a64c036", "major_id": "9aad2513-e82d-474f-ae10-b56fed4c6353", "name": "Contract Specialist"}
+{"type": "category", "category_id": "f50f3ec0-1d7b-4604-9733-40d78e52f6a9", "major_id": "9e65412d-a7b8-41ef-bebf-611e555cf33a", "name": "QA Automation Engineer"}
+{"type": "category", "category_id": "f54eaa62-1145-4857-b533-89479930482a", "major_id": "9e65412d-a7b8-41ef-bebf-611e555cf33a", "name": "Business Analyst"}
+{"type": "category", "category_id": "f5554e51-5a17-499a-a408-fb3686707561", "major_id": "dd491f54-221f-4b80-aa10-227f1ea49a12", "name": "Front-end Developer"}
+{"type": "category", "category_id": "f5a56728-8cd1-4281-b566-bb697ee01a6b", "major_id": "31ebb0b3-8d48-42d2-86f3-65edc75b5a11", "name": "Data Entry Specialist"}
+{"type": "category", "category_id": "f5d1eb56-60fc-4db3-942d-2ed5ab3de20f", "major_id": "78cff18c-16fd-4654-8782-f1fbe85c5e89", "name": "Conversion Rate Optimization Specialist"}
+{"type": "category", "category_id": "f8c091c6-d90f-4727-9bd8-4214891c70b1", "major_id": "5ceb0a5e-e851-4e07-90f8-edc08410af69", "name": "Copywriter"}
+{"type": "category", "category_id": "fa4e4226-c11a-4108-b26c-9726fcc06876", "major_id": "dd491f54-221f-4b80-aa10-227f1ea49a12", "name": "Site Reliability Engineer"}
+{"type": "category", "category_id": "fcec8b64-85bf-4160-8de1-9f497bc4aa0f", "major_id": "dd491f54-221f-4b80-aa10-227f1ea49a12", "name": "DevOps Engineer"}
+{"type": "category", "category_id": "fcf62976-b1a7-4bbb-8631-89f22ac36188", "major_id": "f84d17f5-ab06-4773-8863-4da24fa8a502", "name": "3D Artist"}
+{"type": "skill", "skill_id": "861adad3-0faf-4a43-964e-75821bc5e041", "name": ".NET MAUI"}
+{"type": "skill", "skill_id": "57e9ba6c-5395-4481-afea-81fba0a83b3d", "name": "2D Animation"}
+{"type": "skill", "skill_id": "f265b66e-1f62-4401-844d-8201ca63f927", "name": "3D Modeling"}
+{"type": "skill", "skill_id": "aacf2fab-5b94-4c40-9674-b132dad22248", "name": "A/B Testing"}
+{"type": "skill", "skill_id": "7c665210-79e9-4d90-8c9f-4c7dcc12b84a", "name": "AARRR Funnel"}
+{"type": "skill", "skill_id": "ddb4677a-46a6-473c-bc2f-44d12589bf9f", "name": "Acceptance Criteria"}
+{"type": "skill", "skill_id": "dbc31b57-fa95-444e-b7b5-4b3233561b5b", "name": "Accessibility Design"}
+{"type": "skill", "skill_id": "3e147706-d633-4656-be5d-ff3bd939e555", "name": "Accounting Process"}
+{"type": "skill", "skill_id": "b447f6f8-a942-4f16-a771-e7e29b7088ce", "name": "Accounts Payable"}
+{"type": "skill", "skill_id": "4398d37a-6c76-40a6-905f-3d75861a1b5f", "name": "Accounts Receivable"}
+{"type": "skill", "skill_id": "f8f6f951-0d86-46f0-b16c-148395d2c078", "name": "Ad Copy"}
+{"type": "skill", "skill_id": "016ae8f7-034d-4b0d-97a5-306d7c32f93c", "name": "ADDIE"}
+{"type": "skill", "skill_id": "258cdec8-5cd9-4723-8c48-121094a1122e", "name": "Adobe After Effects"}
+{"type": "skill", "skill_id": "7b2a4f88-2067-4213-a5c0-6b8842ba807e", "name": "Adobe Captivate"}
+{"type": "skill", "skill_id": "3f4ee5a4-2df4-46f1-a5a1-e2bbd3fcacca", "name": "Adobe Illustrator"}
+{"type": "skill", "skill_id": "1b3a3896-f4e1-4838-bd17-f964b2acd420", "name": "Adobe Photoshop"}
+{"type": "skill", "skill_id": "a4c04962-d6a6-4c76-936f-3cf61ca06dea", "name": "Adobe Premiere Pro"}
+{"type": "skill", "skill_id": "ab4de8db-db20-4206-9e2b-370fb255109e", "name": "Adult Learning"}
+{"type": "skill", "skill_id": "ccbd6f01-80ff-455f-9744-6d149dec8d88", "name": "Affiliate Strategy"}
+{"type": "skill", "skill_id": "da1eb58f-a54b-4c2b-b9f4-98ec8b1f70c3", "name": "Agile Coaching"}
+{"type": "skill", "skill_id": "55c7e072-f7eb-4722-9d00-984c973c4c39", "name": "Ahrefs"}
+{"type": "skill", "skill_id": "2578ac32-6c65-4131-ace5-2c783c4cb7e7", "name": "AI Agents"}
+{"type": "skill", "skill_id": "7b3b22c2-1c11-4987-827b-e909f31bcf52", "name": "AI Safety"}
+{"type": "skill", "skill_id": "7c9dd05e-298a-4d67-9b6c-d75023a45b6b", "name": "AIDA"}
+{"type": "skill", "skill_id": "73644771-e3d7-4e5c-a1f4-37ccbfc9667a", "name": "Airtable"}
+{"type": "skill", "skill_id": "467f3f53-6e9b-48f2-afd6-972059528e5e", "name": "Amazon Seller Central"}
+{"type": "skill", "skill_id": "b710f0dc-fc0b-402c-a76c-8c189da797fc", "name": "Analytics"}
+{"type": "skill", "skill_id": "fd1e42b1-f26f-4e96-bdbb-43585da7edcc", "name": "Angular"}
+{"type": "skill", "skill_id": "dd14c5f9-f50f-43e9-a152-7112d090527d", "name": "Ansible"}
+{"type": "skill", "skill_id": "699a7175-4d94-4090-86e9-860c1c8efdc8", "name": "Apache Airflow"}
+{"type": "skill", "skill_id": "5bdfb982-b6ee-470b-9041-68c3edd79a2e", "name": "API Documentation"}
+{"type": "skill", "skill_id": "b69768dd-feac-4ef0-9448-3692e431b76c", "name": "API Integration"}
+{"type": "skill", "skill_id": "df88e35a-5d0e-4dd8-8207-8eac6e9847f6", "name": "API Security"}
+{"type": "skill", "skill_id": "bfd98d3f-439c-475c-bfae-146a873b5e6f", "name": "API Testing"}
+{"type": "skill", "skill_id": "d5ff5d7f-2ca8-4502-a353-966845d6bb93", "name": "Apollo"}
+{"type": "skill", "skill_id": "9b5bcf14-1732-463e-a720-187865cd51c8", "name": "App Localization"}
+{"type": "skill", "skill_id": "d4ec6e60-e2c2-4e30-b997-3efc08209284", "name": "App Store Connect"}
+{"type": "skill", "skill_id": "77028d2f-f94b-40e8-b4f3-f5d0ed5a4466", "name": "App Store Deployment"}
+{"type": "skill", "skill_id": "fa16f7f4-6293-412a-88de-497d3f40fb1b", "name": "Appointment Setting"}
+{"type": "skill", "skill_id": "3fa0e9a7-c3ab-4f91-955f-bae203a64b36", "name": "AR Foundation"}
+{"type": "skill", "skill_id": "92036318-aade-42cd-801f-443873cebc57", "name": "Articulate Storyline"}
+{"type": "skill", "skill_id": "1945bc48-9f52-4f68-9790-7c372b46a69a", "name": "Asana"}
+{"type": "skill", "skill_id": "f4aa7209-8346-4bab-b167-581e8a09f21d", "name": "ASO"}
+{"type": "skill", "skill_id": "903ab48e-e62c-4f63-8ff7-810b40169d66", "name": "ASP.NET Core"}
+{"type": "skill", "skill_id": "fb09bdc5-c9fc-4748-9864-0c19d82546e6", "name": "Assessment Design"}
+{"type": "skill", "skill_id": "a8016fb8-e31e-407e-861d-cd59ed698c46", "name": "ATS Management"}
+{"type": "skill", "skill_id": "bf887200-328c-402a-9ce1-908d3cf922de", "name": "ATS Optimization"}
+{"type": "skill", "skill_id": "983767f2-ecc1-45d4-a5db-3db130b96a17", "name": "Audio Cleanup"}
+{"type": "skill", "skill_id": "67a76a46-be6e-4668-8a80-072b23347c32", "name": "Audit Reporting"}
+{"type": "skill", "skill_id": "df12f9fd-e5c9-4227-8d76-66d5fc1d88cd", "name": "Automation Anywhere"}
+{"type": "skill", "skill_id": "0cf913c8-4095-490b-8846-0bd33a25135f", "name": "AWS"}
+{"type": "skill", "skill_id": "c2421efd-8a46-4d69-a72e-b9fa63ca8017", "name": "AWS SageMaker"}
+{"type": "skill", "skill_id": "c17e5440-173d-48b6-a6f0-c911cefabc3c", "name": "Azure"}
+{"type": "skill", "skill_id": "fb14853d-5b70-43db-8490-c5e62ea970d7", "name": "B2B Content"}
+{"type": "skill", "skill_id": "2cefadff-184f-4eeb-b928-94b0e454c86d", "name": "B2B Marketing"}
+{"type": "skill", "skill_id": "a2586153-368e-45f4-9cc2-f92036bf3c8b", "name": "Backlog Management"}
+{"type": "skill", "skill_id": "90c5a4ea-0992-4a28-963e-312fd4a26ba7", "name": "Balancing"}
+{"type": "skill", "skill_id": "555d3008-8ca1-4183-8b2f-2396b4d753c7", "name": "Bank Reconciliation"}
+{"type": "skill", "skill_id": "eb28477d-bdf8-4981-a78c-5472d88ef5a5", "name": "BigQuery"}
+{"type": "skill", "skill_id": "57000802-25e8-48d6-9438-834480391784", "name": "Blender"}
+{"type": "skill", "skill_id": "bec57470-0f53-478b-a403-2e958f087dd2", "name": "Blog Writing"}
+{"type": "skill", "skill_id": "dc23cdc5-ec74-4c2b-8330-00752306c3a9", "name": "Blueprints"}
+{"type": "skill", "skill_id": "cf00075e-5b31-408b-b941-58b4360bd623", "name": "Boolean Search"}
+{"type": "skill", "skill_id": "10062c0a-2d20-4c70-9000-8c7b0af7e050", "name": "BPMN"}
+{"type": "skill", "skill_id": "f9248b8f-367f-4131-8aa4-609a63eafbf6", "name": "Brand Guidelines"}
+{"type": "skill", "skill_id": "f237968f-da2e-485e-9f88-6f8bd0a7060b", "name": "Brand Voice"}
+{"type": "skill", "skill_id": "5a6e5a25-ad74-44a6-8583-1df45c4e6445", "name": "Bubble"}
+{"type": "skill", "skill_id": "4c484fa2-6663-4e6d-84bc-d96ab9938151", "name": "Budgeting"}
+{"type": "skill", "skill_id": "c90966bf-c3c1-4ad2-9698-586bccd6a538", "name": "Bug Reporting"}
+{"type": "skill", "skill_id": "14b05d14-7d24-4dd8-ba05-18a26e06c589", "name": "Business Analysis"}
+{"type": "skill", "skill_id": "6150db9e-dabb-4429-95da-ce42311b87c5", "name": "Business Case"}
+{"type": "skill", "skill_id": "b29350cf-1be0-4d96-b674-024bda6004c7", "name": "Business Model Canvas"}
+{"type": "skill", "skill_id": "a98248b5-36ed-4f53-b8c9-d90a350140d1", "name": "Business Strategy"}
+{"type": "skill", "skill_id": "de129f35-d67b-41b0-8704-0447ed0db74a", "name": "C#"}
+{"type": "skill", "skill_id": "259674f9-c7fb-4734-aee7-223882c3c9e9", "name": "C++"}
+{"type": "skill", "skill_id": "4f4c5997-b371-4ddd-b625-353181565c95", "name": "Calendar Management"}
+{"type": "skill", "skill_id": "d072c1de-7990-4fb4-b171-b3c73812a363", "name": "Candidate Sourcing"}
+{"type": "skill", "skill_id": "d9aafe5e-66b5-4878-8cd1-e44a571506b0", "name": "Canva"}
+{"type": "skill", "skill_id": "948c8737-308d-4c72-a17d-dd786c6cfb3e", "name": "Canvas LMS"}
+{"type": "skill", "skill_id": "4e18919b-48f6-4f32-a43d-650c10da24c8", "name": "CapCut"}
+{"type": "skill", "skill_id": "bd18fc8c-6eba-4653-b1a5-db28a2822805", "name": "Career Storytelling"}
+{"type": "skill", "skill_id": "5b79177d-cdcd-4cb0-979d-2199dc1cb401", "name": "Case Management"}
+{"type": "skill", "skill_id": "6748bd77-eb69-49cd-b06d-3a34d9d834c6", "name": "CAT Tools"}
+{"type": "skill", "skill_id": "7c9cb554-29ef-4fb4-a2aa-a583b92b48b4", "name": "Certification Exam Design"}
+{"type": "skill", "skill_id": "0ec05c20-28af-4b95-aa5d-83dca65e2c97", "name": "Change Management"}
+{"type": "skill", "skill_id": "1edc023a-d176-4f6f-88cf-3e8c0c88814f", "name": "Character Design"}
+{"type": "skill", "skill_id": "563c0436-1f22-4114-8715-bd58dc486531", "name": "LlamaIndex"}
+{"type": "skill", "skill_id": "5822cc83-a20d-4c54-836b-91b3b43f0aa9", "name": "Chinese Vietnamese Translation"}
+{"type": "skill", "skill_id": "a26db2aa-16ea-48e1-8035-302771d92d9c", "name": "CI/CD for ML"}
+{"type": "skill", "skill_id": "5624926d-5272-4282-a331-2ced1761c729", "name": "Cinema 4D"}
+{"type": "skill", "skill_id": "8723142b-0a10-45ca-902d-9e7026da0aa9", "name": "Citation Management"}
+{"type": "skill", "skill_id": "f7bf6ea4-742b-46b7-adf1-fd271d7535aa", "name": "Clay"}
+{"type": "skill", "skill_id": "46f4ee33-d42f-47c3-adfa-02135811fa42", "name": "Cloud Architecture"}
+{"type": "skill", "skill_id": "21d45008-1207-443a-8c7c-205dd4ca2ced", "name": "Cloud Security"}
+{"type": "skill", "skill_id": "36902795-865f-4dd1-b587-e8f667b415b2", "name": "Cloudflare"}
+{"type": "skill", "skill_id": "759903d3-b256-40aa-bd90-ea01e5d7df82", "name": "Cohort-based Course"}
+{"type": "skill", "skill_id": "e7256729-3493-4b8d-9b3b-5305d10437b2", "name": "Cold Email"}
+{"type": "skill", "skill_id": "3053cc52-ff29-4e6a-a6ea-654b8b88ea26", "name": "Color Grading"}
+{"type": "skill", "skill_id": "8c40b845-2271-4a96-a828-71361e8b5f79", "name": "Color Systems"}
+{"type": "skill", "skill_id": "59d36122-1e80-4248-8871-964f32bd6d67", "name": "Commission Planning"}
+{"type": "skill", "skill_id": "ee34fb85-e48d-42ec-bfd9-66997b356446", "name": "Community Analytics"}
+{"type": "skill", "skill_id": "7b5661b4-4173-4562-9af3-ca71f83d6bf9", "name": "Community Engagement"}
+{"type": "skill", "skill_id": "00314734-00f3-4ff5-b758-d8ff1c5bb2da", "name": "Community Learning"}
+{"type": "skill", "skill_id": "08adb0a9-68d1-4922-8997-27318f27a2f5", "name": "Community Moderation"}
+{"type": "skill", "skill_id": "cb4aabef-5d54-423e-a3ef-d6108ae2a743", "name": "Compensation Reporting"}
+{"type": "skill", "skill_id": "dfc129b2-9eeb-4af0-ab7c-43594257be86", "name": "Competency Framework"}
+{"type": "skill", "skill_id": "c798f6ba-1de6-4889-a9f0-63b0b96cb875", "name": "Competitor Research"}
+{"type": "skill", "skill_id": "6148ea0b-74f0-4d75-a225-1ced6ddcfd51", "name": "Compliance Audit"}
+{"type": "skill", "skill_id": "8139b7b5-069c-4c70-b661-830a559d73d5", "name": "Compliance Reporting"}
+{"type": "skill", "skill_id": "3e32d23f-8038-4ce8-b062-764d6048a52a", "name": "Component Documentation"}
+{"type": "skill", "skill_id": "06cefaa4-2471-4e0f-b580-bf95955b796f", "name": "Confluence"}
+{"type": "skill", "skill_id": "57697285-d050-43a3-ac11-cc1f056d578d", "name": "Content Audit"}
+{"type": "skill", "skill_id": "aef10767-8f10-4023-aa3b-35c936466228", "name": "Content Briefs"}
+{"type": "skill", "skill_id": "15466751-abf5-4c69-972a-e4f8ff3c640c", "name": "Content Calendar"}
+{"type": "skill", "skill_id": "f8dccd97-83aa-41c0-b11c-6889e4ba54b9", "name": "Content Design"}
+{"type": "skill", "skill_id": "2e6a1cc2-7c6e-482e-87d5-1dc658e28e4d", "name": "Content SEO"}
+{"type": "skill", "skill_id": "69f96961-1576-4bfe-b289-7d2a3f868176", "name": "Content Strategy"}
+{"type": "skill", "skill_id": "f200f6f4-b4d0-44d4-8ada-55e085045616", "name": "Contract Drafting"}
+{"type": "skill", "skill_id": "77edd490-8d1d-4aa2-9481-702c6d991650", "name": "Contract Lifecycle Management"}
+{"type": "skill", "skill_id": "f9d580d4-3386-4031-9e6e-96bac7150422", "name": "Contract Review"}
+{"type": "skill", "skill_id": "fed37eab-4a52-4957-b267-9d0b4d29a63c", "name": "Conversation Design"}
+{"type": "skill", "skill_id": "a87b048a-f8ef-4a0c-a8af-d34a4500767f", "name": "Conversion Design"}
+{"type": "skill", "skill_id": "0b3bec0a-b233-43fa-9307-884fa1413e38", "name": "Conversion Research"}
+{"type": "skill", "skill_id": "154b7214-6961-4fff-87fc-ff3cbf0007db", "name": "Conversion Tracking"}
+{"type": "skill", "skill_id": "2baf37cd-6409-41ca-bc98-e7ed18966c92", "name": "Copy Editing"}
+{"type": "skill", "skill_id": "7fdb7043-ea28-40e0-b5bb-b44534ea04cd", "name": "Corporate Tax"}
+{"type": "skill", "skill_id": "3b345934-0638-48e8-b9cf-389b76b8e4c1", "name": "Cost Optimization"}
+{"type": "skill", "skill_id": "86bd35e6-6eba-420e-8495-7b3ab2701542", "name": "Course Enrollment"}
+{"type": "skill", "skill_id": "1116b044-fe9f-4c9d-96a4-2e42a08fa773", "name": "Course Mapping"}
+{"type": "skill", "skill_id": "506d5ed1-6045-4109-a589-43f38bfcf33f", "name": "Course Packaging"}
+{"type": "skill", "skill_id": "e3ac6968-b2fb-4c7d-8677-8e42d66df6a0", "name": "Course Script"}
+{"type": "skill", "skill_id": "84479c38-00b5-414a-b689-e8a8b15b6c1f", "name": "Cover Letter"}
+{"type": "skill", "skill_id": "f7d66f60-9cc6-410c-bb21-6c2005103dab", "name": "Creative Testing"}
+{"type": "skill", "skill_id": "2067f899-6ab8-49c8-9dc8-158494bb3368", "name": "Creator Outreach"}
+{"type": "skill", "skill_id": "07197d73-f655-46e4-8e94-d4b7dda82b3a", "name": "CRM"}
+{"type": "skill", "skill_id": "d1e1eea7-6865-4681-93f8-9fc09b54fca7", "name": "CRM Automation"}
+{"type": "skill", "skill_id": "726cf1bf-2c8c-4500-a3b0-9f40ac9bae51", "name": "CRM Data Cleanup"}
+{"type": "skill", "skill_id": "c0e0b547-3072-4b2a-91b8-c6702c61cd99", "name": "CRM Data Entry"}
+{"type": "skill", "skill_id": "6db0fe4b-e759-45ee-baac-662510770cd2", "name": "CSS3"}
+{"type": "skill", "skill_id": "6e24a486-635f-4a92-b4b2-1a4f172601d6", "name": "Curriculum Design"}
+{"type": "skill", "skill_id": "96b86f56-6d77-4d91-98d0-38b79db8c7b2", "name": "Customer Empathy"}
+{"type": "skill", "skill_id": "894f76c4-cabc-42ee-b927-6462b41e0eb9", "name": "Customer.io"}
+{"type": "skill", "skill_id": "2286df4e-79ec-494e-ab60-e9dd8cbb2a3a", "name": "Cypress"}
+{"type": "skill", "skill_id": "264ff1e6-6c1d-412b-bce0-e4d659053d1a", "name": "DApp UX"}
+{"type": "skill", "skill_id": "f4776084-d1cb-40ca-b549-e001c0dcbea9", "name": "Dart"}
+{"type": "skill", "skill_id": "b250e2a0-3d35-4104-87d4-3fc63da4ac46", "name": "Data Cleaning"}
+{"type": "skill", "skill_id": "68c0aafe-0552-4548-b080-e2af86dcceb0", "name": "Data Collection"}
+{"type": "skill", "skill_id": "4d6dc9d1-5de3-46bc-b677-e063cb3f914d", "name": "Data Entry"}
+{"type": "skill", "skill_id": "e9b0129c-52a1-46d3-a612-2de5f6c0eaea", "name": "Data Modeling"}
+{"type": "skill", "skill_id": "ea0ef420-1ef1-462f-b990-6210a6080c9c", "name": "Data Protection"}
+{"type": "skill", "skill_id": "f508e998-71fa-413c-acb7-10f809a00719", "name": "Data Quality Testing"}
+{"type": "skill", "skill_id": "1285d829-ef0f-44ac-a295-b2d6e99d6759", "name": "Data Storytelling"}
+{"type": "skill", "skill_id": "8e924d3b-9350-43df-9ff5-49a62c5e4d03", "name": "Data Visualization"}
+{"type": "skill", "skill_id": "9baa7529-bf84-4136-9ab4-2193d5a26bce", "name": "Database Design"}
+{"type": "skill", "skill_id": "261cb3e3-226d-4982-8459-f459955b96e7", "name": "Database Migration"}
+{"type": "skill", "skill_id": "92e189a8-dd7f-467c-b484-1bd836000283", "name": "DaVinci Resolve"}
+{"type": "skill", "skill_id": "62852019-5b84-40b5-99a9-f82b9e3f98cf", "name": "DAX"}
+{"type": "skill", "skill_id": "d4f7141b-39e9-44f3-bd94-c0932f0cf4a9", "name": "dbt"}
+{"type": "skill", "skill_id": "0de7359c-3474-4a69-8335-0aca4ba3f708", "name": "DeFi"}
+{"type": "skill", "skill_id": "170af5d6-1e1c-4d48-a4c1-b6fce8300928", "name": "DeFi Security"}
+{"type": "skill", "skill_id": "17d1464a-0406-49e2-990d-ffae4597725d", "name": "Delivery Planning"}
+{"type": "skill", "skill_id": "1d43c2fb-acd6-4d2f-96de-350316abf272", "name": "Dependency Management"}
+{"type": "skill", "skill_id": "702087a4-6edf-4d18-b4b2-e1c0943a691e", "name": "Deployment Checklist"}
+{"type": "skill", "skill_id": "b327e332-078e-494d-875a-07e9880e6eb5", "name": "Design Systems"}
+{"type": "skill", "skill_id": "c512b257-dbf2-4e85-ba58-42adbb25a63e", "name": "Design Tokens"}
+{"type": "skill", "skill_id": "9af6ffd7-d48a-4b5c-b52d-c7d30bd9fea1", "name": "Desk Research"}
+{"type": "skill", "skill_id": "df621c69-942e-42d9-ba35-16b1b3ac4624", "name": "Developer Documentation"}
+{"type": "skill", "skill_id": "d277ff7b-4c96-4123-8534-9221431a78de", "name": "Digital Illustration"}
+{"type": "skill", "skill_id": "5df988b3-04f7-49c2-8812-221539c04cee", "name": "Discord Community"}
+{"type": "skill", "skill_id": "a5cf832f-d256-44df-ba2f-8b51974ea83f", "name": "Docker"}
+{"type": "skill", "skill_id": "eb087f0d-53f4-43a7-882f-96bd282092d9", "name": "Document Formatting"}
+{"type": "skill", "skill_id": "af7355ea-6ab7-4935-8053-6eb870c824b3", "name": "Document Review"}
+{"type": "skill", "skill_id": "588f0d0d-334b-45cb-9441-557782ea97e3", "name": "E-commerce Analytics"}
+{"type": "skill", "skill_id": "2bec1a2c-0984-4dab-8ac4-3ceece170b05", "name": "Economic Modeling"}
+{"type": "skill", "skill_id": "01286632-7035-4e9b-8cf4-b392e1c05fc8", "name": "Editorial Calendar"}
+{"type": "skill", "skill_id": "4b087169-d0f0-4826-beba-291f2b9ab02d", "name": "Electron"}
+{"type": "skill", "skill_id": "56516b2d-f216-4ae3-866c-845bce3f5ca4", "name": "Elementor"}
+{"type": "skill", "skill_id": "2e6142ea-9143-4f22-a068-fece516bf598", "name": "Email Copywriting"}
+{"type": "skill", "skill_id": "7f21aed7-ab1c-430e-bfbf-561e2600f351", "name": "Email Management"}
+{"type": "skill", "skill_id": "0f25e493-0352-4cda-8e7b-fbf5aca8da49", "name": "Email Support"}
+{"type": "skill", "skill_id": "58dfd934-e2ff-4257-9d63-942cfcfc4220", "name": "Email Verification"}
+{"type": "skill", "skill_id": "1c85937e-8fb6-49c9-92c4-c3285e445ba5", "name": "Embeddings"}
+{"type": "skill", "skill_id": "283becf9-783a-4cc4-b8e8-f3ea1d13c041", "name": "Engagement Design"}
+{"type": "skill", "skill_id": "938c6c7e-2666-45c2-a891-597e6c71babc", "name": "English Tutoring"}
+{"type": "skill", "skill_id": "35bbf830-a9d1-4942-8d39-75afdac246f6", "name": "English Vietnamese Translation"}
+{"type": "skill", "skill_id": "b825a251-6162-4b40-bde4-eb12decc1c1f", "name": "Entity Framework Core"}
+{"type": "skill", "skill_id": "9849fbc4-9f81-47b6-80e1-45ed56d13a4b", "name": "Environment Design"}
+{"type": "skill", "skill_id": "94faa2fb-fd28-474b-84ae-968f04afa88b", "name": "Error Messages"}
+{"type": "skill", "skill_id": "b764a0db-9c18-4cba-b93c-b4887e7171e5", "name": "Ethereum"}
+{"type": "skill", "skill_id": "b5643289-aad0-4731-8f94-633112d82c24", "name": "Ethers.js"}
+{"type": "skill", "skill_id": "02ffaa98-cd0e-47f1-b1ca-a0b0747a3636", "name": "ETL"}
+{"type": "skill", "skill_id": "2508cb9f-c4e6-4827-bffc-de7b6adf218b", "name": "Event Planning"}
+{"type": "skill", "skill_id": "8d57ea3a-541b-4794-9db5-8653a02a2366", "name": "Event Taxonomy"}
+{"type": "skill", "skill_id": "54f97e54-9ab6-48bb-a812-9e4a171c2d99", "name": "Excel"}
+{"type": "skill", "skill_id": "5f89c66f-d63a-46f8-a1ae-4aa5be241939", "name": "Executive Summary"}
+{"type": "skill", "skill_id": "620a8cc3-afe3-4575-af4b-a859ece78462", "name": "Expense Tracking"}
+{"type": "skill", "skill_id": "2394acc4-425b-4aa7-a907-5c010b61a7ea", "name": "Experiment Design"}
+{"type": "skill", "skill_id": "ea782ca2-4577-4a14-ab72-808cfe2ca585", "name": "Explainer Script"}
+{"type": "skill", "skill_id": "8e05d983-3a19-42a4-a2e4-e40e7b03fbcb", "name": "Explainer Video"}
+{"type": "skill", "skill_id": "45346272-832a-4032-9b90-d7a7d377993f", "name": "Expo"}
+{"type": "skill", "skill_id": "2ab46d6a-1d21-4576-ace3-d526cf24935f", "name": "Facebook Groups"}
+{"type": "skill", "skill_id": "0ecb767b-a788-48eb-8a48-4d95e1801aa4", "name": "Fact Checking"}
+{"type": "skill", "skill_id": "90038a3c-b3a6-4967-ade3-e9feba19c261", "name": "Feature Engineering"}
+{"type": "skill", "skill_id": "b1a68df1-51ba-4a01-b6d4-b9858693312b", "name": "Feature Store"}
+{"type": "skill", "skill_id": "81f5d365-c72f-4e67-9129-2524b4825a10", "name": "Feedback Loops"}
+{"type": "skill", "skill_id": "7268b554-214a-4abd-921e-64bfcf6b8c31", "name": "Figma"}
+{"type": "skill", "skill_id": "60da279e-7ad5-4997-9194-1d098549cd38", "name": "Figma Components"}
+{"type": "skill", "skill_id": "d9f41016-77f3-4aca-bc03-231039b2e5ae", "name": "Final Cut Pro"}
+{"type": "skill", "skill_id": "c8fc90c8-a406-493c-bf35-8fe7d786855d", "name": "Financial Modeling"}
+{"type": "skill", "skill_id": "22969aef-2e5a-49b6-92a5-fe2c98f216dd", "name": "Financial Reporting"}
+{"type": "skill", "skill_id": "9991b390-38c9-414b-830d-e3c4f37d2f2f", "name": "Firebase"}
+{"type": "skill", "skill_id": "68d8960a-d37c-40a3-959f-0586db5eb1c3", "name": "Flutter"}
+{"type": "skill", "skill_id": "329afc26-7331-4612-8574-22191a292164", "name": "FlutterFlow"}
+{"type": "skill", "skill_id": "688d1e94-ee4e-42ac-8649-d0d8c304868a", "name": "Forecasting"}
+{"type": "skill", "skill_id": "45f3ca29-1300-4799-a3a6-1e060e3834bb", "name": "Foundry"}
+{"type": "skill", "skill_id": "cda41065-25d7-443d-923a-8b490144a15e", "name": "Functional Specification"}
+{"type": "skill", "skill_id": "a6b6211f-7b39-46a5-bca8-9d26778b631c", "name": "Funnel Strategy"}
+{"type": "skill", "skill_id": "5f2f7c13-be5d-45f5-ba26-2123f01609f3", "name": "Game Design Document"}
+{"type": "skill", "skill_id": "63d63b00-2c55-4418-9f8a-43790ff9fe45", "name": "Game Economy"}
+{"type": "skill", "skill_id": "f3409a75-c6b2-4fc5-bac1-736e040c451b", "name": "Game UI"}
+{"type": "skill", "skill_id": "b819a7ba-627e-4734-b7e0-a096a9643f0d", "name": "Gameplay Programming"}
+{"type": "skill", "skill_id": "39827cbe-183d-4f0f-8855-4f7182c3da8b", "name": "Gas Optimization"}
+{"type": "skill", "skill_id": "0751cb39-96fd-46a9-a16d-2596d59246f4", "name": "GDPR"}
+{"type": "skill", "skill_id": "02595e9d-0d1e-4ed2-b88c-9bde527f8f2e", "name": "General Ledger"}
+{"type": "skill", "skill_id": "bf005f89-2e88-4ded-aaab-4e9bb5e9f00c", "name": "GitHub Actions"}
+{"type": "skill", "skill_id": "e8061861-875c-41ce-be52-a34bfae526c9", "name": "GitLab CI"}
+{"type": "skill", "skill_id": "669a5932-dc68-45e7-9a65-404be9211261", "name": "Go-to-market Planning"}
+{"type": "skill", "skill_id": "83c93a60-fe62-470c-b226-91a5d2e11e28", "name": "Go-to-market Strategy"}
+{"type": "skill", "skill_id": "4cb77fb7-6466-41a3-a95e-89f4716b99a2", "name": "Google Ads"}
+{"type": "skill", "skill_id": "cd4869c4-e556-411a-9e8e-1061cbd0b1da", "name": "Google Analytics 4"}
+{"type": "skill", "skill_id": "63b61783-7b2d-46cd-a355-956f252347ba", "name": "Google Cloud"}
+{"type": "skill", "skill_id": "3bb4f421-eb01-4c8c-9448-7f072771299c", "name": "Google Optimize Alternatives"}
+{"type": "skill", "skill_id": "86805070-2488-4ef2-b98c-b920468cc78b", "name": "Google Play Console"}
+{"type": "skill", "skill_id": "a15fd152-678c-4bd9-b426-75f5ce2bddee", "name": "Google Search Console"}
+{"type": "skill", "skill_id": "9e9bc2f0-502e-45ab-9990-b0bd4774cba9", "name": "Google Sheets"}
+{"type": "skill", "skill_id": "f4b0311c-eaa5-4b97-b8b0-406f3e906cf9", "name": "Google Slides"}
+{"type": "skill", "skill_id": "b9d4e738-d696-48c7-a550-9fa166b1b5fa", "name": "Google Tag Manager"}
+{"type": "skill", "skill_id": "b50016ef-9582-41a7-85c7-5c8a74b7d946", "name": "Governance Design"}
+{"type": "skill", "skill_id": "7da38e51-259f-4866-ad43-878773eab70e", "name": "Grafana"}
+{"type": "skill", "skill_id": "ace7a8bd-d37a-4343-8d69-4dd7907dac67", "name": "Grammar Editing"}
+{"type": "skill", "skill_id": "48eb3cb9-b69a-4677-9a58-61d6d09b2c93", "name": "Grant Writing"}
+{"type": "skill", "skill_id": "d0e2cb30-39fe-416d-bb51-e72e343c50c2", "name": "GraphQL"}
+{"type": "skill", "skill_id": "785421f2-105d-4b9f-84e7-aa8eeb266e0e", "name": "Growth Experiments"}
+{"type": "skill", "skill_id": "14d415c7-ae21-4486-bbec-52d23168a585", "name": "Gutenberg"}
+{"type": "skill", "skill_id": "1bf63500-bf13-45f2-b954-b15966f3d8f2", "name": "H5P"}
+{"type": "skill", "skill_id": "8bf00cfe-414e-490c-b37e-23eaebb4d2c5", "name": "Hardhat"}
+{"type": "skill", "skill_id": "cfcbffe6-163c-437e-9047-fd0b299c960b", "name": "Heatmap Analysis"}
+{"type": "skill", "skill_id": "65b5691a-00d0-48b1-9f62-4f79590f6cc4", "name": "Helpdesk Operations"}
+{"type": "skill", "skill_id": "6ec65b7a-1485-4e27-8525-300896175317", "name": "Hotjar"}
+{"type": "skill", "skill_id": "ee5cff02-d0d9-4787-a679-32b87abcf612", "name": "HRIS"}
+{"type": "skill", "skill_id": "40e8b67e-53ee-40c5-b8f0-7542fe1cf10e", "name": "HTML5"}
+{"type": "skill", "skill_id": "5bd6930b-8772-4598-bc92-245d20571a2d", "name": "HubSpot"}
+{"type": "skill", "skill_id": "580f8e8c-1758-40f2-a9cb-18c3c9c01642", "name": "i18n"}
+{"type": "skill", "skill_id": "9dce7391-9860-4075-b7e7-28ed0cc0c347", "name": "IAM"}
+{"type": "skill", "skill_id": "4c6d815b-227a-40c0-a13e-f52c6d9e3cc0", "name": "Icon Design"}
+{"type": "skill", "skill_id": "be4259a6-eb60-458d-98d8-96eb492285ba", "name": "IFRS"}
+{"type": "skill", "skill_id": "10a3f264-b4a3-40e5-a736-c67bd3b503cd", "name": "Image Segmentation"}
+{"type": "skill", "skill_id": "fdb237cc-67ec-4c6b-95a1-8abbe0f17540", "name": "Impact"}
+{"type": "skill", "skill_id": "5e44952c-eb09-4d9b-806f-b1ba4112feef", "name": "Incentive Design"}
+{"type": "skill", "skill_id": "1c76fe27-ade3-4abe-a442-65779ad55f7a", "name": "Incident Response"}
+{"type": "skill", "skill_id": "2471f974-91a0-4c45-a70c-b0a982e5745f", "name": "Infographic Design"}
+{"type": "skill", "skill_id": "4831d5ae-9fea-4a80-b6fc-c58c7ca6158c", "name": "Information Architecture"}
+{"type": "skill", "skill_id": "deb5aca6-28b1-4ffa-89a1-e3a736ad3c51", "name": "Instructional Design"}
+{"type": "skill", "skill_id": "3c002fba-3856-44ce-a9c0-b4eff69021d7", "name": "Interaction Design"}
+{"type": "skill", "skill_id": "73d87360-4cc2-4ccb-ba16-0893dae5089e", "name": "Interactive Learning"}
+{"type": "skill", "skill_id": "ea219b63-1c98-41d8-9bf2-8c7d385c886d", "name": "Intercom"}
+{"type": "skill", "skill_id": "f2c2b222-1b81-44ae-996d-d34078445c26", "name": "Internal Controls"}
+{"type": "skill", "skill_id": "15789602-5f5c-4586-a85a-3fa7513a5d8d", "name": "Interview Scheduling"}
+{"type": "skill", "skill_id": "c35d2be7-6c0c-46d2-9cd0-3f168ea0e406", "name": "Inventory Reporting"}
+{"type": "skill", "skill_id": "3884a574-1f77-447e-a265-625ce8e86de1", "name": "ISO 27001"}
+{"type": "skill", "skill_id": "50360f52-4193-4695-9a5d-382e97e647a6", "name": "Item Analysis"}
+{"type": "skill", "skill_id": "137845c7-439e-4121-9928-554418ea5ce5", "name": "Japanese Vietnamese Translation"}
+{"type": "skill", "skill_id": "8e913e4f-6a36-4e7b-baa0-0beae6c3f0a9", "name": "Java Spring Boot"}
+{"type": "skill", "skill_id": "777baf40-bb64-4eb6-8fd2-51460809be53", "name": "JavaScript"}
+{"type": "skill", "skill_id": "ab9220d3-9773-451a-a177-d82cb25ae941", "name": "Jira"}
+{"type": "skill", "skill_id": "a7c65ff1-9617-460c-ab56-cc91ef2f128b", "name": "Journey Mapping"}
+{"type": "skill", "skill_id": "5ac19e01-c3fa-499b-802b-23b06c15fd20", "name": "Jupyter"}
+{"type": "skill", "skill_id": "f1f6a418-683e-4f28-80ea-f69348f817bb", "name": "Kafka"}
+{"type": "skill", "skill_id": "abf83030-d332-4b6c-8cf2-f2eaf6965c3f", "name": "Kanban"}
+{"type": "skill", "skill_id": "965573c1-d616-46f0-9c6c-412c651b59c3", "name": "Keyword Optimization"}
+{"type": "skill", "skill_id": "0bb7072b-189a-4333-9d84-5d4b7ec7561c", "name": "Keyword Research"}
+{"type": "skill", "skill_id": "c69c40c4-38aa-4f95-8ce4-236a33a6e360", "name": "Klaviyo"}
+{"type": "skill", "skill_id": "fb8e71de-891f-4f99-80fb-96d5938deebc", "name": "Knowledge Base"}
+{"type": "skill", "skill_id": "6cae171f-df0b-4b08-9dd2-bf1263e293ee", "name": "Korean Vietnamese Translation"}
+{"type": "skill", "skill_id": "26d0f5ef-12a2-459c-bcfc-6df451c3017b", "name": "Kotlin"}
+{"type": "skill", "skill_id": "ed508612-6381-488d-9242-fbea2a02b396", "name": "Kubernetes"}
+{"type": "skill", "skill_id": "a38f1cf5-2460-486f-b77d-a1f1dfaa0f83", "name": "Landing Page Copy"}
+{"type": "skill", "skill_id": "8c2685b8-6807-48f9-9a5b-4ec097c0c6f0", "name": "Landing Page Design"}
+{"type": "skill", "skill_id": "6e0145cf-3658-4872-b38e-9c461d5e2ac6", "name": "Landing Page Optimization"}
+{"type": "skill", "skill_id": "2b9e4af4-bb1b-4225-aac1-59148ce00628", "name": "LangChain"}
+{"type": "skill", "skill_id": "1b598a59-9bd4-4529-a96d-81db37cfd65b", "name": "Layout Design"}
+{"type": "skill", "skill_id": "f73640a9-3056-4fe6-9521-f7ebfcb821e0", "name": "Lead Qualification"}
+{"type": "skill", "skill_id": "c41a9830-2958-47ce-9f0e-871139a6f6c0", "name": "Lead Scoring"}
+{"type": "skill", "skill_id": "94ce45b3-e359-4797-a444-e6e6b52794b4", "name": "Learner Journey"}
+{"type": "skill", "skill_id": "db35543c-3fe2-40c3-a2ec-8bbe4b90fb37", "name": "Learning Experience Design"}
+{"type": "skill", "skill_id": "60add790-9763-4c3f-bec9-06554546b61a", "name": "Learning Measurement"}
+{"type": "skill", "skill_id": "28ed84d6-543b-49bc-94e3-94e70f0132ef", "name": "Learning Outcomes"}
+{"type": "skill", "skill_id": "39f409ca-5e23-4a41-aa5f-751697e9c412", "name": "Legal Drafting"}
+{"type": "skill", "skill_id": "393b1e70-c870-4140-aff9-89fd1940fab2", "name": "Legal Formatting"}
+{"type": "skill", "skill_id": "c5cd9e51-a5c8-40e2-b6a3-f7368ae96583", "name": "Legal Research"}
+{"type": "skill", "skill_id": "f5b76322-78e7-4ea8-ac35-5f014c836e70", "name": "Lesson Planning"}
+{"type": "skill", "skill_id": "3905daf9-e1ea-4e7b-a217-1b36c6998c9b", "name": "Level Design"}
+{"type": "skill", "skill_id": "d66a5265-2d11-4b8f-8c00-7fb66ec13f4e", "name": "Lighting"}
+{"type": "skill", "skill_id": "c48cd7a4-e581-4cea-92d0-993b29bf2541", "name": "Line Editing"}
+{"type": "skill", "skill_id": "831ba1be-e2f4-4ed9-8717-66771b8dc46b", "name": "LinkedIn Ads"}
+{"type": "skill", "skill_id": "495f1754-bdfb-41d2-969b-f38e59f12c44", "name": "LinkedIn Marketing"}
+{"type": "skill", "skill_id": "65a92e8f-9357-434d-bf12-26bb294eac57", "name": "LinkedIn Optimization"}
+{"type": "skill", "skill_id": "f3b9979f-abc5-4274-ad28-5ae5b59ce135", "name": "LinkedIn Outreach"}
+{"type": "skill", "skill_id": "5cf722ad-e49e-47c7-9bbf-4636f842bf4a", "name": "LinkedIn Recruiter"}
+{"type": "skill", "skill_id": "ef84c4b2-6170-41e6-9738-a8bb730cc48a", "name": "LinkedIn Sales Navigator"}
+{"type": "skill", "skill_id": "ad073b06-f034-4e4f-a309-d055ccf4e106", "name": "Linux"}
+{"type": "skill", "skill_id": "2353dc93-902a-442a-9b90-1b2c6e3a80c9", "name": "Liquid"}
+{"type": "skill", "skill_id": "53cebf68-3cd9-4ad4-986d-5fc2e918c711", "name": "List Building"}
+{"type": "skill", "skill_id": "8f7c6650-8003-4996-a760-23a3a7fb16ff", "name": "Live Chat Support"}
+{"type": "skill", "skill_id": "bb83b0ef-6ffc-49bd-baf7-da746f3cdc5e", "name": "LLM Evaluation"}
+{"type": "skill", "skill_id": "51178cf8-497d-4a8c-8f8a-552bcc14427c", "name": "LMS Integration"}
+{"type": "skill", "skill_id": "28fb9b26-2b09-4efe-9aaf-924795b23f4b", "name": "LMS Reporting"}
+{"type": "skill", "skill_id": "9149a7d9-b602-4a88-80d7-da77432d3b36", "name": "Load Testing"}
+{"type": "skill", "skill_id": "1c340853-06e1-4535-b5a3-a4881b62e99a", "name": "Localization QA"}
+{"type": "skill", "skill_id": "071682d0-bbd5-4f61-bb0b-f0f2488fe14a", "name": "Logo Design"}
+{"type": "skill", "skill_id": "17e084b3-b42f-4456-b23b-397669760c1c", "name": "Looker Studio"}
+{"type": "skill", "skill_id": "a56f537a-9915-4bad-bd30-8e814acb0ef2", "name": "Lottie"}
+{"type": "skill", "skill_id": "1e2a9913-9283-48dc-93e3-2c2ffad18d57", "name": "Mailchimp"}
+{"type": "skill", "skill_id": "b97433e0-6931-477d-8eb4-aeffc2f64cc1", "name": "Make"}
+{"type": "skill", "skill_id": "09464837-9e2d-42dd-bc10-7231086fac1b", "name": "Manual Testing"}
+{"type": "skill", "skill_id": "2a0e1071-1cd9-4d0d-8012-f617e7a2a921", "name": "Markdown"}
+{"type": "skill", "skill_id": "301241ae-c5db-49f3-8109-5de2370655d4", "name": "Market Entry"}
+{"type": "skill", "skill_id": "e7eac919-a895-4380-8812-d96a68347302", "name": "Market Research"}
+{"type": "skill", "skill_id": "8a18e63a-a660-4844-97fc-4b52e9dbb6f5", "name": "Marketing Translation"}
+{"type": "skill", "skill_id": "45e7a0fc-31ca-49a7-9354-56c6df5d9764", "name": "Marketo"}
+{"type": "skill", "skill_id": "23f84734-252e-4700-b4bd-e666882f0b54", "name": "Marketplace SEO"}
+{"type": "skill", "skill_id": "00312a2e-5804-4e4d-aba8-b62ed423b139", "name": "Math Tutoring"}
+{"type": "skill", "skill_id": "2b23b936-6411-4af5-b92f-2e256b8cdee5", "name": "Meta Ads"}
+{"type": "skill", "skill_id": "13e3ff70-5a17-4292-af17-84187c5418e1", "name": "Meta Business Suite"}
+{"type": "skill", "skill_id": "8d3094a7-c807-44cb-94c6-fc97e181a85d", "name": "Meta Pixel"}
+{"type": "skill", "skill_id": "93a98058-34e1-46d2-a75a-22b8dfaa114d", "name": "Meta Quest"}
+{"type": "skill", "skill_id": "b8bac3cc-4dc8-439a-8d40-698d4cb49eba", "name": "Metric Layer"}
+{"type": "skill", "skill_id": "4e53fb9c-21c0-4668-85cc-324612c19051", "name": "Microcopy"}
+{"type": "skill", "skill_id": "b581d2d6-8b5f-489b-968c-46135ff7994d", "name": "Microservices"}
+{"type": "skill", "skill_id": "6cd3594d-af2e-4e89-bca7-8d179f9b26e3", "name": "MLflow"}
+{"type": "skill", "skill_id": "677a6fee-e402-4253-bc8d-b756f5d6465c", "name": "Mobile CI/CD"}
+{"type": "skill", "skill_id": "5619693e-cb0d-45ee-b1e3-295735cf51f6", "name": "Mobile Game Optimization"}
+{"type": "skill", "skill_id": "c01de17c-5ddb-478d-bbdf-09ca943001cf", "name": "Mobile UI Design"}
+{"type": "skill", "skill_id": "7d54465b-4ab1-4f17-af7a-7df02eefb4f4", "name": "Model Deployment"}
+{"type": "skill", "skill_id": "6b570dcb-f6f8-4daf-8556-21e8018dcd98", "name": "Model Monitoring"}
+{"type": "skill", "skill_id": "179242d7-c2fd-4c7d-9eb2-7f4fb05a150a", "name": "MongoDB"}
+{"type": "skill", "skill_id": "bad3bb7e-943f-4dd6-8c17-f9e2092fbf60", "name": "Month-end Close"}
+{"type": "skill", "skill_id": "724736cb-377a-4999-8bd2-3f0767ec49e1", "name": "Moodle"}
+{"type": "skill", "skill_id": "0308c1fd-e040-4963-9120-4183cac7b9d0", "name": "Multiplayer Networking"}
+{"type": "skill", "skill_id": "6b6bea7e-faab-44ef-bd55-4be776345c14", "name": "MySQL"}
+{"type": "skill", "skill_id": "1a5e74b7-c380-4e6b-9136-e8b20fbc9224", "name": "Mythril"}
+{"type": "skill", "skill_id": "8dddf850-c371-4045-b7c6-90c77fa1bc0e", "name": "n8n"}
+{"type": "skill", "skill_id": "a7fe353a-e761-43fe-ba7a-ee738fe4ed0e", "name": "Narrative Design"}
+{"type": "skill", "skill_id": "adc1acd6-a6a7-4c61-a739-03e491e0d7a9", "name": "NDA"}
+{"type": "skill", "skill_id": "730a4ef8-f275-46ba-b2cd-0066e1ed6f61", "name": "NestJS"}
+{"type": "skill", "skill_id": "e45c8713-5bb5-47e6-b5f8-c31461ee08cb", "name": "Next.js"}
+{"type": "skill", "skill_id": "a377c56f-986b-47a2-b7b9-5f31f9fcec55", "name": "Nginx"}
+{"type": "skill", "skill_id": "16996046-27a8-456e-a4ad-353f810ad796", "name": "NLP"}
+{"type": "skill", "skill_id": "c9976d78-25ca-421c-9e68-a43c6b606b7d", "name": "Node.js"}
+{"type": "skill", "skill_id": "7d3ccc85-9d2c-4884-b1c8-038080f987fb", "name": "Non-functional Requirements"}
+{"type": "skill", "skill_id": "430eec47-eea2-4d4e-b884-723c530dae28", "name": "Notion"}
+{"type": "skill", "skill_id": "685c50e7-3be5-4525-9511-4d47eff9662c", "name": "NumPy"}
+{"type": "skill", "skill_id": "3b67d6c2-0b4f-4311-b6ec-6b2d6269d213", "name": "OAuth 2.0"}
+{"type": "skill", "skill_id": "b39a8c20-4b39-4ae3-9a54-7731fc797a6d", "name": "OCR"}
+{"type": "skill", "skill_id": "c3e682c6-11d9-4287-ac88-5e220b43b4af", "name": "On-page SEO"}
+{"type": "skill", "skill_id": "f674b455-72f4-4c5b-b0ed-e59233fa23a2", "name": "Onboarding Copy"}
+{"type": "skill", "skill_id": "66896c61-e8ca-4f2d-b845-65f5af2ebb56", "name": "Online Research"}
+{"type": "skill", "skill_id": "fc073981-16e8-4d17-8763-26f2d84166c1", "name": "Online Teaching"}
+{"type": "skill", "skill_id": "074611f0-b404-4603-a08b-2d97f90c1007", "name": "OpenAI API"}
+{"type": "skill", "skill_id": "f1db62e8-d350-4fcb-8a16-c81323c75904", "name": "OpenAPI"}
+{"type": "skill", "skill_id": "738eaa9b-3f08-4bfb-9186-3477de809222", "name": "OpenCV"}
+{"type": "skill", "skill_id": "7233495f-6c15-44a1-b26e-c2e1e7e3e67d", "name": "OpenTelemetry"}
+{"type": "skill", "skill_id": "61414fe9-4d73-4bdf-8316-7314019c5350", "name": "OpenZeppelin"}
+{"type": "skill", "skill_id": "6340dc82-7fc6-4ccf-9e1d-71a1ddde3890", "name": "Operations Reporting"}
+{"type": "skill", "skill_id": "c5f47b44-8ca6-4809-8504-5a27f7569a04", "name": "Order Management"}
+{"type": "skill", "skill_id": "b4ba127f-8790-40c6-a21a-cd5f3563fd37", "name": "OWASP Top 10"}
+{"type": "skill", "skill_id": "84a7f490-c808-4c6c-a43b-de8664b49f30", "name": "Packaging Mockup"}
+{"type": "skill", "skill_id": "e26c2773-35b1-439e-9ad3-d8a22643a08e", "name": "Pandas"}
+{"type": "skill", "skill_id": "7e2975a1-f4f4-4a53-9724-0f7f3cd0f3bc", "name": "Partner Management"}
+{"type": "skill", "skill_id": "e05e9a7d-c49e-4bc3-b16d-e1b3b9e6fa0c", "name": "PAS Framework"}
+{"type": "skill", "skill_id": "9af90a61-8fb9-4b1b-9275-949f3757010e", "name": "Payment Integration"}
+{"type": "skill", "skill_id": "437d609e-4d88-4231-91d0-e5495899b616", "name": "PayOS Integration"}
+{"type": "skill", "skill_id": "a5a4f4cb-7b2c-4861-ad20-c08d144e72f5", "name": "Payroll Processing"}
+{"type": "skill", "skill_id": "40fddc44-ae06-46b3-89e1-56d7e7f083cb", "name": "Payroll Reconciliation"}
+{"type": "skill", "skill_id": "a65d7256-7b7f-41fb-94e4-61fc7b767343", "name": "Penetration Testing"}
+{"type": "skill", "skill_id": "9ffef7b6-2ccc-49d9-a365-d29bb91c9a2c", "name": "Persona Research"}
+{"type": "skill", "skill_id": "1278c7c0-611c-4bb6-85fd-ec6dc861171e", "name": "Personal Income Tax"}
+{"type": "skill", "skill_id": "1b408a5a-3231-4bdc-ba5d-27210ddb222e", "name": "PHP"}
+{"type": "skill", "skill_id": "7bb86efd-5d2a-4c2a-ad56-61dfd7549cce", "name": "Pipedrive"}
+{"type": "skill", "skill_id": "d17b50b4-2c0a-4daa-80f4-bc1d36ba613d", "name": "Pipeline Automation"}
+{"type": "skill", "skill_id": "7ff7459a-b922-4fa8-88fb-9e0683c1a82f", "name": "Pitch Deck"}
+{"type": "skill", "skill_id": "2cc0a1c2-74ec-422b-a106-2fd0c97be928", "name": "Pitch Narrative"}
+{"type": "skill", "skill_id": "dd895eaf-257b-4e60-aa96-cfe12584c224", "name": "Player Progression"}
+{"type": "skill", "skill_id": "47c59f84-3f33-4b3b-b797-28067db78d28", "name": "Playwright"}
+{"type": "skill", "skill_id": "a2cf6f96-7dd6-4703-9825-8deee0141b7d", "name": "Podcast Script"}
+{"type": "skill", "skill_id": "3dd00f66-8997-4abc-87de-7c8e07fa5781", "name": "Policy Writing"}
+{"type": "skill", "skill_id": "4c4bc232-1925-4c9f-94ea-d244c8c24cea", "name": "Polygon"}
+{"type": "skill", "skill_id": "bd09827c-b2a4-4575-b852-a34a67e90518", "name": "Portfolio Bio"}
+{"type": "skill", "skill_id": "8ebdc2d7-f24f-4805-bea5-1226d97c6816", "name": "PostgreSQL"}
+{"type": "skill", "skill_id": "31e90150-c542-42f3-9786-d57317749484", "name": "Postman"}
+{"type": "skill", "skill_id": "e5427c23-5ecb-4330-9e93-f3aa1cacfc4f", "name": "Power Apps"}
+{"type": "skill", "skill_id": "0c3142db-cf88-40f8-9f0a-5af6b33498a2", "name": "Power Automate"}
+{"type": "skill", "skill_id": "41fdaaeb-6ebf-4cd0-8ade-5c1e9c2d61d4", "name": "Power BI"}
+{"type": "skill", "skill_id": "798fd4f2-ac4a-4f03-b11f-15061d6b3157", "name": "PowerPoint"}
+{"type": "skill", "skill_id": "0b5753aa-e461-406e-b7df-674ac4991f1e", "name": "PPC Strategy"}
+{"type": "skill", "skill_id": "dd2c87d7-18b2-41cf-8ba0-62d1427d0f10", "name": "Presentation Animation"}
+{"type": "skill", "skill_id": "f88a2836-09e8-4077-b0ff-7f998b9237ce", "name": "Pricing Strategy"}
+{"type": "skill", "skill_id": "3a171f2c-895d-4a7e-9291-c3c1da7cc1b8", "name": "Prioritization"}
+{"type": "skill", "skill_id": "5e5636ae-159f-4cb9-978d-7907ee12a456", "name": "Prisma"}
+{"type": "skill", "skill_id": "8b82beef-b15d-4d9d-9aef-8162cbea6a4d", "name": "Privacy Policy"}
+{"type": "skill", "skill_id": "42a48ed0-f915-440b-a5d1-1f25ce244c51", "name": "Process Improvement"}
+{"type": "skill", "skill_id": "906a1c64-a763-4415-9b08-cbe40a3e8fa1", "name": "Process Mapping"}
+{"type": "skill", "skill_id": "8ef5fcec-7cf1-42ad-bc0c-1caa32d9ad1e", "name": "Process Optimization"}
+{"type": "skill", "skill_id": "90eb9bd1-656b-4a11-bdfd-23bb4b29adb1", "name": "Procreate"}
+{"type": "skill", "skill_id": "a7b0ac53-c61b-430b-83df-ca3de395db1a", "name": "Product Analytics"}
+{"type": "skill", "skill_id": "271c7428-38af-4cf6-8466-72ec5b936a9f", "name": "Product Discovery"}
+{"type": "skill", "skill_id": "bf2c4d34-31c6-4c6e-b772-deed6c19acdf", "name": "Product Listing"}
+{"type": "skill", "skill_id": "f7ebc02a-0288-4533-9bc1-bece10164cd8", "name": "Product Messaging"}
+{"type": "skill", "skill_id": "cebb862c-92e3-4744-81da-07b690b0cb6f", "name": "Product Rendering"}
+{"type": "skill", "skill_id": "7bdbefb4-08f6-42d7-be8d-97f021fd2c88", "name": "Product Roadmap"}
+{"type": "skill", "skill_id": "070e90c0-eddc-48c6-8797-5297b75577bd", "name": "Programming Tutoring"}
+{"type": "skill", "skill_id": "b9af1b29-ed35-4afe-9e29-c663ed8e6555", "name": "Project Planning"}
+{"type": "skill", "skill_id": "c1af9bac-be0e-4f7d-8b90-666445c81432", "name": "Prometheus"}
+{"type": "skill", "skill_id": "59c28faa-03a8-47a9-a8b2-1cc23983fcd9", "name": "Prompt Engineering"}
+{"type": "skill", "skill_id": "91b3cf39-a87c-4133-825b-1fb787629b78", "name": "Proofreading"}
+{"type": "skill", "skill_id": "868b928f-e39a-4c57-9c8a-5231eda91bd2", "name": "Proposal Writing"}
+{"type": "skill", "skill_id": "d5071c20-39ac-42d7-aab6-edb2b479697b", "name": "Prospect Research"}
+{"type": "skill", "skill_id": "226e39bd-ab57-4156-8935-5bd7d76f307f", "name": "Prototyping"}
+{"type": "skill", "skill_id": "ba213386-eb16-4b7c-bf17-458aaf1f7ec2", "name": "Python"}
+{"type": "skill", "skill_id": "ed9e5141-803a-4945-8d5d-184fa13449ce", "name": "Python Automation"}
+{"type": "skill", "skill_id": "330bda8d-aef9-43af-a7e7-ff4df8a86aa4", "name": "Python FastAPI"}
+{"type": "skill", "skill_id": "f311188c-5bae-4340-9625-c6da149edf93", "name": "PyTorch"}
+{"type": "skill", "skill_id": "9ae0f115-c5bd-4b11-9a09-c19ea3ac4744", "name": "Qt"}
+{"type": "skill", "skill_id": "d541dc45-afc2-433d-8b5b-f61c9ab076cd", "name": "Quality Checking"}
+{"type": "skill", "skill_id": "c5f62467-b211-4c47-a55a-3ac8acc4d2fe", "name": "Query Optimization"}
+{"type": "skill", "skill_id": "0f02ec5c-de0a-4d70-8e4a-c143da933797", "name": "QuickBooks"}
+{"type": "skill", "skill_id": "b65d87b6-a5d6-4311-a8ee-5d338270abd7", "name": "Quiz Design"}
+{"type": "skill", "skill_id": "69211007-5ba6-4762-ab85-68c5f575b6c5", "name": "RabbitMQ"}
+{"type": "skill", "skill_id": "d36ee1d0-d38f-4c22-9a93-55318594f58b", "name": "RAG"}
+{"type": "skill", "skill_id": "09561a61-7e8d-46c6-b13d-2fd42b32c000", "name": "RAG Evaluation"}
+{"type": "skill", "skill_id": "cf683d32-26a6-4c7b-bbf9-7e94c329ff6d", "name": "React"}
+{"type": "skill", "skill_id": "dcc26186-4ef9-424b-9b38-0f9107da5e5c", "name": "React Native"}
+{"type": "skill", "skill_id": "966a71dd-09a6-4188-bad7-c2145e77f8d7", "name": "Redis"}
+{"type": "skill", "skill_id": "984a02a2-1688-4290-9422-956f0f9d3a61", "name": "Redlining"}
+{"type": "skill", "skill_id": "2374aa17-bb91-4608-9083-66ff2a324310", "name": "Redux"}
+{"type": "skill", "skill_id": "accacb50-6c96-4ba7-a161-28344808c951", "name": "Referral Programs"}
+{"type": "skill", "skill_id": "e4d86ee6-7eb0-40af-b706-9c659002bf7a", "name": "Regression Testing"}
+{"type": "skill", "skill_id": "b800b237-39cc-4cf4-b019-86c0259ca895", "name": "Release Coordination"}
+{"type": "skill", "skill_id": "fdd9734d-b1e2-4c5d-9271-bacc17517d68", "name": "Release Notes"}
+{"type": "skill", "skill_id": "22142b9a-e926-407c-9065-0b2e3dfe6ee1", "name": "Release Planning"}
+{"type": "skill", "skill_id": "16d1040b-9bc8-4d82-91af-fcbb3b70ca1c", "name": "Report Writing"}
+{"type": "skill", "skill_id": "9a822abe-42e4-42a9-9126-6e25a16b7e65", "name": "Requirements Analysis"}
+{"type": "skill", "skill_id": "09d44819-9e63-4b6b-9329-3de908067000", "name": "Requirements Gathering"}
+{"type": "skill", "skill_id": "5278686d-7a8b-4976-9c97-a239bfc08afd", "name": "Research Synthesis"}
+{"type": "skill", "skill_id": "8eaf08d7-8d56-4b22-bc2b-fdce659dcf9a", "name": "Research Writing"}
+{"type": "skill", "skill_id": "58794c99-bda2-417e-b2d3-588cd24d4e4a", "name": "Resource Planning"}
+{"type": "skill", "skill_id": "dfbc0bda-9fb0-4b33-b422-117de9305fb5", "name": "Responsive Design"}
+{"type": "skill", "skill_id": "519f9098-78eb-4d6d-970c-c670660fb8b9", "name": "REST API"}
+{"type": "skill", "skill_id": "01f74cb4-0e21-4453-9123-c23cc031d524", "name": "Resume Writing"}
+{"type": "skill", "skill_id": "fc438125-c216-4175-869b-535aa4fe88f1", "name": "Retention Strategy"}
+{"type": "skill", "skill_id": "f7ac3b69-cb5e-4de5-99b1-65bf5a027e16", "name": "Retool"}
+{"type": "skill", "skill_id": "0e03df5f-6265-49d2-bf21-de21be4c6ec9", "name": "Review Optimization"}
+{"type": "skill", "skill_id": "a6c4ceb2-ab02-4850-92f9-627e7e50b08d", "name": "RFP Response"}
+{"type": "skill", "skill_id": "a2853edd-7949-475b-9ce7-c81fea61da07", "name": "Rigging"}
+{"type": "skill", "skill_id": "14cf7c15-fc9b-41ea-9aaa-5d58201d2da8", "name": "Risk Management"}
+{"type": "skill", "skill_id": "06bcc9a7-be0d-4e0c-8533-0376149ff1e0", "name": "ROAS Optimization"}
+{"type": "skill", "skill_id": "e3b9470b-33b2-4e15-9b8f-d391fd286ec1", "name": "Rollback Planning"}
+{"type": "skill", "skill_id": "89be9e74-bd14-4c77-918a-8a95b3c11c05", "name": "Rubrics"}
+{"type": "skill", "skill_id": "f2ea0fa5-7d07-43f4-a778-9a93f450487b", "name": "Rust"}
+{"type": "skill", "skill_id": "2d3c84a9-080d-4167-bb8b-d4e31deede0f", "name": "SaaS Design"}
+{"type": "skill", "skill_id": "c130b00a-eaea-4f08-b5bd-22afc6370e88", "name": "Sales Copywriting"}
+{"type": "skill", "skill_id": "93188c1d-9c0f-45df-93a2-c0a73acd1cac", "name": "Sales Reporting"}
+{"type": "skill", "skill_id": "94ab1498-9d24-4e11-bbf8-277ec4ddae3c", "name": "Sales Scripts"}
+{"type": "skill", "skill_id": "f11fcdbd-9c7c-4c3d-aff2-8df4a622cbbc", "name": "Salesforce"}
+{"type": "skill", "skill_id": "db4afd0e-acc0-48a9-b025-90b90c691e2f", "name": "Scenario-based Learning"}
+{"type": "skill", "skill_id": "826c18a6-e5c2-429c-8fb7-265c66ebfb29", "name": "Scikit-learn"}
+{"type": "skill", "skill_id": "a7fe95c2-6be9-470d-a1d5-9876473d3b06", "name": "SCORM"}
+{"type": "skill", "skill_id": "bac41363-74cf-4756-b975-ca64d3299cf8", "name": "SCORM Upload"}
+{"type": "skill", "skill_id": "70ca6119-60f2-49cb-8959-90c009c04a40", "name": "Screening Interviews"}
+{"type": "skill", "skill_id": "1093ae09-1dca-4d62-8441-0dbe9c1e8670", "name": "Scrum"}
+{"type": "skill", "skill_id": "cc0e6529-a247-40ad-8256-7aed5bdff036", "name": "Security Audit"}
+{"type": "skill", "skill_id": "536793c9-6796-49be-8659-09c386afa815", "name": "Segmentation"}
+{"type": "skill", "skill_id": "7c060237-d7ae-4088-8509-6f41830c44b8", "name": "Selenium"}
+{"type": "skill", "skill_id": "dbf00ff3-e1c5-4993-a99d-6c6ef402835e", "name": "Semrush"}
+{"type": "skill", "skill_id": "c0cc15c0-a2eb-456f-aab4-732ce1466173", "name": "SEO Content"}
+{"type": "skill", "skill_id": "94c9d91f-4d69-4e45-be1b-28458b09b72a", "name": "SEO Writing"}
+{"type": "skill", "skill_id": "80efe09a-f42d-468e-b4ca-f5e6d85c9a35", "name": "Server-side Tracking"}
+{"type": "skill", "skill_id": "24e02938-a50c-4a52-91b3-f6c093b878cf", "name": "Serverless"}
+{"type": "skill", "skill_id": "6aa34e44-dc8b-40e3-928a-a0743f096e2d", "name": "Service Agreement"}
+{"type": "skill", "skill_id": "6a2288aa-b0fe-4913-9268-26c939c5337e", "name": "Shopify"}
+{"type": "skill", "skill_id": "b9a4458e-ccec-473e-9417-e3a946df4be6", "name": "Shopify Admin"}
+{"type": "skill", "skill_id": "ee9b1827-1ada-419c-905e-64ce40912db1", "name": "Shopify App Development"}
+{"type": "skill", "skill_id": "83b59f20-0924-4400-9f95-70ba1569086b", "name": "Shopify Hydrogen"}
+{"type": "skill", "skill_id": "99916418-a898-4911-aee2-3dfe724de975", "name": "Slack Community"}
+{"type": "skill", "skill_id": "5ac85b6d-79c5-4a74-bd9e-91096c79ed80", "name": "Slide Sync"}
+{"type": "skill", "skill_id": "3d52134d-77c7-4120-a248-d80a99bcd142", "name": "Slither"}
+{"type": "skill", "skill_id": "1a3f8196-ef29-4dbe-9a81-126b768fe7b1", "name": "SLO/SLI"}
+{"type": "skill", "skill_id": "13cdd868-3bee-4a50-aad1-a8e8275b2be6", "name": "Smart Contract Audit"}
+{"type": "skill", "skill_id": "b83b83cc-3b04-45d3-a3b5-6f5cbc291482", "name": "Smart Contract Testing"}
+{"type": "skill", "skill_id": "69dadbda-0f48-41cf-a08a-d610e95388cc", "name": "Snowflake"}
+{"type": "skill", "skill_id": "d8f35669-2adb-4f76-af59-0da56b5b46e5", "name": "SOC 2"}
+{"type": "skill", "skill_id": "89c45356-7dee-4ac3-b6d5-6f898149df04", "name": "Social Media Design"}
+{"type": "skill", "skill_id": "188d40cc-715f-4227-aa50-2bd0abc7e842", "name": "Social Media Strategy"}
+{"type": "skill", "skill_id": "fcb88d23-e929-4fa5-a7b6-197ad4bad934", "name": "Solana"}
+{"type": "skill", "skill_id": "7789fd94-eec2-4dc0-84f5-a2a79aa07014", "name": "Solidity"}
+{"type": "skill", "skill_id": "c77c1d07-2cd2-45f1-b5dc-dfa989cf2d4d", "name": "SOP Documentation"}
+{"type": "skill", "skill_id": "61e26879-db09-4562-8b66-74198c7f5218", "name": "Spark"}
+{"type": "skill", "skill_id": "6826648f-68de-4740-a0bc-2de6bf6bf09d", "name": "Spatial Interaction"}
+{"type": "skill", "skill_id": "ae9706dd-4bfb-48a1-8ff8-69783afb9c22", "name": "Sprint Planning"}
+{"type": "skill", "skill_id": "1a385194-f134-4620-86de-8aad81a7347f", "name": "Sprint Retrospective"}
+{"type": "skill", "skill_id": "83c93f13-3301-4a5f-a9c0-2e5b9a81424b", "name": "SQL"}
+{"type": "skill", "skill_id": "9fed645e-2131-42c0-9dcc-1329c46bd308", "name": "SQL Server"}
+{"type": "skill", "skill_id": "ea0eacd5-f3cc-4aac-a24d-d6e684d21060", "name": "SQLite"}
+{"type": "skill", "skill_id": "f5772fd5-88db-4daf-a6e5-03e6ccbe531e", "name": "Stakeholder Management"}
+{"type": "skill", "skill_id": "2c8475a4-5b02-45d8-90eb-893e43edd2b4", "name": "Statistics"}
+{"type": "skill", "skill_id": "08b96d3b-02ab-4fdb-9241-c9618a33d3e0", "name": "Status Reporting"}
+{"type": "skill", "skill_id": "3724c713-991c-4345-b850-45beaa535f95", "name": "Storyboard"}
+{"type": "skill", "skill_id": "c8482de5-c3f7-4f10-90d3-17e33f64ca24", "name": "Storyboard Writing"}
+{"type": "skill", "skill_id": "ab0c9b92-278d-4f0e-9e76-cf28c183934b", "name": "Storyboarding"}
+{"type": "skill", "skill_id": "c3146f60-a137-4d8b-b35c-5db5dd42bbb2", "name": "Storybook"}
+{"type": "skill", "skill_id": "823aebde-108a-417b-a472-6d8650bf6b4d", "name": "Stripe API"}
+{"type": "skill", "skill_id": "fc7cfbb8-cbcb-41dc-bd70-ec4b72d7b549", "name": "Style Guide"}
+{"type": "skill", "skill_id": "c3ee6c9c-6ea7-470a-a9a8-b07c1021bc7e", "name": "Subtitle Editing"}
+{"type": "skill", "skill_id": "637da1ee-b66e-468b-b738-ea61f9771106", "name": "Subtitling"}
+{"type": "skill", "skill_id": "822e150c-8fcb-438e-8a43-b662ab70dbb8", "name": "Supabase"}
+{"type": "skill", "skill_id": "ebd42550-e204-43fc-89d0-04e85a49ab8c", "name": "Survey Design"}
+{"type": "skill", "skill_id": "68b7c56f-f746-4596-bcc0-192f87a45aeb", "name": "Swift"}
+{"type": "skill", "skill_id": "f024f7bc-9801-4cf7-aa36-968e62b40ae8", "name": "System Prompt Design"}
+{"type": "skill", "skill_id": "6453548b-3ed1-4852-8414-6cc299fc8d54", "name": "Tableau"}
+{"type": "skill", "skill_id": "11ee2664-d5ec-4039-be7f-8cd2d0ecd4b1", "name": "Tailwind CSS"}
+{"type": "skill", "skill_id": "0a3651c0-4114-4001-84bb-9ffe274edf06", "name": "TalentLMS"}
+{"type": "skill", "skill_id": "fff98c7d-3c37-426f-9cd4-5f7d19f26880", "name": "Tauri"}
+{"type": "skill", "skill_id": "79db03ab-e757-4637-8c58-174ec460e869", "name": "Tax Compliance"}
+{"type": "skill", "skill_id": "c8919cd2-2eb1-42c6-b147-8829cc232c74", "name": "Tax Planning"}
+{"type": "skill", "skill_id": "b03021c3-8be1-4c6f-97cf-3c432935964b", "name": "Tax Preparation"}
+{"type": "skill", "skill_id": "8421f878-d495-4570-996a-27b419b88e41", "name": "Team Facilitation"}
+{"type": "skill", "skill_id": "01e3ef16-fb89-4dbd-9348-7622ef56863a", "name": "Technical Delivery"}
+{"type": "skill", "skill_id": "61d6cfe1-3835-4beb-bf5b-76507d473f09", "name": "Technical SEO"}
+{"type": "skill", "skill_id": "fb932637-ac47-416e-bf07-55593781ad99", "name": "Technical Translation"}
+{"type": "skill", "skill_id": "7d30baee-6f09-4d87-b50c-594ccf19f8c2", "name": "TensorFlow"}
+{"type": "skill", "skill_id": "b25f64f0-fefc-4617-9568-ef10c0027244", "name": "Terminology Management"}
+{"type": "skill", "skill_id": "2b6e58b7-5f16-4913-85b6-92ef9fbbd965", "name": "Terraform"}
+{"type": "skill", "skill_id": "998c7dd0-490b-45d8-accf-be13bb69b4f1", "name": "Test Automation Framework"}
+{"type": "skill", "skill_id": "7c82d505-f878-4682-83e7-3429fa89880f", "name": "Test Bank"}
+{"type": "skill", "skill_id": "e8afc530-ddc9-4874-8d66-37cbca6745d2", "name": "Test Cases"}
+{"type": "skill", "skill_id": "080adeb9-133b-497b-aae9-d4fb92cc2cd2", "name": "Texturing"}
+{"type": "skill", "skill_id": "229a97f2-8ec2-4860-8316-86aa8936302e", "name": "Thought Leadership"}
+{"type": "skill", "skill_id": "12942f2d-d59e-470e-bf0b-7c4b6fd3dabb", "name": "Threat Modeling"}
+{"type": "skill", "skill_id": "a060572f-87c9-4ce0-9c3a-9f6ed7c40cbb", "name": "TikTok Marketing"}
+{"type": "skill", "skill_id": "10ee40b0-df8d-4778-9da1-a1d9ca50615b", "name": "Time Series Forecasting"}
+{"type": "skill", "skill_id": "1bc490b0-43a6-4ae9-a5b0-6d083f9a7b72", "name": "Timesheet Review"}
+{"type": "skill", "skill_id": "ddf0dfaa-84ea-4b3e-a4f0-224937c38f18", "name": "Tokenomics"}
+{"type": "skill", "skill_id": "aed2db26-a9b4-4572-bb75-30d0282fac20", "name": "Traceability Matrix"}
+{"type": "skill", "skill_id": "80ab926f-4c84-4387-988a-d8d6e60bc031", "name": "Tracking Links"}
+{"type": "skill", "skill_id": "d44af04f-4f09-463d-a5e8-55e52a4260f1", "name": "Travel Planning"}
+{"type": "skill", "skill_id": "dfde1b67-3171-47f7-ad79-145453757828", "name": "TypeScript"}
+{"type": "skill", "skill_id": "c42efc9d-b03b-44c7-b20b-ccd0f801e8e4", "name": "Typography"}
+{"type": "skill", "skill_id": "8f9573ea-708b-44d4-87d4-096db00f06f2", "name": "UAT"}
+{"type": "skill", "skill_id": "1707d332-2176-45d5-8bfd-cc9bbe3c91dd", "name": "UiPath"}
+{"type": "skill", "skill_id": "667bcb3b-bcd9-476c-837d-4be87e8f49a3", "name": "Unit Economics"}
+{"type": "skill", "skill_id": "c2101d52-b147-4c6d-9791-44b289bf1f5a", "name": "Unity"}
+{"type": "skill", "skill_id": "438b287d-276e-484a-b3a3-eac030e3c317", "name": "Unity Addressables"}
+{"type": "skill", "skill_id": "32b5396e-498d-490c-8fa7-163ddce2422f", "name": "Unity UI"}
+{"type": "skill", "skill_id": "64c4eff8-082e-4e20-9998-0a1594f8e83c", "name": "Unreal Engine"}
+{"type": "skill", "skill_id": "0dd30e90-0887-4062-9a11-47e2fb2aa790", "name": "Unreal UI"}
+{"type": "skill", "skill_id": "f0a272a2-6402-44b0-81c2-b93830409ab6", "name": "Usability Testing"}
+{"type": "skill", "skill_id": "43ac3c1c-8c22-445a-9e5d-eab810d50d0d", "name": "Use Cases"}
+{"type": "skill", "skill_id": "61dfff8f-c4b5-4d46-b0cf-f852f6dee5bf", "name": "User Flows"}
+{"type": "skill", "skill_id": "485ce19f-e521-491c-8b67-c817ccb1f2ed", "name": "User Guides"}
+{"type": "skill", "skill_id": "d87a1da6-ef39-4c23-89b0-bdb4bcc7af4f", "name": "User Interviews"}
+{"type": "skill", "skill_id": "f2902b8e-7c71-48e1-adf6-ff3c35035125", "name": "User Stories"}
+{"type": "skill", "skill_id": "04c3c368-cacb-4120-984d-785c1950d6af", "name": "User Story Mapping"}
+{"type": "skill", "skill_id": "f4df6b14-1f7d-4e91-95bc-6ef5f9b0188b", "name": "UX/UI Design"}
+{"type": "skill", "skill_id": "5fe7c095-8237-41c9-9561-0ac231dd513d", "name": "VASP"}
+{"type": "skill", "skill_id": "487d52eb-8ab4-4a73-9adf-553a9a4593b8", "name": "VAT"}
+{"type": "skill", "skill_id": "0d06cc1c-337b-4b1f-bd16-ee15de927519", "name": "Vector Art"}
+{"type": "skill", "skill_id": "a244a0ac-c463-45ee-9642-3b3de224a60d", "name": "Vector Database"}
+{"type": "skill", "skill_id": "e2773168-b193-4020-bd1e-a46aee3d8cb4", "name": "Versioning"}
+{"type": "skill", "skill_id": "9cf6a2b0-1718-4b6e-9212-0ce4cc0e7360", "name": "Vesting Schedule"}
+{"type": "skill", "skill_id": "b7033ad4-3f8b-428a-94f6-1fc4e7984e1d", "name": "Video Analytics"}
+{"type": "skill", "skill_id": "50eef23e-38df-49aa-b366-d118d719c34e", "name": "Video Scriptwriting"}
+{"type": "skill", "skill_id": "347ffd40-bc78-408f-bdd0-c9b6eb3e959f", "name": "Virtual Production"}
+{"type": "skill", "skill_id": "5660c74a-1cd3-4c37-87e1-5fbba389db42", "name": "Visual Design"}
+{"type": "skill", "skill_id": "c06a2c23-b76e-49c3-b5ea-b64d56f5c189", "name": "Visual Hierarchy"}
+{"type": "skill", "skill_id": "6ac42487-838a-4351-a5eb-a5d764d6453d", "name": "Vue.js"}
+{"type": "skill", "skill_id": "9b8b2d8f-7d2f-4706-bbdc-67965813dd50", "name": "Wagmi"}
+{"type": "skill", "skill_id": "821f4b51-e228-4317-9fd3-c604efb9b89d", "name": "WalletConnect"}
+{"type": "skill", "skill_id": "76666e9c-1c64-47cc-856b-84010034308f", "name": "Web Accessibility"}
+{"type": "skill", "skill_id": "0215a782-35d2-415d-a9db-3228dc45933c", "name": "Web Scraping"}
+{"type": "skill", "skill_id": "016e3132-4fc9-41b7-a4bf-e227591b7dfe", "name": "Web3.js"}
+{"type": "skill", "skill_id": "acec699e-e734-4efb-a386-515d144a8393", "name": "Webflow"}
+{"type": "skill", "skill_id": "6d97e52a-4cb9-47c6-80b6-1e4a2f260a78", "name": "Webhooks"}
+{"type": "skill", "skill_id": "9bcd66dd-f827-472f-a55b-a03e8e658849", "name": "Website Localization"}
+{"type": "skill", "skill_id": "93525171-8afb-4a83-986b-5dddf413673a", "name": "WebXR"}
+{"type": "skill", "skill_id": "d8af7f9d-645d-473f-8a0f-e475d04bdda3", "name": "Wireframing"}
+{"type": "skill", "skill_id": "ff179988-f063-4fa8-9679-4955b734176c", "name": "WooCommerce"}
+{"type": "skill", "skill_id": "a405ba94-3aa4-4dd5-8734-196520455f8d", "name": "WordPress"}
+{"type": "skill", "skill_id": "3dd4cbd2-6d02-40a9-b004-3a39e6a8034e", "name": "WordPress Performance"}
+{"type": "skill", "skill_id": "622665cf-5f8f-4f26-ae85-aa26d8c29052", "name": "WordPress Plugin Development"}
+{"type": "skill", "skill_id": "4dd199bc-507a-4393-a247-e3d889a76a9c", "name": "Workflow Automation"}
+{"type": "skill", "skill_id": "6f123004-23c6-4f1f-a292-54d077d5c038", "name": "Xero"}
+{"type": "skill", "skill_id": "8d044399-5ac0-49da-80a7-a07e5287e190", "name": "YOLO"}
+{"type": "skill", "skill_id": "825e6495-7f21-4e16-8f8d-6a2029209205", "name": "YouTube Script"}
+{"type": "skill", "skill_id": "2535c33a-f802-473b-811a-3de9df3e3a91", "name": "Zapier"}
+{"type": "skill", "skill_id": "1c0f60f4-5aef-4c3c-a29e-af0088ad40af", "name": "Zendesk"}
+{"type": "skill", "skill_id": "dd62ce41-39c7-4b14-83a0-37e44996a1bf", "name": "Zoom Teaching"}
