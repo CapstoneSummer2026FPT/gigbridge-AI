@@ -16,6 +16,7 @@ Design decisions:
 import asyncio
 import logging
 import time
+from collections.abc import AsyncIterator
 from typing import Optional
 
 from app.core.config import settings
@@ -26,8 +27,6 @@ from app.clients.voice.tts_engine.base import BaseTTSEngine
 from app.clients.voice.factories.stt_factory import STTFactory
 from app.clients.voice.factories.tts_factory import TTSFactory
 from app.clients.voice.session import VoiceSessionManager
-from app.services.tts_audio_stitcher import TTSAudioStitcher
-from app.services.tts_segment_router import TTSSegmentRouter
 
 logger = logging.getLogger("ai_server.voice.gateway")
 
@@ -59,9 +58,6 @@ class VoiceGateway:
 
         # Session manager (Redis-backed)
         self.session = VoiceSessionManager()
-        self.tts_router = TTSSegmentRouter()
-        self.tts_stitcher = TTSAudioStitcher()
-
         logger.info(
             "VoiceGateway initialized: STT=%s, TTS=%s",
             [p[0] for p in self.stt_providers],
@@ -160,25 +156,91 @@ class VoiceGateway:
         Raises:
             VoiceProviderException: If ALL providers fail.
         """
-        await self._ensure_tts_providers()
-        segments = self.tts_router.route(text, language, hotwords=hotwords)
-        if len(segments) > 1:
-            logger.info(
-                "TTS segmented into %d voice routes: %s",
-                len(segments),
-                [segment.language for segment in segments],
-            )
-
-        results = [
-            await self._synthesize_segment_with_fallback(segment.text, segment.language)
-            for segment in segments
-        ]
-        if not results:
+        if not text.strip():
             raise VoiceProviderException("TTS text was empty")
-        if len(results) == 1:
-            return results[0]
+        await self._ensure_tts_providers()
+        logger.info(
+            "TTS single-voice synthesis: chars=%d language=%s",
+            len(text),
+            language,
+        )
+        return await self._synthesize_segment_with_fallback(text, language)
 
-        return self.tts_stitcher.stitch(results)
+    async def open_single_voice_stream(
+        self,
+        text: str,
+        language: str,
+    ) -> tuple[str, str, AsyncIterator[bytes]]:
+        """Open one provider stream for the complete question.
+
+        The first audio frame is fetched before returning so providers can
+        fail over before the HTTP response starts. Once bytes have been sent,
+        an interrupted provider cannot be replaced without corrupting audio.
+        """
+        if not text.strip():
+            raise VoiceProviderException("TTS text was empty")
+        await self._ensure_tts_providers()
+        errors: list[str] = []
+
+        for name, provider in self.tts_providers:
+            try:
+                stream_factory = getattr(provider, "stream_synthesize", None)
+                if stream_factory is None:
+                    result = await asyncio.wait_for(
+                        provider.synthesize(text, language),
+                        timeout=settings.TTS_PROVIDER_TIMEOUT,
+                    )
+
+                    async def buffered_stream(audio_bytes: bytes = result.audio_bytes):
+                        yield audio_bytes
+
+                    return result.mime_type, name, buffered_stream()
+
+                iterator = stream_factory(text, language).__aiter__()
+                first_chunk = await asyncio.wait_for(
+                    anext(iterator),
+                    timeout=settings.TTS_PROVIDER_TIMEOUT,
+                )
+                mime_type = getattr(provider, "stream_mime_type", "audio/mpeg")
+
+                async def live_stream(
+                    first: bytes = first_chunk,
+                    remaining=iterator,
+                    provider_name: str = name,
+                ):
+                    yield first
+                    while True:
+                        try:
+                            chunk = await asyncio.wait_for(
+                                anext(remaining),
+                                timeout=settings.TTS_PROVIDER_TIMEOUT,
+                            )
+                        except StopAsyncIteration:
+                            return
+                        except Exception:
+                            logger.exception(
+                                "TTS stream interrupted after playback started: provider=%s",
+                                provider_name,
+                            )
+                            raise
+                        if chunk:
+                            yield chunk
+
+                logger.info(
+                    "TTS stream opened: provider=%s chars=%d language=%s first_bytes=%d",
+                    name,
+                    len(text),
+                    language,
+                    len(first_chunk),
+                )
+                return mime_type, name, live_stream()
+            except StopAsyncIteration:
+                errors.append(f"{name}: returned no audio")
+            except Exception as exc:
+                logger.warning("TTS streaming provider '%s' failed to start: %s", name, exc)
+                errors.append(f"{name}: {exc}")
+
+        raise VoiceProviderException("All TTS providers failed to open a stream", errors=errors)
 
     async def _synthesize_segment_with_fallback(
         self, text: str, language: str

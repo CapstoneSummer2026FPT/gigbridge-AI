@@ -13,6 +13,7 @@ from fastapi import (
 )
 from typing import Optional
 import logging
+from fastapi.responses import StreamingResponse
 
 from app.api.schemas.base import StandardResponse
 from app.api.schemas.interviews import (
@@ -290,6 +291,46 @@ async def confirm_answer(
             message="Answer confirmed. Next question ready.",
             data=result,
             errors=[],
+        )
+    except Exception as exc:
+        raise _as_http(exc)
+
+
+@router.get(
+    "/{session_id}/questions/{question_index}/audio/stream",
+    status_code=status.HTTP_200_OK,
+)
+async def stream_question_audio(
+    session_id: str = Path(
+        ...,
+        min_length=8,
+        max_length=128,
+        pattern=SESSION_ID_PATTERN,
+    ),
+    question_index: int = Path(..., ge=1),
+    audio_access_token: str = Header(
+        ...,
+        alias="X-Session-Token",
+        min_length=32,
+        max_length=128,
+    ),
+    service: InterviewService = Depends(get_interview_service),
+):
+    """Stream one complete question using the session's primary voice."""
+    try:
+        mime_type, provider, audio_stream = await service.stream_question_audio(
+            session_id,
+            question_index,
+            audio_access_token,
+        )
+        return StreamingResponse(
+            audio_stream,
+            media_type=mime_type,
+            headers={
+                "Cache-Control": "no-store",
+                "X-TTS-Provider": provider,
+                "X-Content-Type-Options": "nosniff",
+            },
         )
     except Exception as exc:
         raise _as_http(exc)

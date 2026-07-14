@@ -27,11 +27,35 @@ _VOICE_MAP = {
 }
 
 
+def _voice_for(language: str) -> str:
+    """Use one multilingual persona across Vietnamese and English text."""
+    return settings.EDGE_TTS_MULTILINGUAL_VOICE or _VOICE_MAP.get(
+        language, _VOICE_MAP["vi"]
+    )
+
+
 class EdgeTTSEngine(BaseTTSEngine):
     """Edge TTS engine using Microsoft's online neural voices.
 
     Completely free, no API key required. Excellent Vietnamese support.
     """
+
+    stream_mime_type = "audio/mpeg"
+
+    async def stream_synthesize(self, text: str, language: str):
+        """Yield MP3 frames as Edge TTS produces them.
+
+        One voice is selected from the interview language and used for the
+        complete question, including embedded technical terms.
+        """
+        voice = _voice_for(language)
+        communicate = edge_tts.Communicate(text, voice)
+        try:
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio" and chunk["data"]:
+                    yield bytes(chunk["data"])
+        except Exception as exc:
+            raise VoiceProviderException(f"Edge TTS streaming failed: {exc}")
 
     async def synthesize(self, text: str, language: str) -> SynthesisResult:
         """Synthesize text to MP3 audio via edge-tts.
@@ -39,15 +63,11 @@ class EdgeTTSEngine(BaseTTSEngine):
         Collects chunks from the async generator before applying the timeout,
         ensuring we return complete audio bytes.
         """
-        voice = _VOICE_MAP.get(language, _VOICE_MAP["vi"])
-        communicate = edge_tts.Communicate(text, voice)
-
         async def _collect() -> bytes:
             """Iterate the async generator and collect all audio chunks."""
             audio = bytearray()
-            async for chunk in communicate.stream():
-                if chunk["type"] == "audio":
-                    audio.extend(chunk["data"])
+            async for chunk in self.stream_synthesize(text, language):
+                audio.extend(chunk)
             return bytes(audio)
 
         try:

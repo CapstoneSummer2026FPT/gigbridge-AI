@@ -65,6 +65,7 @@ class Settings(BaseSettings):
     TTS_CHUNK_CHARS: int = Field(default=220)
     TTS_BATCH_CONCURRENCY: int = Field(default=1)
     EDGE_TTS_TIMEOUT: int = 15               # seconds
+    EDGE_TTS_MULTILINGUAL_VOICE: str = Field(default="en-US-AvaMultilingualNeural")
     EDGE_TTS_VOICE_VI: str = Field(default="vi-VN-HoaiMyNeural")
     EDGE_TTS_VOICE_EN: str = Field(default="en-US-JennyNeural")
     ELEVENLABS_MODEL: str = Field(default="eleven_multilingual_v2")

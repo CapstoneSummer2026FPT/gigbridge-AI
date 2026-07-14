@@ -320,11 +320,9 @@ class TestBilingualTTSSynthesis:
             writer.writeframes(data)
         return output.getvalue()
 
-    def test_gateway_synthesizes_routed_segments(self):
+    def test_gateway_uses_one_voice_for_complete_question(self):
         from app.clients.voice.gateway import VoiceGateway
         from app.clients.voice.models import SynthesisResult
-        from app.services.tts_audio_stitcher import TTSAudioStitcher
-        from app.services.tts_segment_router import TTSSegmentRouter
 
         class FakeTTS:
             def __init__(self):
@@ -341,8 +339,6 @@ class TestBilingualTTSSynthesis:
         fake_tts = FakeTTS()
         gateway = VoiceGateway.__new__(VoiceGateway)
         gateway.tts_providers = [("fake", fake_tts)]
-        gateway.tts_router = TTSSegmentRouter()
-        gateway.tts_stitcher = TTSAudioStitcher()
 
         result = asyncio.run(
             gateway.synthesize_with_fallback(
@@ -352,14 +348,40 @@ class TestBilingualTTSSynthesis:
             )
         )
 
-        assert fake_tts.calls == [
-            ("Hay dung ", "vi"),
-            ("React", "en"),
-            (".", "vi"),
-        ]
+        assert fake_tts.calls == [("Hay dung React.", "vi")]
         assert result.audio_bytes.startswith(b"RIFF")
         assert result.mime_type == "audio/wav"
         assert result.tts_provider == "fake"
+
+    def test_edge_tts_yields_audio_frames_without_buffering(self):
+        from app.clients.voice.tts_engine.edge_tts_engine import EdgeTTSEngine
+
+        class FakeCommunicate:
+            def __init__(self, text, voice):
+                assert text == "Hay mo ta React trong du an cua ban."
+                assert voice
+
+            async def stream(self):
+                yield {"type": "audio", "data": b"first-frame"}
+                yield {"type": "WordBoundary", "data": b""}
+                yield {"type": "audio", "data": b"second-frame"}
+
+        async def collect():
+            engine = EdgeTTSEngine()
+            return [
+                chunk
+                async for chunk in engine.stream_synthesize(
+                    "Hay mo ta React trong du an cua ban.", "vi"
+                )
+            ]
+
+        with patch(
+            "app.clients.voice.tts_engine.edge_tts_engine.edge_tts.Communicate",
+            FakeCommunicate,
+        ):
+            chunks = asyncio.run(collect())
+
+        assert chunks == [b"first-frame", b"second-frame"]
 
 
 class TestVieNeuTTSEngine:

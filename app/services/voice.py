@@ -15,6 +15,7 @@ single-worker deployments. For multi-worker, replace with a factory.
 import asyncio
 import logging
 import uuid
+from collections.abc import AsyncIterator
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -87,6 +88,14 @@ class VoiceService:
             language,
             hotwords=hotwords,
         )
+
+    async def open_tts_stream(
+        self,
+        text: str,
+        language: str,
+    ) -> tuple[str, str, AsyncIterator[bytes]]:
+        """Open a single-voice stream for immediate browser playback."""
+        return await self.gateway.open_single_voice_stream(text, language)
 
     # ── Session Management ─────────────────────────────────────
 

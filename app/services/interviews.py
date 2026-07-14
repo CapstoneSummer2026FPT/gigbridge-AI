@@ -145,8 +145,9 @@ class InterviewService:
         )
         history_ms = (time.perf_counter() - history_started) * 1000
 
-        # TTS synthesis for voice mode is lazy: return text immediately and
-        # generate audio in the background for polling/playback.
+        # Voice audio is generated only when the browser opens the streaming
+        # endpoint. This avoids duplicate eager synthesis and lets playback
+        # begin with the provider's first audio frame.
         audio_base64 = None
         audio_mime_type = None
         tts_provider = None
@@ -155,15 +156,8 @@ class InterviewService:
 
         if session.mode == "voice":
             tts_started = time.perf_counter()
-            await self.schedule_question_tts(
-                session.session_id,
-                1,
-                first_question,
-                session.language,
-                hotwords=session.hotwords or [],
-            )
             tts_ms = (time.perf_counter() - tts_started) * 1000
-            tts_provider = "pending"
+            tts_provider = "streaming"
 
         total_ms = (time.perf_counter() - started_at) * 1000
         logger.info(
@@ -233,13 +227,13 @@ class InterviewService:
         history = await self.voice.get_history(session_id)
         next_question = await self._generate_next_question(history, session.language)
 
-        # Schedule TTS if voice mode. Audio is fetched lazily by the frontend.
+        # Voice audio is streamed lazily when requested by the frontend.
         audio_base64 = None
         audio_mime_type = None
         tts_provider = None
         fallback_used = False
         if session.mode == "voice":
-            tts_provider = "pending"
+            tts_provider = "streaming"
 
         # Advance pointer
         await self.voice.advance_pointer(session_id)
@@ -248,15 +242,6 @@ class InterviewService:
         await self.voice.add_history(
             session_id, "assistant", next_question, session.language
         )
-        if session.mode == "voice":
-            await self.schedule_question_tts(
-                session_id,
-                next_index,
-                next_question,
-                session.language,
-                hotwords=session.hotwords or [],
-            )
-
         return InterviewQuestionResponse(
             session_id=session_id,
             question_index=next_index,
@@ -461,8 +446,8 @@ class InterviewService:
         next_question = await self._generate_next_question(history, session.language)
         llm_ms = (time.perf_counter() - llm_started) * 1000
 
-        # 8. Prepare lazy TTS. The full question text returns immediately;
-        # audio is generated in chunked background work and fetched by polling.
+        # 8. Prepare lazy streaming TTS. The full question text returns
+        # immediately; synthesis starts when the browser requests playback.
         audio_base64 = None
         audio_mime_type = None
         tts_provider = None
@@ -472,28 +457,19 @@ class InterviewService:
         if session.mode == "voice":
             tts_started = time.perf_counter()
             tts_ms = (time.perf_counter() - tts_started) * 1000
-            tts_provider = "pending"
+            tts_provider = "streaming"
 
         # 8. Advance the pointer after the LLM question is ready.
         advance_started = time.perf_counter()
         await self.voice.advance_pointer(session_id)
         advance_ms = (time.perf_counter() - advance_started) * 1000
 
-        # 9. Save the assistant question to history, then schedule TTS.
+        # 9. Save the assistant question to history. TTS opens on demand.
         assistant_history_started = time.perf_counter()
         await self.voice.add_history(
             session_id, "assistant", next_question, session.language
         )
         assistant_history_ms = (time.perf_counter() - assistant_history_started) * 1000
-        if session.mode == "voice":
-            await self.schedule_question_tts(
-                session_id,
-                next_index,
-                next_question,
-                session.language,
-                hotwords=session.hotwords or [],
-            )
-
         logger.info(
             "Confirm → advance: session=%s q=%d→%d tts=%s",
             session_id, session.question_index, next_index, tts_provider or "none",
@@ -720,6 +696,73 @@ class InterviewService:
                 else None
             ),
         }
+
+    async def stream_question_audio(
+        self,
+        session_id: str,
+        question_index: int,
+        audio_access_token: str,
+    ):
+        """Open immediate single-voice audio for one interview question."""
+        if not await self.voice.verify_audio_access_token(
+            session_id, audio_access_token
+        ):
+            raise SessionAccessDeniedError()
+        session = await self.voice.load_session(session_id)
+        if not session:
+            raise SessionExpiredError()
+
+        cached = await self.voice.get_cached_tts(session_id, question_index)
+        if cached is not None:
+            meta = await self.voice.get_cached_tts_meta(session_id, question_index)
+
+            async def cached_stream():
+                for offset in range(0, len(cached), 64 * 1024):
+                    yield cached[offset : offset + 64 * 1024]
+
+            return meta["mime_type"], meta["tts_provider"], cached_stream()
+
+        text = await self._find_question_text(session_id, question_index)
+        if not text:
+            raise VoiceProviderException("Question text was not found")
+
+        mime_type, provider, provider_stream = await self.voice.open_tts_stream(
+            text,
+            session.language,
+        )
+        await self.voice.set_tts_status(session_id, question_index, "streaming")
+
+        async def cache_while_streaming():
+            audio = bytearray()
+            completed = False
+            try:
+                async for chunk in provider_stream:
+                    if chunk:
+                        audio.extend(chunk)
+                        yield chunk
+                completed = True
+            finally:
+                if completed and audio:
+                    await self.voice.cache_tts(
+                        session_id,
+                        question_index,
+                        bytes(audio),
+                        mime_type=mime_type,
+                        tts_provider=provider,
+                        fallback_used=False,
+                    )
+                    await self.voice.set_tts_status(
+                        session_id, question_index, "ready"
+                    )
+                    logger.info(
+                        "Question TTS stream complete: session=%s q=%d provider=%s bytes=%d",
+                        session_id,
+                        question_index,
+                        provider,
+                        len(audio),
+                    )
+
+        return mime_type, provider, cache_while_streaming()
 
     async def _generate_question_tts_background(
         self,
