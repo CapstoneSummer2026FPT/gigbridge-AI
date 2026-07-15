@@ -81,10 +81,17 @@ class RAGService:
         if settings.CLAUDE_API_KEY:
             os.environ["ANTHROPIC_API_KEY"] = settings.CLAUDE_API_KEY
 
-        # Set default models
-        self.chunk_model = "openai/gpt-4.1-nano"
-        self.qa_model = "groq/openai/gpt-oss-120b"
-        self.fallback_model = "gpt-4o-mini"
+        # Dynamically set models based on default provider
+        provider_model_map = {
+            "openai": "gpt-4o-mini",
+            "gemini": "gemini/gemini-1.5-flash",
+            "claude": "anthropic/claude-3-5-sonnet-20240620",
+            "local": f"ollama/{settings.LOCAL_MODEL_NAME}"
+        }
+        default_provider = settings.DEFAULT_LLM_PROVIDER.lower()
+        self.qa_model = provider_model_map.get(default_provider, "gpt-4o-mini")
+        self.chunk_model = self.qa_model
+        self.fallback_model = "gpt-4o-mini" if default_provider != "openai" else "gemini/gemini-1.5-flash"
 
     def chunk_text(self, text: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> List[str]:
         """
@@ -309,7 +316,8 @@ Respond in JSON format matching the schema.
         """
         try:
             query_vector = (await self.get_embeddings([query]))[0]
-            results = self.chroma.query_documents(
+            results = await asyncio.to_thread(
+                self.chroma.query_documents,
                 collection_name=collection_name,
                 query_embeddings=[query_vector],
                 n_results=top_k
@@ -420,7 +428,8 @@ Reply only with the list of ranked chunk ids, nothing else. Include all the chun
         """
         try:
             query_vector = (await self.get_embeddings([question]))[0]
-            results = self.chroma.query_documents(
+            results = await asyncio.to_thread(
+                self.chroma.query_documents,
                 collection_name=collection_name,
                 query_embeddings=[query_vector],
                 n_results=retrieval_k
@@ -453,8 +462,10 @@ Reply only with the list of ranked chunk ids, nothing else. Include all the chun
         rewritten_question = await self.rewrite_query(original_question)
         logger.info(f"Original query: '{original_question}' | Rewritten query: '{rewritten_question}'")
         
-        chunks1 = await self.fetch_context_unranked(original_question, collection_name, retrieval_k=20)
-        chunks2 = await self.fetch_context_unranked(rewritten_question, collection_name, retrieval_k=20)
+        chunks1, chunks2 = await asyncio.gather(
+            self.fetch_context_unranked(original_question, collection_name, retrieval_k=20),
+            self.fetch_context_unranked(rewritten_question, collection_name, retrieval_k=20)
+        )
         
         chunks = self.merge_chunks(chunks1, chunks2)
         reranked = await self.rerank(original_question, chunks, final_k=10)
@@ -492,7 +503,8 @@ Reply only with the list of ranked chunk ids, nothing else. Include all the chun
                 embedding_tokens = len(question.split()) # Estimate of token count
 
                 async def query_group(group):
-                    results = self.chroma.query_documents(
+                    results = await asyncio.to_thread(
+                        self.chroma.query_documents,
                         collection_name=config.collection_name,
                         query_embeddings=[query_vector],
                         n_results=group.n_results,

@@ -45,7 +45,7 @@ class AnswerConfig(BaseModel):
     # Prompt & LLM overrides (no nesting)
     system_prompt: Optional[str] = Field(default=None, description="System instructions override")
     user_template: Optional[str] = Field(default=None, description="Custom Jinja2 user template override")
-    provider: Optional[str] = Field(default=None, description="LLM provider: gemini, openai, claude, local")
+    provider: Optional[str] = Field(default=None, description="LLM provider: openai, gemini, claude, local")
     model: Optional[str] = Field(default=None, description="Model override (e.g. gpt-4o-mini)")
     temperature: Optional[float] = Field(default=None, description="Sampling temperature")
 

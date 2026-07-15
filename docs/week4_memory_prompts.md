@@ -16,5 +16,5 @@ System prompts are separated into text templates under `app/prompts/templates/`.
 
 ## 3. LLM Gateway & Fallback Router
 The `LLMGateway` (`app/clients/llm/gateway.py`) orchestrates completion requests across model providers, preventing system outages:
-*   **Routing Priority**: Try `Gemini` (Primary) -> `OpenAI` (Fallback 1) -> `Claude` (Fallback 2) -> `Local Model` (Ollama - Fallback 3).
+*   **Routing Priority**: Try `OpenAI` (Primary) -> `Gemini` (Fallback 1) -> `Claude` (Fallback 2) -> `Local Model` (Ollama - Fallback 3).
 *   **Outage Failover Loop**: If the primary client throws an HTTP error or timeout, the gateway catches the exception, logs it, and immediately forwards the query to the next available fallback provider, ensuring 100% uptime.

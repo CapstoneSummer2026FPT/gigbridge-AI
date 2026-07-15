@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     ELEVENLABS_API_KEY: str = Field(default="")
 
     # LLM Router Configurations
-    DEFAULT_LLM_PROVIDER: str = Field(default="gemini")
+    DEFAULT_LLM_PROVIDER: str = Field(default="openai")
     LOCAL_OLLAMA_URL: str = Field(default="http://localhost:11434")
     LOCAL_MODEL_NAME: str = Field(default="llama3.2")
 
