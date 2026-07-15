@@ -46,7 +46,7 @@ if default_db_path.startswith("."):
 else:
     DB_NAME = default_db_path
 
-collection_name = "ai-chatbot"
+collection_name = "general-knowledge"
 embedding_model = default_embedding_model
 wait = wait_exponential(multiplier=1, min=10, max=240)
 
@@ -122,7 +122,7 @@ Reply only with the list of ranked chunk ids, nothing else. Include all the chun
     except Exception as parse_err:
         print(f"Error ordering chunks: {parse_err}. Using default collection order.")
         return chunks[:FINAL_K]
-
+ 
 def make_rag_messages(question, history, chunks):
     context = "\n\n".join(
         f"Extract from {chunk.metadata.get('source', 'unknown')}:\n{chunk.page_content}" for chunk in chunks
@@ -248,10 +248,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ask questions to the GigBridge Knowledge Base.")
     parser.add_argument("--query", type=str, required=True, help="Question to ask")
     parser.add_argument("--style", type=str, choices=["precision", "fast"], default="precision", help="The QA style/mode to use")
+    parser.add_argument("--collection", type=str, default="general-knowledge", help="Chroma DB collection name")
     args = parser.parse_args()
 
     try:
-        print(f"Answering query: '{args.query}' (Style: {args.style})...")
+        collection_name = args.collection
+        collection = chroma.get_or_create_collection(collection_name)
+        print(f"Answering query: '{args.query}' (Collection: {collection_name}, Style: {args.style})...")
         answer, context = answer_question(args.query, style=args.style)
         print("\n=== ANSWER ===")
         print(answer)

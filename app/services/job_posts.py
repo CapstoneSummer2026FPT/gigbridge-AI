@@ -53,9 +53,9 @@ class JobPostService:
             collection_name="ai-create-job-post",
             response_format=JobPostGenerationResponse,
             retrieval_groups=[
-                RetrievalGroup(name="majors", n_results=10, where={"type": "major"}),
-                RetrievalGroup(name="categories", n_results=15, where={"type": "category"}),
-                RetrievalGroup(name="skills", n_results=30, where={"type": "skill"}),
+                RetrievalGroup(name="majors", n_results=3, where={"type": "major"}),
+                RetrievalGroup(name="categories", n_results=5, where={"type": "category"}),
+                RetrievalGroup(name="skills", n_results=12, where={"type": "skill"}),
             ],
             system_prompt=system_prompt,
             user_template="job_posts.txt"

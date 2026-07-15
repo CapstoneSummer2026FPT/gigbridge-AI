@@ -10,7 +10,7 @@ This is the independent AI microservice for the **GigBridge** freelance marketpl
 2.  **AI Interview**: Conducts mock interviews supporting voice transcripts (via OpenAI Whisper) and dynamic questions spoken back (via ElevenLabs TTS).
 3.  **AI Talent Matching**: Semantically parses profiles and matches them to open job descriptions using vector embeddings.
 4.  **AI Analysis**: Generates analytics and work insights on project files, milestones, and dispute logs.
-5.  **LLM Router/Gateway**: A self-contained router managing model fallbacks (`Gemini` -> `OpenAI` -> `Claude` -> `Local Ollama`) in case of service downtime.
+5.  **LLM Router/Gateway**: A self-contained router managing model fallbacks (`OpenAI` -> `Gemini` -> `Claude` -> `Local Ollama`) in case of service downtime.
 6.  **Custom RAG Pipeline**: In-memory and disk-persisted vector searches using Chroma DB.
 
 ---

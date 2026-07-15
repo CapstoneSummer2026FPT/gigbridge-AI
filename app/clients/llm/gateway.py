@@ -34,7 +34,7 @@ class LLMGateway(BaseLLMClient):
 
         # Place default provider first, then maintain standard sequence
         order = [self.default_provider]
-        standard_sequence = ["gemini", "openai", "claude", "local"]
+        standard_sequence = ["openai", "gemini", "claude", "local"]
         for p in standard_sequence:
             if p not in order:
                 order.append(p)
