@@ -1,8 +1,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
-*.py[cod]
-*$py.class
-
+__init__.py
+*.ini
 # C extensions
 *.so
 
@@ -155,3 +154,16 @@ cython_debug/
 
 # Local databases / Vector DBs
 chroma_db/
+
+# Markdown docs / notes
+*.md
+
+# AI coding assistant files
+.codex/
+.claude/
+.cursor/
+.cursorrules
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+copilot-instructions.md

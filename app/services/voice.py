@@ -1,85 +1,230 @@
-import io
-import httpx
-import base64
+"""VoiceService — Facade over the voice subsystem.
+
+Provides a clean, high-level API for all voice operations:
+  - speech_to_text() / text_to_speech() — delegates to gateway with fallback
+  - Session lifecycle: create_session(), load_session(), delete_session()
+  - Draft management: save_draft(), consume_draft()
+  - TTS caching: cache_tts(), get_cached_tts()
+  - Conversation history: add_history(), get_history()
+  - Pointer advancement: advance_pointer()
+
+Dependency injection: singleton with lazy init. The singleton is safe for
+single-worker deployments. For multi-worker, replace with a factory.
+"""
+
+import asyncio
 import logging
+import uuid
+from collections.abc import AsyncIterator
+from datetime import datetime, timezone
 from typing import Optional
-from openai import AsyncOpenAI
+
 from app.core.config import settings
+from app.clients.voice.models import (
+    TranscriptionResult,
+    SynthesisResult,
+    DraftData,
+    InterviewSession,
+)
+from app.clients.voice.gateway import VoiceGateway
 
 logger = logging.getLogger("ai_server.voice_service")
 
+
 class VoiceService:
-    """Service handling speech synthesis (TTS via ElevenLabs) and audio transcription (STT via Whisper)"""
-    
-    def __init__(self):
-        self.elevenlabs_api_key = settings.ELEVENLABS_API_KEY
-        self.openai_api_key = settings.OPENAI_API_KEY
-        self.stt_client = AsyncOpenAI(api_key=self.openai_api_key) if self.openai_api_key else None
-        
-        # ElevenLabs default voice configuration (Rachel voice ID)
-        self.default_voice_id = "21m00Tcm4TlvDq8ikWAM"
-        self.tts_url = f"https://api.elevenlabs.io/v1/text-to-speech/{self.default_voice_id}"
+    """High-level facade over the voice subsystem.
 
-    async def text_to_speech(self, text: str) -> Optional[str]:
+    Holds the gateway (providers + session manager) and exposes
+    a clean API for the interview service and API routes.
+    """
+
+    def __init__(self, gateway: Optional[VoiceGateway] = None):
+        self.gateway = gateway or VoiceGateway()
+
+    # ── Core STT/TTS ───────────────────────────────────────────
+
+    async def speech_to_text(
+        self,
+        audio: bytes,
+        language: str,
+        hotwords: Optional[list[str]] = None,
+        primary_language: Optional[str] = None,
+    ) -> TranscriptionResult:
+        """Transcribe audio to text with automatic provider fallback.
+
+        Args:
+            audio: WAV 16-bit 16kHz mono PCM bytes (pre-decoded by AudioProcessor).
+            language: BCP-47 hint ('vi', 'en') or 'auto'/'mixed'.
+            hotwords: Optional job-specific words to bias provider decoding.
+            primary_language: Session primary language used when language is auto/mixed.
+
+        Returns:
+            TranscriptionResult with provider metadata.
         """
-        Synthesizes text into speech audio and returns a base64-encoded string.
+        return await self.gateway.transcribe_with_fallback(
+            audio,
+            language,
+            hotwords=hotwords,
+            primary_language=primary_language,
+        )
+
+    async def text_to_speech(
+        self,
+        text: str,
+        language: str,
+        hotwords: Optional[list[str]] = None,
+    ) -> SynthesisResult:
+        """Synthesize text to speech audio with automatic provider fallback.
+
+        Args:
+            text: Text to vocalize.
+            language: BCP-47 code for voice selection.
+
+        Returns:
+            SynthesisResult with audio bytes and metadata.
         """
-        if not self.elevenlabs_api_key:
-            logger.warning("ElevenLabs API Key is not configured. Skipping TTS generation.")
-            return None
+        return await self.gateway.synthesize_with_fallback(
+            text,
+            language,
+            hotwords=hotwords,
+        )
 
-        headers = {
-            "xi-api-key": self.elevenlabs_api_key,
-            "content-type": "application/json"
-        }
-        
-        payload = {
-            "text": text,
-            "model_id": "eleven_monolingual_v1",
-            "voice_settings": {
-                "stability": 0.5,
-                "similarity_boost": 0.75
-            }
-        }
+    async def open_tts_stream(
+        self,
+        text: str,
+        language: str,
+    ) -> tuple[str, str, AsyncIterator[bytes]]:
+        """Open a single-voice stream for immediate browser playback."""
+        return await self.gateway.open_single_voice_stream(text, language)
 
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(self.tts_url, headers=headers, json=payload)
-                if response.status_code != 200:
-                    logger.error(f"ElevenLabs TTS failed: Status {response.status_code}, {response.text}")
-                    return None
-                
-                # Convert binary audio content to base64
-                audio_base64 = base64.b64encode(response.content).decode("utf-8")
-                return audio_base64
-        except Exception as e:
-            logger.error(f"TTS generation error: {str(e)}")
-            return None
+    # ── Session Management ─────────────────────────────────────
 
-    async def speech_to_text(self, audio_bytes: bytes, filename: str) -> str:
+    async def create_session(self, session_data: dict) -> InterviewSession:
+        """Create a new voice interview session in Redis."""
+        return await self.gateway.session.create_session(session_data)
+
+    async def load_session(self, session_id: str) -> Optional[InterviewSession]:
+        """Load a session if it exists and hasn't expired."""
+        return await self.gateway.session.load_or_expire(session_id)
+
+    async def delete_session(self, session_id: str) -> None:
+        """Delete a session and all associated data."""
+        await self.gateway.session.delete_session(session_id)
+
+    # ── Draft Management ───────────────────────────────────────
+
+    async def save_draft(self, session_id: str, draft: DraftData) -> None:
+        """Save a transcription draft (10-minute TTL)."""
+        await self.gateway.session.save_draft(session_id, draft)
+
+    async def consume_draft(self, session_id: str) -> Optional[DraftData]:
+        """Atomically consume a draft via GETDEL.
+
+        Returns None if the draft was already consumed or expired.
         """
-        Transcribes candidate audio files using OpenAI's Whisper model.
+        return await self.gateway.session.consume_draft(session_id)
+
+    # ── TTS Cache ──────────────────────────────────────────────
+
+    async def cache_tts(
+        self,
+        session_id: str,
+        question_index: int,
+        audio_bytes: bytes,
+        mime_type: str = "audio/wav",
+        tts_provider: str = "",
+        fallback_used: bool = False,
+    ) -> None:
+        """Cache TTS audio for a question (15-minute TTL)."""
+        await self.gateway.session.cache_tts(
+            session_id,
+            question_index,
+            audio_bytes,
+            mime_type=mime_type,
+            tts_provider=tts_provider,
+            fallback_used=fallback_used,
+        )
+
+    async def get_cached_tts(self, session_id: str, question_index: int) -> Optional[bytes]:
+        """Retrieve cached TTS audio, or None if not cached."""
+        return await self.gateway.session.get_cached_tts(session_id, question_index)
+
+    async def get_cached_tts_meta(self, session_id: str, question_index: int) -> dict:
+        """Retrieve cached TTS metadata."""
+        return await self.gateway.session.get_cached_tts_meta(session_id, question_index)
+
+    async def set_tts_status(
+        self,
+        session_id: str,
+        question_index: int,
+        status: str,
+        error: Optional[str] = None,
+    ) -> None:
+        """Store background TTS status."""
+        await self.gateway.session.set_tts_status(
+            session_id,
+            question_index,
+            status,
+            error,
+        )
+
+    async def get_tts_status(self, session_id: str, question_index: int) -> dict:
+        """Retrieve background TTS status."""
+        return await self.gateway.session.get_tts_status(session_id, question_index)
+
+    # ── Pointer Advancement ────────────────────────────────────
+
+    async def advance_pointer(self, session_id: str) -> int:
+        """Atomically increment the question index.
+
+        Returns the new question index.
         """
-        if not self.stt_client:
-            raise ValueError("OpenAI API Key is not configured for transcription (Whisper).")
+        return await self.gateway.session.advance_pointer(session_id)
 
-        try:
-            # Create a file-like buffer from bytes
-            audio_buffer = io.BytesIO(audio_bytes)
-            audio_buffer.name = filename  # Whisper requires a filename parameter to detect format
+    # ── Confirm tracking ──────────────────────────────────────
 
-            logger.info(f"Sending audio file {filename} for Whisper transcription")
-            response = await self.stt_client.audio.transcriptions.create(
-                model="whisper-1",
-                file=audio_buffer
-            )
-            return response.text
-        except Exception as e:
-            logger.error(f"Whisper transcription failed: {str(e)}")
-            raise ValueError(f"Transcription failed: {str(e)}")
+    async def mark_confirmed(self, session_id: str) -> None:
+        """Mark a session as having a confirmed answer."""
+        await self.gateway.session.mark_confirmed(session_id)
 
-# Dependency helper
-_voice_service = VoiceService()
+    async def is_confirmed(self, session_id: str) -> bool:
+        """Check if this session already has a confirmed answer."""
+        return await self.gateway.session.is_confirmed(session_id)
 
-def get_voice_service() -> VoiceService:
+    async def verify_audio_access_token(self, session_id: str, token: str) -> bool:
+        """Verify authorization for session-scoped TTS audio."""
+        return await self.gateway.session.verify_audio_access_token(session_id, token)
+
+    # ── Conversation History ───────────────────────────────────
+
+    async def add_history(self, session_id: str, role: str, content: str, language: str) -> None:
+        """Append a conversation turn to Redis history."""
+        await self.gateway.session.add_history(session_id, role, content, language)
+
+    async def get_history(self, session_id: str) -> list[dict]:
+        """Retrieve full conversation history."""
+        return await self.gateway.session.get_history(session_id)
+
+
+# ── Dependency injection ────────────────────────────────────────
+
+_voice_service: Optional[VoiceService] = None
+_voice_service_lock: Optional[asyncio.Lock] = None
+
+
+async def get_voice_service() -> VoiceService:
+    """Return a singleton VoiceService with lazy initialization.
+
+    Uses an asyncio.Lock to prevent duplicate initialization races
+    at startup. Safe for single-worker deployments.
+    """
+    global _voice_service, _voice_service_lock
+    if _voice_service is None:
+        if _voice_service_lock is None:
+            _voice_service_lock = asyncio.Lock()
+        async with _voice_service_lock:
+            if _voice_service is None:
+                gateway = VoiceGateway()
+                _voice_service = VoiceService(gateway=gateway)
+                logger.info("VoiceService singleton initialized")
     return _voice_service
