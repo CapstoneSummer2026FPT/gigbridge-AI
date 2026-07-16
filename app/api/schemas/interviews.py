@@ -57,12 +57,39 @@ class ConfirmAnswerRequest(BaseModel):
 
 # ── Response Schemas ────────────────────────────────────────────
 
+class QuestionAnswerPair(BaseModel):
+    question_index: int = Field(..., description="1-indexed question identifier")
+    question_text: str = Field(..., description="The text of the question asked")
+    candidate_answer: str = Field(..., description="The answer provided by the candidate")
+
+
+class AnalyzeVettingRequest(BaseModel):
+    freelancer_id: str = Field(..., description="The ID of the freelancer candidate")
+    job_title: str = Field(..., min_length=1, description="Title from the job post")
+    job_description: Optional[str] = Field(None, description="Job post requirements/description")
+    job_skills: List[str] = Field(default_factory=list, description="Required skills from the job post")
+    qa_pairs: List[QuestionAnswerPair] = Field(..., description="Questions and answers to analyze")
+
+
+class GradedQuestion(BaseModel):
+    question_index: int = Field(..., description="1-indexed question identifier")
+    question_text: str = Field(..., description="The question text asked")
+    question_type: Literal["theoretical", "problem_solving"] = Field(..., description="Question classification")
+    difficulty: Literal["easy", "medium", "hard"] = Field(..., description="Difficulty rating")
+    candidate_answer: str = Field(..., description="The raw answer provided by the candidate")
+    score: int = Field(..., ge=0, le=100, description="Score on a scale of 0 to 100")
+    feedback: str = Field(..., description="Short justification highlighting strengths and gaps")
+
+
 class InterviewFeedback(BaseModel):
     score: int = Field(..., ge=0, le=100, description="Overall score out of 100")
     summary: str = Field(..., description="Summary of candidate performance")
     technical_skills: List[str] = Field(..., description="Assessed technical skills")
     soft_skills: List[str] = Field(..., description="Assessed communication/soft skills")
     recommended_hire: bool = Field(..., description="Final hiring recommendation")
+    holistic_adjustment: int = Field(default=0, ge=-15, le=15, description="Holistic score modifier (-15 to +15)")
+    holistic_adjustment_reason: str = Field(default="", description="Explanation for the holistic adjustment")
+    graded_questions: List[GradedQuestion] = Field(default_factory=list, description="List of individual question grades and details")
 
 
 class InterviewQuestionResponse(BaseModel):

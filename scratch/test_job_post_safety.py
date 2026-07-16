@@ -11,6 +11,7 @@ load_dotenv()
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.api.schemas.job_posts import JobPostGenerationRequest, JobPostGenerationResponse
+from app.api.schemas.rag import AnswerResult
 from app.services.job_posts import JobPostService, get_job_post_service
 from app.core.exceptions import AIServerException
 
@@ -59,10 +60,24 @@ class TestJobPostSafety(unittest.IsolatedAsyncioTestCase):
         mock_prompt = MagicMock()
         mock_prompt.render_prompt = MagicMock(return_value="rendered prompt")
 
+        # Mock the RAG service
+        mock_rag = MagicMock()
+        mock_rag.answer_question = AsyncMock()
+        mock_rag.answer_question.return_value = AnswerResult(
+            answer=sentinel_response,
+            sources=[],
+            latency_ms=0.0,
+            retrieval_time_ms=0.0,
+            llm_time_ms=0.0,
+            prompt_tokens=0,
+            completion_tokens=0
+        )
+
         service = JobPostService(
             llm_gateway=mock_llm,
             memory_manager=mock_memory,
-            prompt_manager=mock_prompt
+            prompt_manager=mock_prompt,
+            rag_service=mock_rag
         )
 
         # Act & Assert
@@ -103,10 +118,24 @@ class TestJobPostSafety(unittest.IsolatedAsyncioTestCase):
         mock_prompt = MagicMock()
         mock_prompt.render_prompt = MagicMock(return_value="rendered prompt")
 
+        # Mock the RAG service
+        mock_rag = MagicMock()
+        mock_rag.answer_question = AsyncMock()
+        mock_rag.answer_question.return_value = AnswerResult(
+            answer=normal_response,
+            sources=[],
+            latency_ms=0.0,
+            retrieval_time_ms=0.0,
+            llm_time_ms=0.0,
+            prompt_tokens=0,
+            completion_tokens=0
+        )
+
         service = JobPostService(
             llm_gateway=mock_llm,
             memory_manager=mock_memory,
-            prompt_manager=mock_prompt
+            prompt_manager=mock_prompt,
+            rag_service=mock_rag
         )
 
         # Act

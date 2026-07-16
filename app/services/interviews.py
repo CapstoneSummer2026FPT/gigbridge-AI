@@ -24,6 +24,7 @@ from app.api.schemas.interviews import (
     InterviewQuestionResponse,
     InterviewFeedback,
     DraftDataResponse,
+    AnalyzeVettingRequest,
 )
 from app.core.config import settings
 from app.core.exceptions import (
@@ -963,6 +964,123 @@ class InterviewService:
                 soft_skills=[],
                 recommended_hire=False,
             )
+
+    async def analyze_vetting(self, request: AnalyzeVettingRequest) -> InterviewFeedback:
+        """Analyze candidate answers to vetting questions and calculate difficulty-weighted score."""
+        qa_lines = []
+        for pair in request.qa_pairs:
+            qa_lines.append(
+                f"[Question {pair.question_index}] ({pair.question_text})\n"
+                f"Candidate Answer: {pair.candidate_answer}\n"
+                "---------------------"
+            )
+        qa_block = "\n".join(qa_lines)
+
+        job_title = request.job_title.strip()
+        job_description = (request.job_description or "").strip()
+        job_skills = ", ".join(request.job_skills) if request.job_skills else "Software Engineering"
+
+        system_prompt = (
+            "You are an expert technical recruiter and hiring manager evaluating a candidate's vetting questions and answers.\n"
+            "Analyze the provided questions and candidate answers and produce a structured evaluation report.\n"
+            "\n"
+            "For each question-answer pair:\n"
+            "1. Identify the Question Text.\n"
+            "2. Classify the Question Type:\n"
+            "   - \"theoretical\": Concepts, architecture, definitions.\n"
+            "   - \"problem_solving\": Practical tasks, coding, debugging, scenario resolution.\n"
+            "3. Classify the Question Difficulty:\n"
+            "   - \"easy\": Basic conceptual queries or simple syntax.\n"
+            "   - \"medium\": Standard scenarios, intermediate logic, or typical debugging.\n"
+            "   - \"hard\": High-scale design, deep performance tuning, concurrency, or advanced algorithms.\n"
+            "4. Extract the Candidate's Answer.\n"
+            "5. Grade the Candidate's Answer (Score 0-100) using these strict guidelines:\n"
+            "   - 90-100: Flawless, detailed, covers edge cases and best practices.\n"
+            "   - 70-89: Solid correctness, competent, minor gaps.\n"
+            "   - 50-69: Basic understanding, lacks detail, minor flaws.\n"
+            "   - 1-49: Incorrect, major misconceptions.\n"
+            "   - 0: Skipped, refused, or completely irrelevant.\n"
+            "6. Provide a concise, recruiter-focused justification Feedback for this specific answer.\n"
+            "\n"
+            "Also, provide an overall evaluation:\n"
+            "- Recommended Hire (true/false) based on whether they meet professional engineering standards.\n"
+            "- Overall Summary of their performance, highlighting key strengths and areas of growth.\n"
+            "- Assessed Technical Skills: List specific technologies/skills demonstrated.\n"
+            "- Assessed Soft Skills: Communication quality, structural clarity, and confidence.\n"
+            "- Holistic Adjustment: An integer value between -15 and +15 reflecting soft skills, deal-breakers, or exceptional performance not fully captured by raw question averages.\n"
+            "- Holistic Adjustment Reason: Explaining why the adjustment was made.\n"
+            "\n"
+            "Output strictly in JSON according to the schema requested. Do not include markdown code fences (like ```json) or leading/trailing conversational text."
+        )
+
+        user_prompt = (
+            "Evaluate the following candidate vetting answers from the recruiter's perspective:\n\n"
+            f"Job Title: {job_title}\n"
+            f"Job Description: {job_description}\n"
+            f"Expected Skills: {job_skills}\n\n"
+            "Vetting Questions & Answers:\n"
+            f"{qa_block}"
+        )
+
+        evaluation_json = await self.llm.generate(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            response_format=InterviewFeedback,
+        )
+
+        raw_evaluation = evaluation_json if isinstance(evaluation_json, str) else ""
+        feedback = None
+        try:
+            feedback = InterviewFeedback.model_validate_json(raw_evaluation)
+        except (ValidationError, ValueError, TypeError):
+            # Fallback parsing for wrapped JSON
+            start = raw_evaluation.find("{")
+            end = raw_evaluation.rfind("}")
+            if start >= 0 and end > start:
+                try:
+                    feedback = InterviewFeedback.model_validate_json(
+                        raw_evaluation[start : end + 1]
+                    )
+                except (ValidationError, ValueError, TypeError):
+                    pass
+
+        if not feedback:
+            logger.exception("LLM returned invalid vetting evaluation JSON")
+            return InterviewFeedback(
+                score=0,
+                summary="Automated vetting feedback is temporarily unavailable.",
+                technical_skills=[],
+                soft_skills=[],
+                recommended_hire=False,
+                holistic_adjustment=0,
+                holistic_adjustment_reason="Failed to parse AI response.",
+                graded_questions=[],
+            )
+
+        # ── Calculate Programmatic Weighted Score ──────────────────
+        difficulty_weights = {
+            "easy": 1.0,
+            "medium": 1.5,
+            "hard": 2.0
+        }
+
+        total_weighted_score = 0.0
+        total_weight = 0.0
+
+        for gq in feedback.graded_questions:
+            weight = difficulty_weights.get(gq.difficulty.lower(), 1.0)
+            total_weighted_score += gq.score * weight
+            total_weight += weight
+
+        if total_weight > 0:
+            base_score = total_weighted_score / total_weight
+        else:
+            base_score = 0.0
+
+        final_score = int(round(base_score + feedback.holistic_adjustment))
+        feedback.score = max(0, min(100, final_score))
+
+        return feedback
 
 
 # ── Dependency injection ────────────────────────────────────────
