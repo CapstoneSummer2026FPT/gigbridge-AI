@@ -188,7 +188,7 @@ def test_endpoint_success_schema_mapping():
 
     try:
         response = client.post(
-            "/api/ai/interviews/analyze-vetting",
+            "/api/ai/interviews/ai-interview-judging",
             json=payload,
             headers={"X-API-Key": "dev-key-please-change-in-env"}  # Bypass API key check for tests
         )
@@ -213,7 +213,7 @@ def test_invalid_payload_triggers_validation_error():
     }
 
     response = client.post(
-        "/api/ai/interviews/analyze-vetting",
+        "/api/ai/interviews/ai-interview-judging",
         json=payload,
         headers={"X-API-Key": "dev-key-please-change-in-env"}
     )

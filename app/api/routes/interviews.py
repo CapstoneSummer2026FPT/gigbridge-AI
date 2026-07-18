@@ -375,7 +375,7 @@ async def get_question_audio(
 
 
 @router.post(
-    "/analyze-vetting",
+    "/ai-interview-judging",
     response_model=StandardResponse[InterviewFeedback],
     status_code=status.HTTP_200_OK,
 )
