@@ -28,3 +28,7 @@ Rather than functioning as a basic job board, GigBridge operates as a trusted co
 * **Global Community**: Talent has no geographic borders. We connect experts with opportunities everywhere.
 * **Excellence**: We set high standards for platform usability, code quality, and project execution.
 * **Trust & Safety**: Secure wallets, verified profiles, and escrow safeguards ensure every party is protected.
+
+## Platform Access
+
+GigBridge is a web-only platform accessed exclusively via web browsers at https://gigbridge.id.vn. There is no native mobile or desktop application (no iOS, Android, macOS, or Windows app available on any app stores). All features, including the interactive workspace, e-signatures, wallet payments, and AI candidate pre-screenings, are optimized for both desktop and mobile web browsers.
