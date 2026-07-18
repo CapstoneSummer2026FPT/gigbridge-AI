@@ -694,3 +694,85 @@ def test_startup_requires_redis_6_2_or_newer(redis_version, should_pass):
             with pytest.raises(RuntimeError, match="Redis 6.2"):
                 asyncio.run(main.validate_voice_dependencies())
     assert fake_redis.closed is True
+
+
+def test_predefined_job_questions_flow():
+    InterviewService = _import_interview_service()
+    import json
+    from app.api.schemas.interviews import StartInterviewRequest
+    from app.clients.voice.models import InterviewSession, DraftData
+
+    # Mock Voice Service
+    voice = MagicMock()
+    
+    session = InterviewSession(
+        session_id="int_12345678",
+        job_id="job_abc",
+        freelancer_id="free_xyz",
+        mode="text",
+        language="en",
+        question_index=1,
+        job_questions=["Q1", "Q2"]
+    )
+    voice.create_session = AsyncMock(return_value=session)
+    voice.add_history = AsyncMock()
+    
+    # Mock LLM Gateway (should not be called for question generation)
+    llm = MagicMock()
+    llm.generate = AsyncMock()
+
+    service = InterviewService(llm_gateway=llm, voice_service=voice)
+    
+    # 1. Initialize
+    request = StartInterviewRequest(
+        job_id="job_abc",
+        freelancer_id="free_xyz",
+        job_title="Engineer",
+        job_questions=["Q1", "Q2"]
+    )
+    response = asyncio.run(service.initialize_interview(request))
+    assert response.question_text == "Q1"
+    assert response.question_index == 1
+    assert response.job_id == "job_abc"
+    assert response.freelancer_id == "free_xyz"
+    llm.generate.assert_not_called()
+
+    # 2. Confirm first answer, should get Q2
+    voice.load_session = AsyncMock(return_value=session)
+    draft = DraftData(
+        draft_id="draft_123",
+        question_index=1,
+        transcript="Answer 1",
+        language="en",
+        stt_provider="test",
+        confidence=1.0,
+        created_at="now"
+    )
+    voice.consume_draft = AsyncMock(return_value=draft)
+    voice.mark_confirmed = AsyncMock()
+    voice.get_history = AsyncMock(return_value=[])
+    voice.advance_pointer = AsyncMock()
+
+    response2 = asyncio.run(service.confirm_answer("int_12345678", "Answer 1"))
+    assert response2.is_completed is False
+    assert response2.question_text == "Q2"
+    assert response2.question_index == 2
+    assert response2.job_id == "job_abc"
+    assert response2.freelancer_id == "free_xyz"
+    llm.generate.assert_not_called()
+
+    # 3. Confirm second answer, should finish interview
+    session.question_index = 2
+    draft.question_index = 2
+    draft.transcript = "Answer 2"
+    
+    # Mock feedback generation LLM response
+    llm.generate = AsyncMock(return_value="not json")
+
+    response3 = asyncio.run(service.confirm_answer("int_12345678", "Answer 2"))
+    assert response3.is_completed is True
+    assert response3.feedback is not None
+    assert response3.feedback.score == 0
+    assert response3.job_id == "job_abc"
+    assert response3.freelancer_id == "free_xyz"
+

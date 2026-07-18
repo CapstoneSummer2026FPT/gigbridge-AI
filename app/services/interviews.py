@@ -104,6 +104,7 @@ class InterviewService:
             "job_phonetic_aliases": self._clean_aliases(
                 request.job_phonetic_aliases
             ),
+            "job_questions": request.job_questions or [],
         }
 
         session_create_started = time.perf_counter()
@@ -134,10 +135,14 @@ class InterviewService:
         )
 
         llm_started = time.perf_counter()
-        first_question = await self.llm.generate(
-            system_prompt=system_prompt, user_prompt=user_prompt
-        )
-        llm_ms = (time.perf_counter() - llm_started) * 1000
+        if session.job_questions:
+            first_question = session.job_questions[0]
+            llm_ms = 0.0
+        else:
+            first_question = await self.llm.generate(
+                system_prompt=system_prompt, user_prompt=user_prompt
+            )
+            llm_ms = (time.perf_counter() - llm_started) * 1000
 
         # Save assistant message to history
         history_started = time.perf_counter()
@@ -185,6 +190,8 @@ class InterviewService:
             tts_provider=tts_provider,
             fallback_used=fallback_used,
             is_completed=False,
+            job_id=session.job_id,
+            freelancer_id=session.freelancer_id,
         )
 
     # ── Text Answer (backward compat) ─────────────────────────
@@ -416,7 +423,13 @@ class InterviewService:
         answer_history_ms = (time.perf_counter() - answer_history_started) * 1000
 
         # 6. Check if interview is complete
-        if session.question_index >= self.max_questions:
+        total_predefined = len(session.job_questions) if session.job_questions else 0
+        if session.job_questions:
+            is_complete = session.question_index >= total_predefined
+        else:
+            is_complete = session.question_index >= self.max_questions
+
+        if is_complete:
             feedback_started = time.perf_counter()
             feedback = await self._generate_feedback(session_id)
             feedback_ms = (time.perf_counter() - feedback_started) * 1000
@@ -436,6 +449,8 @@ class InterviewService:
                 question_index=session.question_index,
                 is_completed=True,
                 feedback=feedback,
+                job_id=session.job_id,
+                freelancer_id=session.freelancer_id,
             )
 
         # 7. Generate next question (BEFORE advancing pointer)
@@ -444,8 +459,12 @@ class InterviewService:
         history = await self.voice.get_history(session_id)
         get_history_ms = (time.perf_counter() - get_history_started) * 1000
         llm_started = time.perf_counter()
-        next_question = await self._generate_next_question(history, session.language)
-        llm_ms = (time.perf_counter() - llm_started) * 1000
+        if session.job_questions:
+            next_question = session.job_questions[session.question_index]
+            llm_ms = 0.0
+        else:
+            next_question = await self._generate_next_question(history, session.language)
+            llm_ms = (time.perf_counter() - llm_started) * 1000
 
         # 8. Prepare lazy streaming TTS. The full question text returns
         # immediately; synthesis starts when the browser requests playback.
@@ -503,6 +522,8 @@ class InterviewService:
             tts_provider=tts_provider,
             fallback_used=fallback_used,
             is_completed=False,
+            job_id=session.job_id,
+            freelancer_id=session.freelancer_id,
         )
 
     # ── Private helpers ────────────────────────────────────────

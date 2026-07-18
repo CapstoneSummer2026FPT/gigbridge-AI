@@ -31,6 +31,10 @@ class StartInterviewRequest(BaseModel):
     language: Literal["auto", "vi", "en"] = Field(
         default="auto", description="Primary interview language"
     )
+    job_questions: List[str] = Field(
+        default_factory=list,
+        description="Predefined job post questions set by the client",
+    )
 
 
 class SubmitAnswerRequest(BaseModel):
@@ -118,6 +122,8 @@ class InterviewQuestionResponse(BaseModel):
     feedback: Optional[InterviewFeedback] = Field(
         None, description="Grading feedback if completed"
     )
+    job_id: Optional[str] = Field(None, description="Job Post ID")
+    freelancer_id: Optional[str] = Field(None, description="Freelancer User ID")
 
 
 class DraftDataResponse(BaseModel):
