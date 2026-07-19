@@ -7,6 +7,7 @@ No WEBM_OPUS format issues because the AudioProcessor decodes everything to WAV 
 
 import asyncio
 import logging
+import re
 from typing import Optional
 
 # Google SDK imports are LAZY — inside _get_client() / transcribe() below.
@@ -125,10 +126,15 @@ class GoogleSTTEngine(BaseSTTEngine):
             raise VoiceProviderException("Google STT returned empty results")
 
         best = response.results[0].alternatives[0]
+        full_text = (best.transcript or "").strip()
+        clean_speech = re.sub(r"[^\w\s]", "", full_text).strip()
+        if not clean_speech or full_text in {"...", "…", ".", "..", "...."}:
+            raise VoiceProviderException("Google STT returned no speech segments")
+
         confidence = best.confidence if best.confidence is not None else 0.0
 
         return TranscriptionResult(
-            text=best.transcript,
+            text=full_text,
             language=bcp47,
             confidence=confidence,
             stt_provider="google_stt",
