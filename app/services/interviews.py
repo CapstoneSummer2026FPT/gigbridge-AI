@@ -24,6 +24,7 @@ from app.api.schemas.interviews import (
     InterviewQuestionResponse,
     InterviewFeedback,
     DraftDataResponse,
+    AnalyzeVettingRequest,
 )
 from app.core.config import settings
 from app.core.exceptions import (
@@ -103,6 +104,7 @@ class InterviewService:
             "job_phonetic_aliases": self._clean_aliases(
                 request.job_phonetic_aliases
             ),
+            "job_questions": request.job_questions or [],
         }
 
         session_create_started = time.perf_counter()
@@ -133,10 +135,14 @@ class InterviewService:
         )
 
         llm_started = time.perf_counter()
-        first_question = await self.llm.generate(
-            system_prompt=system_prompt, user_prompt=user_prompt
-        )
-        llm_ms = (time.perf_counter() - llm_started) * 1000
+        if session.job_questions:
+            first_question = session.job_questions[0]
+            llm_ms = 0.0
+        else:
+            first_question = await self.llm.generate(
+                system_prompt=system_prompt, user_prompt=user_prompt
+            )
+            llm_ms = (time.perf_counter() - llm_started) * 1000
 
         # Save assistant message to history
         history_started = time.perf_counter()
@@ -184,6 +190,8 @@ class InterviewService:
             tts_provider=tts_provider,
             fallback_used=fallback_used,
             is_completed=False,
+            job_id=session.job_id,
+            freelancer_id=session.freelancer_id,
         )
 
     # ── Text Answer (backward compat) ─────────────────────────
@@ -415,7 +423,13 @@ class InterviewService:
         answer_history_ms = (time.perf_counter() - answer_history_started) * 1000
 
         # 6. Check if interview is complete
-        if session.question_index >= self.max_questions:
+        total_predefined = len(session.job_questions) if session.job_questions else 0
+        if session.job_questions:
+            is_complete = session.question_index >= total_predefined
+        else:
+            is_complete = session.question_index >= self.max_questions
+
+        if is_complete:
             feedback_started = time.perf_counter()
             feedback = await self._generate_feedback(session_id)
             feedback_ms = (time.perf_counter() - feedback_started) * 1000
@@ -435,6 +449,8 @@ class InterviewService:
                 question_index=session.question_index,
                 is_completed=True,
                 feedback=feedback,
+                job_id=session.job_id,
+                freelancer_id=session.freelancer_id,
             )
 
         # 7. Generate next question (BEFORE advancing pointer)
@@ -443,8 +459,12 @@ class InterviewService:
         history = await self.voice.get_history(session_id)
         get_history_ms = (time.perf_counter() - get_history_started) * 1000
         llm_started = time.perf_counter()
-        next_question = await self._generate_next_question(history, session.language)
-        llm_ms = (time.perf_counter() - llm_started) * 1000
+        if session.job_questions:
+            next_question = session.job_questions[session.question_index]
+            llm_ms = 0.0
+        else:
+            next_question = await self._generate_next_question(history, session.language)
+            llm_ms = (time.perf_counter() - llm_started) * 1000
 
         # 8. Prepare lazy streaming TTS. The full question text returns
         # immediately; synthesis starts when the browser requests playback.
@@ -502,6 +522,8 @@ class InterviewService:
             tts_provider=tts_provider,
             fallback_used=fallback_used,
             is_completed=False,
+            job_id=session.job_id,
+            freelancer_id=session.freelancer_id,
         )
 
     # ── Private helpers ────────────────────────────────────────
@@ -963,6 +985,123 @@ class InterviewService:
                 soft_skills=[],
                 recommended_hire=False,
             )
+
+    async def analyze_vetting(self, request: AnalyzeVettingRequest) -> InterviewFeedback:
+        """Analyze candidate answers to vetting questions and calculate difficulty-weighted score."""
+        qa_lines = []
+        for pair in request.qa_pairs:
+            qa_lines.append(
+                f"[Question {pair.question_index}] ({pair.question_text})\n"
+                f"Candidate Answer: {pair.candidate_answer}\n"
+                "---------------------"
+            )
+        qa_block = "\n".join(qa_lines)
+
+        job_title = request.job_title.strip()
+        job_description = (request.job_description or "").strip()
+        job_skills = ", ".join(request.job_skills) if request.job_skills else "Software Engineering"
+
+        system_prompt = (
+            "You are an expert technical recruiter and hiring manager evaluating a candidate's vetting questions and answers.\n"
+            "Analyze the provided questions and candidate answers and produce a structured evaluation report.\n"
+            "\n"
+            "For each question-answer pair:\n"
+            "1. Identify the Question Text.\n"
+            "2. Classify the Question Type:\n"
+            "   - \"theoretical\": Concepts, architecture, definitions.\n"
+            "   - \"problem_solving\": Practical tasks, coding, debugging, scenario resolution.\n"
+            "3. Classify the Question Difficulty:\n"
+            "   - \"easy\": Basic conceptual queries or simple syntax.\n"
+            "   - \"medium\": Standard scenarios, intermediate logic, or typical debugging.\n"
+            "   - \"hard\": High-scale design, deep performance tuning, concurrency, or advanced algorithms.\n"
+            "4. Extract the Candidate's Answer.\n"
+            "5. Grade the Candidate's Answer (Score 0-100) using these strict guidelines:\n"
+            "   - 90-100: Flawless, detailed, covers edge cases and best practices.\n"
+            "   - 70-89: Solid correctness, competent, minor gaps.\n"
+            "   - 50-69: Basic understanding, lacks detail, minor flaws.\n"
+            "   - 1-49: Incorrect, major misconceptions.\n"
+            "   - 0: Skipped, refused, or completely irrelevant.\n"
+            "6. Provide a concise, recruiter-focused justification Feedback for this specific answer.\n"
+            "\n"
+            "Also, provide an overall evaluation:\n"
+            "- Recommended Hire (true/false) based on whether they meet professional engineering standards.\n"
+            "- Overall Summary of their performance, highlighting key strengths and areas of growth.\n"
+            "- Assessed Technical Skills: List specific technologies/skills demonstrated.\n"
+            "- Assessed Soft Skills: Communication quality, structural clarity, and confidence.\n"
+            "- Holistic Adjustment: An integer value between -15 and +15 reflecting soft skills, deal-breakers, or exceptional performance not fully captured by raw question averages.\n"
+            "- Holistic Adjustment Reason: Explaining why the adjustment was made.\n"
+            "\n"
+            "Output strictly in JSON according to the schema requested. Do not include markdown code fences (like ```json) or leading/trailing conversational text."
+        )
+
+        user_prompt = (
+            "Evaluate the following candidate vetting answers from the recruiter's perspective:\n\n"
+            f"Job Title: {job_title}\n"
+            f"Job Description: {job_description}\n"
+            f"Expected Skills: {job_skills}\n\n"
+            "Vetting Questions & Answers:\n"
+            f"{qa_block}"
+        )
+
+        evaluation_json = await self.llm.generate(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            response_format=InterviewFeedback,
+        )
+
+        raw_evaluation = evaluation_json if isinstance(evaluation_json, str) else ""
+        feedback = None
+        try:
+            feedback = InterviewFeedback.model_validate_json(raw_evaluation)
+        except (ValidationError, ValueError, TypeError):
+            # Fallback parsing for wrapped JSON
+            start = raw_evaluation.find("{")
+            end = raw_evaluation.rfind("}")
+            if start >= 0 and end > start:
+                try:
+                    feedback = InterviewFeedback.model_validate_json(
+                        raw_evaluation[start : end + 1]
+                    )
+                except (ValidationError, ValueError, TypeError):
+                    pass
+
+        if not feedback:
+            logger.exception("LLM returned invalid vetting evaluation JSON")
+            return InterviewFeedback(
+                score=0,
+                summary="Automated vetting feedback is temporarily unavailable.",
+                technical_skills=[],
+                soft_skills=[],
+                recommended_hire=False,
+                holistic_adjustment=0,
+                holistic_adjustment_reason="Failed to parse AI response.",
+                graded_questions=[],
+            )
+
+        # ── Calculate Programmatic Weighted Score ──────────────────
+        difficulty_weights = {
+            "easy": 1.0,
+            "medium": 1.5,
+            "hard": 2.0
+        }
+
+        total_weighted_score = 0.0
+        total_weight = 0.0
+
+        for gq in feedback.graded_questions:
+            weight = difficulty_weights.get(gq.difficulty.lower(), 1.0)
+            total_weighted_score += gq.score * weight
+            total_weight += weight
+
+        if total_weight > 0:
+            base_score = total_weighted_score / total_weight
+        else:
+            base_score = 0.0
+
+        final_score = int(round(base_score + feedback.holistic_adjustment))
+        feedback.score = max(0, min(100, final_score))
+
+        return feedback
 
 
 # ── Dependency injection ────────────────────────────────────────

@@ -24,6 +24,8 @@ from app.api.schemas.interviews import (
     DraftDataResponse,
     QuestionAudioResponse,
     SESSION_ID_PATTERN,
+    AnalyzeVettingRequest,
+    InterviewFeedback,
 )
 from app.core.config import settings
 from app.core.rate_limit import limiter
@@ -366,6 +368,28 @@ async def get_question_audio(
             success=True,
             message="Question audio status retrieved.",
             data=result,
+            errors=[],
+        )
+    except Exception as exc:
+        raise _as_http(exc)
+
+
+@router.post(
+    "/ai-interview-judging",
+    response_model=StandardResponse[InterviewFeedback],
+    status_code=status.HTTP_200_OK,
+)
+async def analyze_vetting(
+    payload: AnalyzeVettingRequest,
+    service: InterviewService = Depends(get_interview_service),
+):
+    """Analyze and grade candidate answers to a set of vetting questions."""
+    try:
+        data = await service.analyze_vetting(payload)
+        return StandardResponse(
+            success=True,
+            message="Vetting answers successfully evaluated.",
+            data=data,
             errors=[],
         )
     except Exception as exc:

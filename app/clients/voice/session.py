@@ -101,6 +101,7 @@ class VoiceSessionManager:
             "job_phonetic_aliases": json.dumps(
                 data.get("job_phonetic_aliases", {}), ensure_ascii=False
             ),
+            "job_questions": json.dumps(data.get("job_questions", []), ensure_ascii=False),
         }
 
         key = f"session:{session_id}"
@@ -121,6 +122,7 @@ class VoiceSessionManager:
             job_skills=json.loads(mapping["job_skills"]),
             hotwords=json.loads(mapping["hotwords"]),
             job_phonetic_aliases=json.loads(mapping["job_phonetic_aliases"]),
+            job_questions=json.loads(mapping["job_questions"]),
         )
 
     async def load_or_expire(self, session_id: str) -> Optional[InterviewSession]:
@@ -150,6 +152,7 @@ class VoiceSessionManager:
             job_phonetic_aliases=self._json_dict_of_lists(
                 data.get("job_phonetic_aliases")
             ),
+            job_questions=self._json_list(data.get("job_questions")),
         )
 
     async def delete_session(self, session_id: str) -> None:

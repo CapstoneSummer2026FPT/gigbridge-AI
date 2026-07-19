@@ -19,7 +19,11 @@ Go to the Sign Up page, select your target role (Freelancer or Client), enter yo
 ### Can I use GigBridge before completing my profile?
 No. To apply for jobs or post jobs, users must complete the interactive profile setup to ensure safety and maintain quality standards within the platform.
 
+### Is there a GigBridge mobile app?
+No. GigBridge is a web-only platform. There is no native mobile application (iOS or Android) available on any app store. All client and freelancer features are fully accessible and mobile-optimized via web browsers at https://gigbridge.id.vn.
+
 ---
+
 
 ## For Clients
 

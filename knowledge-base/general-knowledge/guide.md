@@ -6,9 +6,13 @@ description: "Step-by-step guides and tips to help freelancers and clients succe
 
 # User Guide
 
+> [!IMPORTANT]
+> GigBridge is a web-only platform. You do not need to download a mobile app. Access all features directly through your desktop or mobile web browser at https://gigbridge.id.vn.
+
 Step-by-step tutorials to navigate and succeed on the GigBridge freelance platform.
 
 ---
+
 
 ## Guide for Freelancers
 

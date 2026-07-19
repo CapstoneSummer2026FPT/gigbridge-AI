@@ -140,6 +140,7 @@ class InterviewSession:
     job_skills: list[str] | None = None
     hotwords: list[str] | None = None
     job_phonetic_aliases: dict[str, list[str]] | None = None
+    job_questions: list[str] | None = None
 
 
 # ──────────────────────────────────────────────

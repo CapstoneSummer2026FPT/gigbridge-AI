@@ -45,12 +45,13 @@ Based on the client's prompt:
    - If the client's prompt is written in English or any other language, generate the description in English.
 8. Generate a list of relevant recruitment/vetting questions (question_recruitment) that the client can ask candidates to assess their fit for this role.
    CRITICAL QUESTION GUIDELINES:
-   - You MUST generate EXACTLY 3 questions in total.
-   - EXACTLY 1 of the 3 questions MUST be theoretical, conceptual, or definition-based (e.g., "What is RAG?", "How does Dependency Injection work?", etc.) to assess the candidate's understanding of underlying patterns.
-   - The other 2 questions MUST focus strictly on practical engineering, process, and problem-solving.
+   - You MUST generate EXACTLY 4 questions in total.
+   - EXACTLY 1 of the first 3 questions MUST be theoretical, conceptual, or definition-based (e.g., "What is RAG?", "How does Dependency Injection work?", etc.) to assess the candidate's understanding of underlying patterns.
+   - EXACTLY 2 of the first 3 questions MUST focus strictly on practical engineering, process, and problem-solving.
    - Include questions about implementation process (e.g., "How would you implement...", "What specific process do you follow when...").
    - Include questions about problem-solving (e.g., "How do you diagnose and resolve...", "Describe how you solved a performance bottleneck in...").
    - Include questions about design choices and architecture (e.g., "Why would you choose ... architecture for this system?", "What trade-offs did you face when designing...").
+   - The 4th question MUST ALWAYS be EXACTLY: "How many experiences do you have for this role?" (or "Bạn có bao nhiêu kinh nghiệm cho vai trò này?" if the client's prompt is written in Vietnamese).
    CRITICAL LANGUAGE RULE:
    - If the client's prompt is written in Vietnamese, generate these questions in Vietnamese.
    - If the client's prompt is written in English or any other language, generate these questions in English.

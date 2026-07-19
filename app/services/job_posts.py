@@ -92,6 +92,15 @@ class JobPostService:
         elif total_system + len(response_data.custom_skills) > 10:
             response_data.custom_skills = response_data.custom_skills[:(10 - total_system)]
 
+        # Enforce the 4th localized compulsory vetting question
+        compulsory_question = "Bạn có bao nhiêu kinh nghiệm cho vai trò này?" if target_lang == "Vietnamese" else "How many experiences do you have for this role?"
+        raw_questions = response_data.question_recruitment or []
+        filtered_questions = [
+            q for q in raw_questions
+            if "how many experiences" not in q.lower() and "bao nhiêu kinh nghiệm" not in q.lower()
+        ]
+        response_data.question_recruitment = filtered_questions[:3] + [compulsory_question]
+
         # Map system skill IDs to names to maintain backward-compatible combined `skills` list in memory cache
         skill_id_to_name = {}
         for src in result.sources:
