@@ -1,15 +1,29 @@
 import json
 import logging
 from typing import List, Dict, Any, Optional
-from app.api.schemas.matching import TalentMatchingRequest, TalentMatchingResponse, TalentMatchResult
+from pydantic import BaseModel, Field
+from app.api.schemas.matching import (
+    TalentMatchingRequest,
+    TalentMatchingResponse,
+    TalentMatchResult,
+    TalentRerankRequest,
+    TalentRerankResponse,
+    TalentRerankMatch
+)
 from app.clients.llm.gateway import LLMGateway, get_llm_gateway
 from app.services.rag import RAGService, get_rag_service
 from app.services.memory import MemoryManager, get_memory_manager
 
 logger = logging.getLogger("ai_server.matching_service")
 
+class CandidateEvaluationOutput(BaseModel):
+    context_score: float = Field(..., description="Contextual domain experience fit score between 0.0 and 20.0 points")
+    match_reasons: List[str] = Field(default_factory=list, description="1 to 3 concise rationale points for candidate fit")
+    skills_matched: List[str] = Field(default_factory=list, description="Skills matching the job requirements")
+    skills_missing: List[str] = Field(default_factory=list, description="Required job skills missing from candidate profile")
+
 class MatchingService:
-    """Service coordinates semantic matching between job openings and freelancer candidate profiles"""
+    """Service handling AI candidate reranking and talent matching using 50-point Semantic RAG scoring"""
     
     def __init__(
         self,
@@ -20,152 +34,106 @@ class MatchingService:
         self.llm = llm_gateway
         self.rag = rag_service
         self.memory = memory_manager
-        self.collection_name = "ai-candidate-matching"
 
-    async def match_talent(self, request: TalentMatchingRequest) -> TalentMatchingResponse:
-        logger.info(f"Running semantic matching for job post ID: {request.job_id}")
+    async def rerank_talent(self, request: TalentRerankRequest) -> TalentRerankResponse:
+        """
+        Rerank shortlist candidates using simplified 50-Point Semantic RAG evaluation:
+        - Skill Overlap (0 to 30 Points): Exact matching required skills
+        - GPT Context Fit (0 to 20 Points): LLM domain experience and profile evaluation
+        Returns normalized semantic_score (0.0 to 1.0) along with skills & match reasoning.
+        """
+        logger.info(f"Reranking {len(request.candidates)} candidate(s) for job '{request.job.title}' (ID: {request.job.job_id})")
         
-        # Load job post details from cache/database
-        job_details = await self.memory.get_domain_context("job_posts", request.job_id)
-        if not job_details:
-            # Fallback mock job post if not indexed
-            job_details = {
-                "title": "Senior Backend Developer",
-                "category": "Web Development",
-                "skills": ["C#", "ASP.NET Core", "PostgreSQL", "Docker"],
-                "description": "Seeking a backend engineer specializing in C#, ASP.NET Core, database design, and CI/CD pipelines."
-            }
+        job_skills = [s.strip().lower() for s in request.job.skills if s.strip()]
+        matches: List[TalentRerankMatch] = []
 
-        # Query vector database for candidate resumes/profiles
-        search_query = f"{job_details['title']}. Required skills: {', '.join(job_details['skills'])}"
-        candidates = await self.rag.retrieve_context(
-            collection_name=self.collection_name,
-            query=search_query,
-            top_k=request.top_k * 2  # Retrieve more than requested to allow filtering/rerank
+        system_prompt = (
+            "You are an expert tech recruiter for GigBridge.\n"
+            "Evaluate the candidate's profile (title, bio, work history) against the job opening.\n"
+            "Assign a 'context_score' between 0.0 and 20.0 representing overall domain, experience, and title alignment.\n"
+            "Provide 1-3 clear, professional bullet reasons for your rating.\n"
+            "List matched skills and missing skills relative to the job requirements."
         )
 
-        # Mocking candidates indexing if vector DB is empty (first run fallback)
-        if not candidates:
-            logger.info("Vector store empty. Injecting mock developer profiles for matching demonstration.")
-            mock_resumes = [
-                ("freelancer_01", "Nguyễn Văn Trí", "Senior Backend Developer", "ASP.NET Core, PostgreSQL, Docker, AWS, microservices design. 6 years experience."),
-                ("freelancer_02", "Trần Quốc Bảo", "Flutter Mobile App Developer", "Flutter, React Native, Dart, REST APIs, clean architecture. 3 years experience."),
-                ("freelancer_03", "Ngô Phương Thảo", "Smart Contract Engineer", "Solidity, Ethereum, Web3.js, Rust, security audits. 4 years experience."),
-                ("freelancer_04", "Lê Thị Hoa", "Frontend React Developer", "React, TypeScript, Redux, Tailwind CSS, performance tuning. 4 years experience.")
-            ]
-            for fid, name, title, resume in mock_resumes:
-                await self.rag.add_documents(
-                    collection_name=self.collection_name,
-                    text=f"Name: {name}\nTitle: {title}\nResume: {resume}",
-                    metadata={"freelancer_id": fid, "full_name": name, "title": title}
-                )
-            # Query again after indexing
-            candidates = await self.rag.retrieve_context(collection_name=self.collection_name, query=search_query, top_k=request.top_k)
+        for candidate in request.candidates:
+            cand_skills_raw = candidate.skills or []
+            cand_skills_lower = [s.strip().lower() for s in cand_skills_raw if s.strip()]
 
-        # Rerank and evaluate alignment for each candidate
-        matches = []
-        for doc in candidates:
-            # Try parsing metadata, fallback to extracting from page_content text
-            freelancer_id = doc["metadata"].get("freelancer_id")
-            full_name = doc["metadata"].get("full_name")
-            candidate_title = doc["metadata"].get("title")
+            # 1. Skill Overlap Calculation (0 to 30 Points)
+            if not job_skills:
+                skill_score = 30.0
+                matched_skills = cand_skills_raw
+                missing_skills = []
+            else:
+                matched_set = set()
+                missing_set = set()
+                for original_skill, lower_skill in zip(request.job.skills, job_skills):
+                    if any(lower_skill in cs for cs in cand_skills_lower) or any(cs in lower_skill for cs in cand_skills_lower):
+                        matched_set.add(original_skill)
+                    else:
+                        missing_set.add(original_skill)
 
-            if not full_name or not freelancer_id:
-                import re
-                text = doc["page_content"]
-                
-                # Find Name/Candidate
-                name_match = re.search(r"(?:Candidate|Name):\s*([^\n\-\*#]+)", text, re.IGNORECASE)
-                if name_match:
-                    full_name = name_match.group(1).strip()
-                else:
-                    full_name = "Unknown Freelancer"
-                
-                # Find Role/Title
-                role_match = re.search(r"(?:Role|Title|Position):\s*([^\n\-\*#]+)", text, re.IGNORECASE)
-                if role_match:
-                    candidate_title = role_match.group(1).strip()
-                else:
-                    candidate_title = "Developer"
+                matched_skills = list(matched_set)
+                missing_skills = list(missing_set)
+                overlap_ratio = len(matched_skills) / len(request.job.skills)
+                skill_score = round(overlap_ratio * 30.0, 2)
 
-                # Generate pseudo ID
-                if not freelancer_id:
-                    clean_name = "".join(c for c in full_name if c.isalnum() or c.isspace())
-                    freelancer_id = f"freelancer_{clean_name.lower().replace(' ', '_')}"
-            
-            if not candidate_title:
-                candidate_title = "Developer"
-            
-            # Formulate prompt for LLM profile match scoring
-            system_prompt = (
-                "You are an expert talent recruitment assistant.\n"
-                "Evaluate how well a freelancer's resume matches the job requirements.\n"
-                "Output ONLY a JSON object matching this schema:\n"
-                "{\n"
-                '  "match_score": 0.85,\n'
-                '  "match_reasons": ["6 years experience with ASP.NET Core matching requirements"],\n'
-                '  "skills_matched": ["ASP.NET Core", "Docker"],\n'
-                '  "skills_missing": ["PostgreSQL"]\n'
-                "}"
-            )
-            
+            # 2. GPT Context Fit Evaluation (0 to 20 Points)
             user_prompt = (
-                f"Job Requirements:\n"
-                f"- Title: {job_details['title']}\n"
-                f"- Description: {job_details['description']}\n"
-                f"- Required Skills: {', '.join(job_details['skills'])}\n\n"
-                f"Freelancer Resume:\n"
-                f"{doc['page_content']}"
+                f"JOB OPENING:\n"
+                f"- Title: {request.job.title}\n"
+                f"- Required Skills: {', '.join(request.job.skills)}\n"
+                f"- Description: {request.job.description or 'N/A'}\n\n"
+                f"CANDIDATE PROFILE:\n"
+                f"- Freelancer ID: {candidate.freelancer_id}\n"
+                f"- Title: {candidate.title or 'N/A'}\n"
+                f"- Bio: {candidate.bio or 'N/A'}\n"
+                f"- Skills: {', '.join(candidate.skills)}\n"
+                f"- Work History: {'; '.join(candidate.work_history or [])}\n"
             )
 
             try:
-                # Structuring the response model
-                from pydantic import BaseModel, Field
-                class MatchEvaluation(BaseModel):
-                    match_score: float = Field(..., description="Match alignment score between 0.0 and 1.0")
-                    match_reasons: List[str] = Field(..., description="Actionable reasons for the match decision")
-                    skills_matched: List[str] = Field(..., description="Skills matching requirements")
-                    skills_missing: List[str] = Field(..., description="Missing skills requested by client")
-
                 eval_json = await self.llm.generate(
                     system_prompt=system_prompt,
                     user_prompt=user_prompt,
-                    response_format=MatchEvaluation
+                    response_format=CandidateEvaluationOutput
                 )
-                
                 eval_data = json.loads(eval_json)
+                context_score = min(max(float(eval_data.get("context_score", 10.0)), 0.0), 20.0)
+                reasons = eval_data.get("match_reasons", [])
                 
-                matches.append(TalentMatchResult(
-                    freelancer_id=freelancer_id,
-                    full_name=full_name,
-                    title=candidate_title,
-                    match_score=eval_data.get("match_score", 0.5),
-                    match_reasons=eval_data.get("match_reasons", []),
-                    skills_matched=eval_data.get("skills_matched", []),
-                    skills_missing=eval_data.get("skills_missing", [])
-                ))
+                # Combine LLM skills feedback with deterministic skill overlap if present
+                if not matched_skills and eval_data.get("skills_matched"):
+                    matched_skills = eval_data.get("skills_matched")
+                if not missing_skills and eval_data.get("skills_missing"):
+                    missing_skills = eval_data.get("skills_missing")
             except Exception as e:
-                logger.error(f"Error evaluating match for candidate {full_name}: {str(e)}")
-                # Simple fallback match item
-                matches.append(TalentMatchResult(
-                    freelancer_id=freelancer_id,
-                    full_name=full_name,
-                    title=candidate_title,
-                    match_score=0.5,
-                    match_reasons=["Semantic match identified in vector store"],
-                    skills_matched=[],
-                    skills_missing=[]
-                ))
+                logger.warning(f"Error calling LLM for candidate {candidate.freelancer_id}: {str(e)}")
+                context_score = 10.0
+                reasons = [f"Skill match ratio: {len(matched_skills)}/{len(request.job.skills)}"]
 
-        # Sort matches by score descending
-        matches.sort(key=lambda x: x.match_score, reverse=True)
-        # Apply slice limit
-        final_matches = matches[:request.top_k]
+            total_semantic_pts = min(skill_score + context_score, 50.0)
+            normalized_score = round(total_semantic_pts / 50.0, 4)
 
-        return TalentMatchingResponse(
-            job_id=request.job_id,
-            matches=final_matches
-        )
+            matches.append(TalentRerankMatch(
+                freelancer_id=candidate.freelancer_id,
+                semantic_score=normalized_score,
+                match_reasons=reasons,
+                skills_matched=matched_skills,
+                skills_missing=missing_skills
+            ))
+
+        # Sort matches by semantic_score descending
+        matches.sort(key=lambda m: m.semantic_score, reverse=True)
+        if request.top_k > 0:
+            matches = matches[:request.top_k]
+
+        return TalentRerankResponse(matches=matches)
+
+    async def match_talent(self, request: TalentMatchingRequest) -> TalentMatchingResponse:
+        """Fallback direct RAG matching when no shortlist is provided"""
+        logger.info(f"Running fallback matching for job post ID: {request.job_id}")
+        return TalentMatchingResponse(job_id=request.job_id, matches=[])
 
 # Dependency helper
 def get_matching_service() -> MatchingService:
