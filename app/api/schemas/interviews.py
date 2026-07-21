@@ -102,6 +102,7 @@ class InterviewQuestionResponse(BaseModel):
         None, description="Bearer token required to retrieve this session's TTS audio"
     )
     question_index: int = Field(..., description="Index number of current question")
+    question_count: int = Field(..., ge=1, description="Total questions in this interview")
     question_text: Optional[str] = Field(None, description="Current question text")
     language: Optional[str] = Field(None, description="BCP-47 language code")
     audio_base64: Optional[str] = Field(
