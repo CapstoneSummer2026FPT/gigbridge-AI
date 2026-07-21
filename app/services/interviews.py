@@ -183,6 +183,7 @@ class InterviewService:
             session_id=session.session_id,
             audio_access_token=audio_access_token,
             question_index=1,
+            question_count=len(session.job_questions) or self.max_questions,
             question_text=first_question,
             language=session.language,
             audio_base64=audio_base64,
@@ -226,6 +227,7 @@ class InterviewService:
             return InterviewQuestionResponse(
                 session_id=session_id,
                 question_index=session.question_index,
+                question_count=len(session.job_questions) or self.max_questions,
                 is_completed=True,
                 feedback=feedback,
             )
@@ -253,6 +255,7 @@ class InterviewService:
         return InterviewQuestionResponse(
             session_id=session_id,
             question_index=next_index,
+            question_count=len(session.job_questions) or self.max_questions,
             question_text=next_question,
             language=session.language,
             audio_base64=audio_base64,
@@ -447,6 +450,7 @@ class InterviewService:
             return InterviewQuestionResponse(
                 session_id=session_id,
                 question_index=session.question_index,
+                question_count=len(session.job_questions) or self.max_questions,
                 is_completed=True,
                 feedback=feedback,
                 job_id=session.job_id,
@@ -515,6 +519,7 @@ class InterviewService:
         return InterviewQuestionResponse(
             session_id=session_id,
             question_index=next_index,
+            question_count=len(session.job_questions) or self.max_questions,
             question_text=next_question,
             language=session.language,
             audio_base64=audio_base64,
