@@ -148,9 +148,9 @@ class AudioProcessor:
         # Concatenate all frames
         full = np.concatenate(audio_frames, axis=1)
 
-        # Normalize to int16 range
+        # Normalize to int16 range if signal is above background noise floor
         peak = np.max(np.abs(full))
-        if peak > 0:
+        if peak > 0.01:
             full = full / peak * 0.95  # headroom
         pcm_int16 = (full[0] * 32767).astype(np.int16)
 
