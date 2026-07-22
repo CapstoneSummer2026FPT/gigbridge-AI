@@ -13,6 +13,7 @@ from fastapi import (
 )
 from typing import Optional
 import logging
+import secrets
 from fastapi.responses import StreamingResponse
 
 from app.api.schemas.base import StandardResponse
@@ -26,6 +27,8 @@ from app.api.schemas.interviews import (
     SESSION_ID_PATTERN,
     AnalyzeVettingRequest,
     InterviewFeedback,
+    InterviewDefinitionRequest,
+    InterviewDefinitionResponse,
 )
 from app.core.config import settings
 from app.core.rate_limit import limiter
@@ -96,6 +99,12 @@ def _as_http(exc: Exception, default_status: int = 500) -> HTTPException:
             },
         )
     if isinstance(exc, AudioValidationError):
+        logger.warning(
+            "Interview audio rejected: code=%s status=%d errors=%s",
+            exc.error_code,
+            exc.status_code,
+            exc.errors,
+        )
         return HTTPException(
             status_code=exc.status_code,
             detail={
@@ -132,6 +141,27 @@ def _as_http(exc: Exception, default_status: int = 500) -> HTTPException:
 
 
 # ── Endpoints ───────────────────────────────────────────────────
+
+@router.post(
+    "/definitions",
+    response_model=StandardResponse[InterviewDefinitionResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_interview_definition(payload: InterviewDefinitionRequest):
+    """Register the configuration selected when a client enables an interview."""
+    data = InterviewDefinitionResponse(
+        definition_reference=f"aidef_{secrets.token_urlsafe(18)}",
+        mode=payload.mode,
+        language=payload.language,
+        question_count=payload.question_count,
+    )
+    return StandardResponse(
+        success=True,
+        message="Interview definition successfully registered.",
+        data=data,
+        errors=[],
+    )
+
 
 @router.post(
     "/start",

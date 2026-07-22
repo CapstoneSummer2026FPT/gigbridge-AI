@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from app.api.schemas.base import StandardResponse
 from app.api.schemas.matching import (
     TalentMatchingRequest,
@@ -13,21 +13,17 @@ router = APIRouter(prefix="/matching")
 @router.post(
     "/recommend",
     response_model=StandardResponse[TalentMatchingResponse],
-    status_code=status.HTTP_200_OK
+    status_code=status.HTTP_200_OK,
+    deprecated=True,
 )
 async def recommend_talent(
     request: TalentMatchingRequest,
     service: MatchingService = Depends(get_matching_service)
 ):
-    """
-    Find and rank candidates matching the requirements of a specified Job Post.
-    """
-    data = await service.match_talent(request)
-    return StandardResponse(
-        success=True,
-        message="Talent recommendation complete.",
-        data=data,
-        errors=[]
+    del request, service
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="Use /matching/rerank with a backend-authorized candidate pool.",
     )
 
 @router.post(
@@ -40,7 +36,7 @@ async def rerank_talent(
     service: MatchingService = Depends(get_matching_service)
 ):
     """
-    Rerank a candidate shortlist against job requirements using 50-point Semantic RAG scoring.
+    Retrieve and deterministically rerank a backend-authorized candidate pool.
     """
     data = await service.rerank_talent(request)
     return StandardResponse(

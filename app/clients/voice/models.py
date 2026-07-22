@@ -134,6 +134,7 @@ class InterviewSession:
     mode: str
     language: str
     question_index: int
+    question_count: int = 3
     stt_language: str = ""
     job_title: str = ""
     job_description: str = ""

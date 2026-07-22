@@ -45,9 +45,17 @@ class LLMGateway(BaseLLMClient):
         system_prompt: str,
         user_prompt: str,
         history: Optional[List[Dict[str, str]]] = None,
-        response_format: Optional[Any] = None
+        response_format: Optional[Any] = None,
+        model: Optional[str] = None,
+        provider: Optional[str] = None,
+        allow_fallback: bool = True,
     ) -> str:
-        fallback_list = self.get_fallback_order()
+        selected_provider = (provider or self.default_provider).lower()
+        fallback_list = (
+            self.get_fallback_order()
+            if allow_fallback and provider is None
+            else [selected_provider]
+        )
         errors = []
 
         for provider_name in fallback_list:
@@ -65,7 +73,8 @@ class LLMGateway(BaseLLMClient):
                     system_prompt=system_prompt,
                     user_prompt=user_prompt,
                     history=history,
-                    response_format=response_format
+                    response_format=response_format,
+                    model=model,
                 )
                 logger.info(f"Successfully received response from: {provider_name}")
                 return result
