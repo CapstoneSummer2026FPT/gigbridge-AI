@@ -17,7 +17,8 @@ class ClaudeClient(BaseLLMClient):
         system_prompt: str,
         user_prompt: str,
         history: Optional[List[Dict[str, str]]] = None,
-        response_format: Optional[Any] = None
+        response_format: Optional[Any] = None,
+        model: Optional[str] = None,
     ) -> str:
         if not self.api_key:
             raise ValueError("Claude API Key is not configured.")
@@ -45,7 +46,7 @@ class ClaudeClient(BaseLLMClient):
             actual_system_prompt += f"\n\nCRITICAL: You must return the output as a valid JSON object matching the following JSON Schema. Do not include markdown code block formatting or any other text before/after the JSON.\nSchema:\n{schema_json}"
 
         payload = {
-            "model": self.model_name,
+            "model": model or self.model_name,
             "max_tokens": 4000,
             "system": actual_system_prompt,
             "messages": formatted_messages,

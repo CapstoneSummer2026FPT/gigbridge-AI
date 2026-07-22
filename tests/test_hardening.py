@@ -89,6 +89,35 @@ def test_schema_constraints_and_session_id_validation():
         ConfirmAnswerRequest(session_id="int_12345678", corrected_text="   ")
 
 
+def test_interview_definition_endpoint_registers_client_defaults():
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from app.api.routes.interviews import router
+
+    app = FastAPI()
+    app.include_router(router, prefix="/api/ai")
+    response = TestClient(app).post(
+        "/api/ai/interviews/definitions",
+        json={
+            "job_id": "job-123",
+            "job_title": "Senior React Engineer",
+            "job_skills": ["React", "TypeScript"],
+            "mode": "voice",
+            "language": "auto",
+            "question_count": 5,
+        },
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"]["definition_reference"].startswith("aidef_")
+    assert body["data"]["mode"] == "voice"
+    assert body["data"]["language"] == "auto"
+    assert body["data"]["question_count"] == 5
+
+
 def test_rate_limit_bucket_hashes_api_key():
     from app.core.rate_limit import api_key_bucket
 
@@ -211,7 +240,7 @@ def test_session_id_constraint_applies_to_form_and_path_routes():
 
 
 def test_exception_handlers_hide_internal_and_provider_details():
-    from fastapi import FastAPI
+    from fastapi import FastAPI, HTTPException
     from fastapi.testclient import TestClient
 
     from app.core.exceptions import VoiceProviderException, register_exception_handlers
@@ -229,15 +258,29 @@ def test_exception_handlers_hide_internal_and_provider_details():
             "credential leaked", errors=["provider stack detail"]
         )
 
+    @app.get("/audio-validation")
+    async def audio_validation():
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "audio_decode_failed",
+                "message": "Audio Decode Failed",
+                "errors": [],
+            },
+        )
+
     client = TestClient(app, raise_server_exceptions=False)
     internal_response = client.get("/internal")
     provider_response = client.get("/provider")
+    audio_validation_response = client.get("/audio-validation")
     assert internal_response.status_code == 500
     assert "secret" not in internal_response.text
     assert internal_response.json()["errors"] == []
     assert provider_response.status_code == 503
     assert "credential" not in provider_response.text
     assert "provider stack" not in provider_response.text
+    assert audio_validation_response.status_code == 400
+    assert audio_validation_response.json()["message"] == "Audio Decode Failed"
 
 
 class _FakeRedis:

@@ -13,7 +13,38 @@ class ChromaDBClient:
         self.client = chromadb.PersistentClient(path=self.db_path)
 
     def get_or_create_collection(self, name: str):
-        return self.client.get_or_create_collection(name=name)
+        return self.client.get_or_create_collection(
+            name=name,
+            metadata={"hnsw:space": "cosine"},
+        )
+
+    def get_documents(
+        self,
+        collection_name: str,
+        ids: List[str],
+    ) -> Dict[str, Any]:
+        if not ids:
+            return {"ids": [], "documents": [], "metadatas": []}
+        collection = self.get_or_create_collection(collection_name)
+        return collection.get(ids=ids, include=["documents", "metadatas"])
+
+    def upsert_documents(
+        self,
+        collection_name: str,
+        ids: List[str],
+        embeddings: List[List[float]],
+        documents: List[str],
+        metadatas: List[Dict[str, Any]],
+    ) -> None:
+        if not ids:
+            return
+        collection = self.get_or_create_collection(collection_name)
+        collection.upsert(
+            ids=ids,
+            embeddings=embeddings,
+            documents=documents,
+            metadatas=metadatas,
+        )
 
     def add_documents(
         self,
@@ -42,7 +73,8 @@ class ChromaDBClient:
         return collection.query(
             query_embeddings=query_embeddings,
             n_results=n_results,
-            where=where
+            where=where,
+            include=["documents", "metadatas", "distances"],
         )
 
     def delete_collection(self, collection_name: str) -> None:
