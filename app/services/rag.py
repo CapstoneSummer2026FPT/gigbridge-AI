@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from openai import AsyncOpenAI
 from tenacity import retry, wait_exponential
 import litellm
+import httpx
 from litellm import acompletion, completion
 
 from app.clients.db.chroma import ChromaDBClient, get_chroma_client
@@ -256,10 +257,45 @@ Respond in JSON format matching the schema.
         results = await asyncio.gather(*tasks)
         return list(results)
 
-    async def get_embeddings(self, texts: List[str]) -> List[List[float]]:
+    async def get_embeddings(
+        self,
+        texts: List[str],
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
+        allow_fallback: bool = True,
+    ) -> List[List[float]]:
         """
         Generate vector embeddings for input texts using OpenAI client or Gemini endpoint.
         """
+        selected_provider = (provider or "openai").lower()
+        selected_model = model or self.embedding_model
+        if selected_provider == "ollama":
+            try:
+                endpoint = f"{settings.LOCAL_OLLAMA_URL.rstrip('/')}/api/embed"
+                async with httpx.AsyncClient(timeout=120.0) as client:
+                    response = await client.post(
+                        endpoint,
+                        json={
+                            "model": selected_model,
+                            "input": texts,
+                            "truncate": True,
+                        },
+                    )
+                    response.raise_for_status()
+                    payload = response.json()
+                if not isinstance(payload, dict):
+                    raise RAGException("Ollama returned an invalid embedding response.")
+                embeddings = payload.get("embeddings")
+                if not isinstance(embeddings, list) or len(embeddings) != len(texts):
+                    raise RAGException("Ollama returned an incomplete embedding batch.")
+                return embeddings
+            except RAGException:
+                raise
+            except Exception as exc:
+                if not allow_fallback:
+                    raise RAGException(f"Ollama embeddings failed: {exc}") from exc
+                logger.warning("Ollama embeddings failed; using configured fallback: %s", exc)
+
         if not self.openai_client:
             # Check if Gemini key is set, try to use it as OpenAI compatible endpoint
             if settings.GEMINI_API_KEY:
@@ -268,7 +304,7 @@ Respond in JSON format matching the schema.
                         api_key=settings.GEMINI_API_KEY,
                         base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
                     )
-                    model = "text-embedding-004" if self.embedding_model == "text-embedding-3-large" else self.embedding_model
+                    model = "text-embedding-004" if selected_model == "text-embedding-3-large" else selected_model
                     response = await gemini_emb_client.embeddings.create(
                         model=model,
                         input=texts
@@ -279,7 +315,7 @@ Respond in JSON format matching the schema.
             raise RAGException("API Key is not configured for generating embeddings.")
         try:
             response = await self.openai_client.embeddings.create(
-                model=self.embedding_model,
+                model=selected_model,
                 input=texts
             )
             return [e.embedding for e in response.data]

@@ -1,6 +1,11 @@
 from fastapi import APIRouter, Depends, status
 from app.api.schemas.base import StandardResponse
-from app.api.schemas.matching import TalentMatchingRequest, TalentMatchingResponse
+from app.api.schemas.matching import (
+    TalentMatchingRequest,
+    TalentMatchingResponse,
+    TalentRerankRequest,
+    TalentRerankResponse,
+)
 from app.services.matching import MatchingService, get_matching_service
 
 router = APIRouter(prefix="/matching")
@@ -23,4 +28,23 @@ async def recommend_talent(
         message="Talent recommendation complete.",
         data=data,
         errors=[]
+    )
+
+
+@router.post(
+    "/rerank",
+    response_model=StandardResponse[TalentRerankResponse],
+    status_code=status.HTTP_200_OK,
+)
+async def rerank_talent(
+    request: TalentRerankRequest,
+    service: MatchingService = Depends(get_matching_service),
+):
+    """Score and rank a backend-provided candidate pool."""
+    data = await service.rerank_talent(request)
+    return StandardResponse(
+        success=True,
+        message="Talent reranking complete.",
+        data=data,
+        errors=[],
     )

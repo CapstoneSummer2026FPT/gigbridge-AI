@@ -1,8 +1,21 @@
 import json
 import logging
+import math
+import re
 from typing import List, Dict, Any, Optional
-from app.api.schemas.matching import TalentMatchingRequest, TalentMatchingResponse, TalentMatchResult
+from app.api.schemas.matching import (
+    TalentMatchingRequest,
+    TalentMatchingResponse,
+    TalentMatchResult,
+    TalentRerankCandidate,
+    TalentRerankJob,
+    TalentRerankMatch,
+    TalentRerankRequest,
+    TalentRerankResponse,
+)
+from app.clients.db.chroma import ChromaDBClient, get_chroma_client
 from app.clients.llm.gateway import LLMGateway, get_llm_gateway
+from app.core.config import settings
 from app.services.rag import RAGService, get_rag_service
 from app.services.memory import MemoryManager, get_memory_manager
 
@@ -15,12 +28,179 @@ class MatchingService:
         self,
         llm_gateway: LLMGateway = get_llm_gateway(),
         rag_service: RAGService = get_rag_service(),
-        memory_manager: MemoryManager = get_memory_manager()
+        memory_manager: MemoryManager = get_memory_manager(),
+        chroma_client: ChromaDBClient = get_chroma_client(),
     ):
         self.llm = llm_gateway
         self.rag = rag_service
         self.memory = memory_manager
+        self.chroma = chroma_client
         self.collection_name = "ai-candidate-matching"
+
+    async def rerank_talent(
+        self, request: TalentRerankRequest
+    ) -> TalentRerankResponse:
+        """Rerank the authoritative candidate pool supplied by the backend."""
+        provider = settings.MATCHING_EMBEDDING_PROVIDER
+        model = settings.MATCHING_EMBEDDING_MODEL
+        candidate_texts = [
+            self._candidate_text(candidate) for candidate in request.candidates
+        ]
+        candidate_vectors = await self.rag.get_embeddings(
+            candidate_texts,
+            provider=provider,
+            model=model,
+            allow_fallback=False,
+        )
+        job_vector = (
+            await self.rag.get_embeddings(
+                [self._job_text(request.job)],
+                provider=provider,
+                model=model,
+                allow_fallback=False,
+            )
+        )[0]
+
+        matches = []
+        for candidate, vector in zip(request.candidates, candidate_vectors):
+            embedding_score = round(
+                max(0.0, min(100.0, self._cosine(job_vector, vector) * 100.0)),
+                2,
+            )
+            algorithm_score, reasons, strengths = self._algorithm_score(
+                request.job, candidate
+            )
+            matches.append(
+                TalentRerankMatch(
+                    freelancer_id=candidate.freelancer_id,
+                    embedding_score=embedding_score,
+                    algorithm_score=algorithm_score,
+                    match_reasons=reasons,
+                    semantic_strengths=strengths,
+                )
+            )
+
+        matches.sort(
+            key=lambda item: (
+                -(0.6 * item.embedding_score + 0.4 * item.algorithm_score),
+                item.freelancer_id,
+            )
+        )
+        embedding_model = f"{provider}:{model}"
+        return TalentRerankResponse(
+            matches=matches[: min(request.top_k, len(matches))],
+            algorithm_version=request.algorithm_version,
+            embedding_model=embedding_model,
+            scoring_version=request.scoring_version,
+        )
+
+    @staticmethod
+    def _normalise(values: List[str]) -> set[str]:
+        return {value.strip().casefold() for value in values if value.strip()}
+
+    @staticmethod
+    def _tokens(value: Optional[str]) -> set[str]:
+        return set(re.findall(r"[\w+#.-]+", (value or "").casefold()))
+
+    @classmethod
+    def _algorithm_score(
+        cls, job: TalentRerankJob, candidate: TalentRerankCandidate
+    ) -> tuple[float, List[str], List[str]]:
+        required = cls._normalise(job.skills + job.custom_skills)
+        candidate_skills = cls._normalise(candidate.skills)
+        verified_skills = cls._normalise(
+            [skill for work in candidate.verified_work for skill in work.skills]
+        )
+        effective_skills = candidate_skills | verified_skills
+        matched = sorted(required & effective_skills)
+
+        skill_score = 55.0 * len(matched) / len(required) if required else 0.0
+        job_tokens = cls._tokens(f"{job.title} {job.description}")
+        profile_tokens = cls._tokens(f"{candidate.title or ''} {candidate.bio or ''}")
+        text_score = (
+            25.0 * len(job_tokens & profile_tokens) / len(job_tokens)
+            if job_tokens
+            else 0.0
+        )
+        job_taxonomy = cls._normalise(
+            [job.major_name or "", job.category_name or ""]
+        )
+        candidate_taxonomy = cls._normalise(
+            [candidate.major_name or ""] + candidate.categories
+        )
+        taxonomy_score = 15.0 if job_taxonomy & candidate_taxonomy else 0.0
+        availability_score = 5.0 if candidate.availability == 0 else (
+            2.5 if candidate.availability == 1 else 0.0
+        )
+        score = round(
+            min(100.0, skill_score + text_score + taxonomy_score + availability_score),
+            2,
+        )
+
+        reasons = []
+        strengths = []
+        if required:
+            reasons.append(f"{len(matched)}/{len(required)} requested skills matched")
+        if matched:
+            strengths.append(f"Skill alignment: {', '.join(matched[:5])}")
+        if verified_skills & required:
+            strengths.append("Relevant skills are supported by verified work")
+        if taxonomy_score:
+            strengths.append("Major or category aligns with the job")
+        if not reasons:
+            reasons.append("Candidate assessed using semantic profile similarity")
+        return score, reasons[:3], strengths[:5]
+
+    @staticmethod
+    def _cosine(left: List[float], right: List[float]) -> float:
+        if not left or len(left) != len(right):
+            return 0.0
+        denominator = math.sqrt(sum(x * x for x in left)) * math.sqrt(
+            sum(x * x for x in right)
+        )
+        if denominator == 0:
+            return 0.0
+        return sum(x * y for x, y in zip(left, right)) / denominator
+
+    @staticmethod
+    def _job_text(job: TalentRerankJob) -> str:
+        return " | ".join(
+            filter(
+                None,
+                [
+                    job.title,
+                    job.description,
+                    job.industry,
+                    job.major_name,
+                    job.category_name,
+                    ", ".join(job.skills + job.custom_skills),
+                    job.location,
+                ],
+            )
+        )
+
+    @staticmethod
+    def _candidate_text(candidate: TalentRerankCandidate) -> str:
+        work = " ".join(
+            f"{item.title} {item.description or ''} "
+            f"{item.major_name or ''} {item.category_name or ''} "
+            f"{' '.join(item.skills)}"
+            for item in candidate.verified_work
+        )
+        return " | ".join(
+            filter(
+                None,
+                [
+                    candidate.title,
+                    candidate.bio,
+                    candidate.major_name,
+                    ", ".join(candidate.categories),
+                    ", ".join(candidate.skills),
+                    candidate.location,
+                    work,
+                ],
+            )
+        )
 
     async def match_talent(self, request: TalentMatchingRequest) -> TalentMatchingResponse:
         logger.info(f"Running semantic matching for job post ID: {request.job_id}")

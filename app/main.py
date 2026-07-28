@@ -143,7 +143,20 @@ async def validate_voice_dependencies():
     else:
         logger.info("Google credentials configured")
 
-    # 4. PyAV — check availability (critical for audio decode)
+    # 4. Gladia API key — warn when configured without credentials
+    if (
+        settings.STT_PRIMARY_PROVIDER == "gladia"
+        or settings.STT_FALLBACK_PROVIDER == "gladia"
+    ):
+        if not settings.GLADIA_API_KEY:
+            logger.warning(
+                "⚠ Gladia STT is configured but GLADIA_API_KEY is not set; "
+                "the provider will be unavailable."
+            )
+        else:
+            logger.info("Gladia API key configured")
+
+    # 5. PyAV — check availability (critical for audio decode)
     try:
         import av as _  # noqa: F401
 

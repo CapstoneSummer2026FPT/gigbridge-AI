@@ -40,6 +40,7 @@ from app.services.voice import VoiceService, get_voice_service
 from app.services.transcript_corrector import TranscriptCorrector
 from app.clients.voice.models import DraftData, SynthesisResult
 from app.services.tts_audio_stitcher import TTSAudioStitcher
+from app.services.hotword_resolver import HotwordResolver
 
 logger = logging.getLogger("ai_server.interviews_service")
 
@@ -55,11 +56,13 @@ class InterviewService:
         self,
         llm_gateway: LLMGateway | None = None,
         voice_service: VoiceService | None = None,
+        hotword_resolver: HotwordResolver | None = None,
     ):
         self.llm = llm_gateway
         self.voice = voice_service
         self.max_questions = settings.MAX_INTERVIEW_QUESTIONS
         self.transcript_corrector = TranscriptCorrector()
+        self.hotword_resolver = hotword_resolver or HotwordResolver()
         self._pending_tts_tasks: set[asyncio.Task] = set()
 
     # ── Interview Lifecycle ────────────────────────────────────
@@ -76,6 +79,15 @@ class InterviewService:
         job_title = request.job_title.strip()
         job_description = (request.job_description or "").strip()
         job_skills = self._clean_terms(request.job_skills)
+        job_phonetic_aliases = self._clean_aliases(request.job_phonetic_aliases)
+        hotwords = self.hotword_resolver.resolve(
+            job_title,
+            job_skills,
+            job_major=request.job_major,
+            job_category=request.job_category,
+            job_questions=request.job_questions,
+            phonetic_aliases=job_phonetic_aliases,
+        )
         interview_language = self._resolve_interview_language(
             request.language,
             job_title,
@@ -96,14 +108,8 @@ class InterviewService:
             "job_title": job_title,
             "job_description": job_description,
             "job_skills": job_skills,
-            "hotwords": self._build_hotwords(
-                request.job_title,
-                request.job_skills,
-                request.job_description,
-            ),
-            "job_phonetic_aliases": self._clean_aliases(
-                request.job_phonetic_aliases
-            ),
+            "hotwords": hotwords,
+            "job_phonetic_aliases": job_phonetic_aliases,
             "job_questions": request.job_questions or [],
         }
 
@@ -605,21 +611,22 @@ class InterviewService:
         cls,
         job_title: str,
         job_skills: list[str],
-        job_description: str | None,
+        job_description: str | None = None,
+        job_major: str | None = None,
+        job_category: str | None = None,
+        job_questions: list[str] | None = None,
+        phonetic_aliases: dict[str, list[str]] | None = None,
     ) -> list[str]:
-        seed_terms = [job_title, *(job_skills or [])]
-        if job_description:
-            for raw in job_description.replace("/", " ").replace(",", " ").split():
-                token = raw.strip(" .;:()[]{}<>\"'")
-                has_letter = any(ch.isalpha() for ch in token)
-                has_lower = any(ch.islower() for ch in token)
-                is_camel_case = has_lower and any(ch.isupper() for ch in token[1:])
-                has_technical_symbol = has_lower and any(
-                    ch in token for ch in ("#", ".", "+")
-                )
-                if has_letter and (is_camel_case or has_technical_symbol):
-                    seed_terms.append(token)
-        return cls._clean_terms(seed_terms)[:50]
+        """Compatibility wrapper for deterministic hotword construction."""
+        return HotwordResolver.build_reliable_terms(
+            job_title,
+            job_skills,
+            job_major=job_major,
+            job_category=job_category,
+            job_questions=job_questions,
+            phonetic_aliases=phonetic_aliases,
+            max_terms=settings.HOTWORD_MAX_TERMS,
+        )
 
     @staticmethod
     def _clean_aliases(aliases: dict[str, list[str]]) -> dict[str, list[str]]:

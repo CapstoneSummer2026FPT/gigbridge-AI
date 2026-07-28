@@ -48,10 +48,15 @@ class STTFactory:
 
             return FasterWhisperEngine()
 
+        elif provider == "gladia":
+            from app.clients.voice.stt_engine.gladia import GladiaSTTEngine
+
+            return GladiaSTTEngine()
+
         else:
             raise VoiceProviderException(
                 f"Unknown STT provider: {provider}. "
-                f"Supported: google, faster_whisper"
+                f"Supported: google, faster_whisper, gladia"
             )
 
     @staticmethod

@@ -19,3 +19,63 @@ class TalentMatchResult(BaseModel):
 class TalentMatchingResponse(BaseModel):
     job_id: str = Field(..., description="Target job post ID")
     matches: List[TalentMatchResult] = Field(..., description="Sorted list of best-matching candidates")
+
+
+class TalentRerankVerifiedWork(BaseModel):
+    contract_id: str
+    title: str
+    description: Optional[str] = None
+    major_name: Optional[str] = None
+    category_name: Optional[str] = None
+    skills: List[str] = Field(default_factory=list)
+
+
+class TalentRerankJob(BaseModel):
+    job_id: str
+    title: str
+    description: str = ""
+    industry: Optional[str] = None
+    major_id: Optional[str] = None
+    major_name: Optional[str] = None
+    major_category_id: Optional[str] = None
+    category_name: Optional[str] = None
+    skills: List[str] = Field(default_factory=list)
+    custom_skills: List[str] = Field(default_factory=list)
+    location: Optional[str] = None
+    estimated_duration: Optional[str] = None
+
+
+class TalentRerankCandidate(BaseModel):
+    freelancer_id: str
+    title: Optional[str] = None
+    bio: Optional[str] = None
+    location: Optional[str] = None
+    availability: int = 0
+    major_id: Optional[str] = None
+    major_name: Optional[str] = None
+    categories: List[str] = Field(default_factory=list)
+    skills: List[str] = Field(default_factory=list)
+    verified_work: List[TalentRerankVerifiedWork] = Field(default_factory=list)
+
+
+class TalentRerankRequest(BaseModel):
+    job: TalentRerankJob
+    candidates: List[TalentRerankCandidate] = Field(min_length=1, max_length=100)
+    top_k: int = Field(default=10, ge=1, le=30)
+    algorithm_version: str = "2.0"
+    scoring_version: str = "weighted-features-v1"
+
+
+class TalentRerankMatch(BaseModel):
+    freelancer_id: str
+    embedding_score: float = Field(ge=0, le=100)
+    algorithm_score: float = Field(ge=0, le=100)
+    match_reasons: List[str] = Field(default_factory=list)
+    semantic_strengths: List[str] = Field(default_factory=list)
+
+
+class TalentRerankResponse(BaseModel):
+    matches: List[TalentRerankMatch]
+    algorithm_version: str
+    embedding_model: str
+    scoring_version: str
