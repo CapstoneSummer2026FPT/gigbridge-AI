@@ -20,7 +20,8 @@ class GeminiClient(BaseLLMClient):
         system_prompt: str,
         user_prompt: str,
         history: Optional[List[Dict[str, str]]] = None,
-        response_format: Optional[Any] = None
+        response_format: Optional[Any] = None,
+        model: Optional[str] = None,
     ) -> str:
         if not self.client:
             raise ValueError("Gemini API Key is not configured.")
@@ -34,7 +35,7 @@ class GeminiClient(BaseLLMClient):
         messages.append({"role": "user", "content": user_prompt})
 
         kwargs = {
-            "model": self.model_name,
+            "model": model or self.model_name,
             "messages": messages,
             "temperature": 0.0
         }

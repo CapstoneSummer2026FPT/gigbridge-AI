@@ -41,6 +41,27 @@ class StartInterviewRequest(BaseModel):
         default_factory=list,
         description="Predefined job post questions set by the client",
     )
+    question_count: Optional[int] = Field(
+        None,
+        ge=1,
+        le=20,
+        description="Number of generated questions when no predefined questions are supplied",
+    )
+    definition_reference: Optional[str] = Field(
+        None,
+        max_length=128,
+        description="Opaque reference returned when the client enabled this interview",
+    )
+
+
+class InterviewDefinitionRequest(BaseModel):
+    job_id: str = Field(..., min_length=1, max_length=128)
+    job_title: str = Field(..., min_length=1, max_length=300)
+    job_description: Optional[str] = None
+    job_skills: List[str] = Field(default_factory=list)
+    mode: Literal["text", "voice"] = "voice"
+    language: Literal["auto", "vi", "en"] = "auto"
+    question_count: int = Field(default=5, ge=1, le=20)
 
 
 class SubmitAnswerRequest(BaseModel):
@@ -71,6 +92,14 @@ class QuestionAnswerPair(BaseModel):
     question_index: int = Field(..., description="1-indexed question identifier")
     question_text: str = Field(..., description="The text of the question asked")
     candidate_answer: str = Field(..., description="The answer provided by the candidate")
+
+
+class InterviewDefinitionResponse(BaseModel):
+    definition_reference: str
+    status: Literal["active"] = "active"
+    mode: Literal["text", "voice"]
+    language: Literal["auto", "vi", "en"]
+    question_count: int = Field(..., ge=1, le=20)
 
 
 class AnalyzeVettingRequest(BaseModel):

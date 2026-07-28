@@ -652,6 +652,28 @@ class TestAudioProcessorValidation:
         size = self.processor.validate_request("audio/wav", "")
         assert size == 0
 
+    def test_decode_normalizes_stereo_audio_to_mono_16khz_wav(self):
+        source_rate = 48000
+        seconds = 1
+        timeline = np.linspace(0, seconds, source_rate * seconds, endpoint=False)
+        left = (np.sin(2 * np.pi * 440 * timeline) * 12000).astype(np.int16)
+        right = (np.sin(2 * np.pi * 660 * timeline) * 8000).astype(np.int16)
+        stereo = np.column_stack((left, right)).reshape(-1)
+        source = io.BytesIO()
+        with wave.open(source, "wb") as wav:
+            wav.setnchannels(2)
+            wav.setsampwidth(2)
+            wav.setframerate(source_rate)
+            wav.writeframes(stereo.tobytes())
+
+        normalized = self.processor.decode_and_normalize(source.getvalue())
+        with wave.open(io.BytesIO(normalized), "rb") as wav:
+            assert wav.getnchannels() == 1
+            assert wav.getsampwidth() == 2
+            assert wav.getframerate() == 16000
+            assert abs(wav.getnframes() - 16000) <= 1
+        assert self.processor.detect_silence(normalized) is False
+
 
 # ═══════════════════════════════════════════════════════════════
 # AudioProcessor — silence detection (numpy-only, no PyAV)

@@ -3,6 +3,7 @@ import logging
 import os
 import json
 import asyncio
+import httpx
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
@@ -265,16 +266,19 @@ Respond in JSON format matching the schema.
         allow_fallback: bool = True,
     ) -> List[List[float]]:
         """
-        Generate vector embeddings for input texts using OpenAI client or Gemini endpoint.
+        Generate vector embeddings using OpenAI, Gemini, or Ollama.
         """
         selected_provider = (provider or "openai").lower()
         selected_model = model or self.embedding_model
+
+        if not texts:
+            return []
+
         if selected_provider == "ollama":
             try:
-                endpoint = f"{settings.LOCAL_OLLAMA_URL.rstrip('/')}/api/embed"
                 async with httpx.AsyncClient(timeout=120.0) as client:
                     response = await client.post(
-                        endpoint,
+                        f"{settings.LOCAL_OLLAMA_URL.rstrip('/')}/api/embed",
                         json={
                             "model": selected_model,
                             "input": texts,
@@ -283,30 +287,90 @@ Respond in JSON format matching the schema.
                     )
                     response.raise_for_status()
                     payload = response.json()
+
                 if not isinstance(payload, dict):
-                    raise RAGException("Ollama returned an invalid embedding response.")
+                    raise RAGException(
+                        "Ollama returned an invalid embedding response."
+                    )
+
                 embeddings = payload.get("embeddings")
-                if not isinstance(embeddings, list) or len(embeddings) != len(texts):
-                    raise RAGException("Ollama returned an incomplete embedding batch.")
-                return embeddings
+                if (
+                    not isinstance(embeddings, list)
+                    or len(embeddings) != len(texts)
+                ):
+                    raise RAGException(
+                        "Ollama returned an incomplete embedding batch."
+                    )
+
+                vectors: List[List[float]] = []
+                expected_dimension: Optional[int] = None
+                for embedding in embeddings:
+                    if not isinstance(embedding, list) or not embedding:
+                        raise RAGException(
+                            "Ollama returned an invalid embedding vector."
+                        )
+                    try:
+                        vector = [float(value) for value in embedding]
+                    except (TypeError, ValueError) as exc:
+                        raise RAGException(
+                            "Ollama returned a non-numeric embedding vector."
+                        ) from exc
+
+                    if expected_dimension is None:
+                        expected_dimension = len(vector)
+                    elif len(vector) != expected_dimension:
+                        raise RAGException(
+                            "Ollama returned inconsistent embedding dimensions."
+                        )
+                    vectors.append(vector)
+
+                return vectors
             except RAGException:
                 raise
-            except Exception as exc:
-                if not allow_fallback:
-                    raise RAGException(f"Ollama embeddings failed: {exc}") from exc
-                logger.warning("Ollama embeddings failed; using configured fallback: %s", exc)
+            except httpx.HTTPStatusError as exc:
+                raise RAGException(
+                    "Ollama embedding request failed with HTTP "
+                    f"{exc.response.status_code}."
+                ) from exc
+            except httpx.RequestError as exc:
+                raise RAGException(
+                    "Unable to connect to the configured Ollama embedding service."
+                ) from exc
+            except (TypeError, ValueError) as exc:
+                raise RAGException(
+                    "Ollama returned an invalid embedding response."
+                ) from exc
+
+        if selected_provider == "gemini":
+            if not settings.GEMINI_API_KEY:
+                raise RAGException("Gemini API key is not configured for embeddings.")
+            try:
+                gemini_emb_client = AsyncOpenAI(
+                    api_key=settings.GEMINI_API_KEY,
+                    base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+                )
+                response = await gemini_emb_client.embeddings.create(
+                    model=selected_model,
+                    input=texts,
+                )
+                return [e.embedding for e in response.data]
+            except Exception as e:
+                raise RAGException(f"Failed to generate Gemini embeddings: {str(e)}")
+
+        if selected_provider != "openai":
+            raise RAGException(f"Unsupported embedding provider: {selected_provider}")
 
         if not self.openai_client:
             # Check if Gemini key is set, try to use it as OpenAI compatible endpoint
-            if settings.GEMINI_API_KEY:
+            if allow_fallback and provider is None and settings.GEMINI_API_KEY:
                 try:
                     gemini_emb_client = AsyncOpenAI(
                         api_key=settings.GEMINI_API_KEY,
                         base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
                     )
-                    model = "text-embedding-004" if selected_model == "text-embedding-3-large" else selected_model
+                    fallback_model = "text-embedding-004" if selected_model == "text-embedding-3-large" else selected_model
                     response = await gemini_emb_client.embeddings.create(
-                        model=model,
+                        model=fallback_model,
                         input=texts
                     )
                     return [e.embedding for e in response.data]

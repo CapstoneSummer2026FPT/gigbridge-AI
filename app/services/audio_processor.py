@@ -119,21 +119,22 @@ class AudioProcessor:
                 errors=[f"Cannot open audio container: {exc}"],
             )
 
-        audio_frames = []
+        pcm_chunks: list[np.ndarray] = []
         try:
+            resampler = _av.AudioResampler(
+                format="s16",
+                layout="mono",
+                rate=self.target_sample_rate,
+            )
             for frame in input_container.decode(audio=0):
-                # Convert frame to float32 numpy array
-                arr = frame.to_ndarray()
-
-                # Stereo → mono: average channels
-                if arr.shape[0] > 1:
-                    arr = np.mean(arr, axis=0, keepdims=True)
-
-                # Resample to target sample rate
-                if frame.sample_rate != self.target_sample_rate:
-                    arr = self._resample_numpy(arr, frame.sample_rate, self.target_sample_rate)
-
-                audio_frames.append(arr.astype(np.float32))
+                for normalized_frame in resampler.resample(frame):
+                    pcm_chunks.append(
+                        normalized_frame.to_ndarray().reshape(-1).astype(np.int16)
+                    )
+            for normalized_frame in resampler.resample(None):
+                pcm_chunks.append(
+                    normalized_frame.to_ndarray().reshape(-1).astype(np.int16)
+                )
         except Exception as exc:
             raise AudioValidationError(
                 "audio_decode_failed", 400,
@@ -142,17 +143,12 @@ class AudioProcessor:
         finally:
             input_container.close()
 
-        if not audio_frames:
+        if not pcm_chunks:
             raise AudioValidationError("no_speech_detected", 400)
 
-        # Concatenate all frames
-        full = np.concatenate(audio_frames, axis=1)
-
-        # Normalize to int16 range
-        peak = np.max(np.abs(full))
-        if peak > 0:
-            full = full / peak * 0.95  # headroom
-        pcm_int16 = (full[0] * 32767).astype(np.int16)
+        # PyAV handles packed/planar channel layouts and sample formats before
+        # exposing a consistent mono LINEAR16 stream.
+        pcm_int16 = np.concatenate(pcm_chunks)
 
         # Check duration
         duration_seconds = len(pcm_int16) / self.target_sample_rate

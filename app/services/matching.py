@@ -1,12 +1,12 @@
-import json
+import asyncio
+import hashlib
 import logging
 import math
 import re
-from typing import List, Dict, Any, Optional
+from collections import Counter
+from typing import Dict, Iterable, List, Optional, Sequence
+
 from app.api.schemas.matching import (
-    TalentMatchingRequest,
-    TalentMatchingResponse,
-    TalentMatchResult,
     TalentRerankCandidate,
     TalentRerankJob,
     TalentRerankMatch,
@@ -14,339 +14,482 @@ from app.api.schemas.matching import (
     TalentRerankResponse,
 )
 from app.clients.db.chroma import ChromaDBClient, get_chroma_client
-from app.clients.llm.gateway import LLMGateway, get_llm_gateway
 from app.core.config import settings
+from app.core.exceptions import RAGException
 from app.services.rag import RAGService, get_rag_service
-from app.services.memory import MemoryManager, get_memory_manager
 
 logger = logging.getLogger("ai_server.matching_service")
 
+_TOKEN_PATTERN = re.compile(r"[a-z0-9+#.]{2,}")
+_STOP_WORDS = {
+    "and", "are", "for", "from", "into", "that", "the", "this", "with",
+    "will", "your", "you", "our", "job", "work", "role", "using", "have",
+    "has", "build", "developer", "engineer",
+}
+
+
 class MatchingService:
-    """Service coordinates semantic matching between job openings and freelancer candidate profiles"""
-    
+    """Embedding retrieval followed by deterministic weighted feature reranking."""
+
     def __init__(
         self,
-        llm_gateway: LLMGateway = get_llm_gateway(),
-        rag_service: RAGService = get_rag_service(),
-        memory_manager: MemoryManager = get_memory_manager(),
-        chroma_client: ChromaDBClient = get_chroma_client(),
+        rag_service: Optional[RAGService] = None,
+        chroma_client: Optional[ChromaDBClient] = None,
     ):
-        self.llm = llm_gateway
-        self.rag = rag_service
-        self.memory = memory_manager
-        self.chroma = chroma_client
-        self.collection_name = "ai-candidate-matching"
+        self.rag = rag_service or get_rag_service()
+        self.chroma = chroma_client or get_chroma_client()
 
-    async def rerank_talent(
-        self, request: TalentRerankRequest
-    ) -> TalentRerankResponse:
-        """Rerank the authoritative candidate pool supplied by the backend."""
-        provider = settings.MATCHING_EMBEDDING_PROVIDER
-        model = settings.MATCHING_EMBEDDING_MODEL
-        candidate_texts = [
-            self._candidate_text(candidate) for candidate in request.candidates
-        ]
-        candidate_vectors = await self.rag.get_embeddings(
-            candidate_texts,
-            provider=provider,
-            model=model,
-            allow_fallback=False,
+    async def rerank_talent(self, request: TalentRerankRequest) -> TalentRerankResponse:
+        self._validate_request_versions(request)
+        candidates_by_id = self._candidate_map(request.candidates)
+        if not candidates_by_id:
+            return self._response([])
+
+        documents = {
+            candidate_id: self._profile_document(candidate)
+            for candidate_id, candidate in candidates_by_id.items()
+        }
+        collection_name = self._collection_name()
+        await self._upsert_changed_profiles(collection_name, documents)
+        retrieved = await self._retrieve(
+            collection_name,
+            request.job,
+            list(candidates_by_id),
         )
-        job_vector = (
-            await self.rag.get_embeddings(
-                [self._job_text(request.job)],
-                provider=provider,
-                model=model,
+
+        rerank_limit = min(settings.MATCHING_RERANK_LIMIT, len(retrieved))
+        rerank_ids = [candidate_id for candidate_id, _ in retrieved[:rerank_limit]]
+        algorithm_scores = self._evaluate_algorithm(
+            request.job,
+            rerank_ids,
+            candidates_by_id,
+        )
+
+        embedding_scores = dict(retrieved)
+        matches = [
+            TalentRerankMatch(
+                freelancer_id=candidate_id,
+                embedding_score=embedding_scores[candidate_id],
+                algorithm_score=evaluation[0],
+                semantic_strengths=evaluation[1],
+                match_reasons=evaluation[2],
+            )
+            for candidate_id, evaluation in algorithm_scores.items()
+        ]
+        # 45:35 is renormalized here because backend evidence is added after this service.
+        matches.sort(
+            key=lambda match: (
+                -(0.5625 * match.embedding_score + 0.4375 * match.algorithm_score),
+                match.freelancer_id,
+            )
+        )
+        expected = min(request.top_k, len(candidates_by_id), rerank_limit)
+        matches = matches[:expected]
+        if len(matches) != expected:
+            raise RAGException("Matching algorithm returned an incomplete candidate set.")
+
+        logger.info(
+            "Matched job %s against %d eligible profiles; retrieved=%d algorithmically_reranked=%d returned=%d",
+            request.job.job_id,
+            len(candidates_by_id),
+            len(retrieved),
+            len(rerank_ids),
+            len(matches),
+        )
+        return self._response(matches)
+
+    def _validate_request_versions(self, request: TalentRerankRequest) -> None:
+        if request.algorithm_version != settings.MATCHING_ALGORITHM_VERSION:
+            raise RAGException("Unsupported talent matching algorithm version.")
+        if request.scoring_version != settings.MATCHING_SCORING_VERSION:
+            raise RAGException("Unsupported talent matching scoring version.")
+
+    @staticmethod
+    def _candidate_map(
+        candidates: List[TalentRerankCandidate],
+    ) -> Dict[str, TalentRerankCandidate]:
+        result: Dict[str, TalentRerankCandidate] = {}
+        for candidate in candidates:
+            if candidate.freelancer_id in result:
+                raise RAGException("Duplicate freelancer IDs are not allowed.")
+            result[candidate.freelancer_id] = candidate
+        return result
+
+    async def _upsert_changed_profiles(
+        self,
+        collection_name: str,
+        documents: Dict[str, str],
+    ) -> None:
+        stable_ids = [self._stable_id(candidate_id) for candidate_id in documents]
+        existing = await asyncio.to_thread(
+            self.chroma.get_documents,
+            collection_name,
+            stable_ids,
+        )
+        existing_hashes = {
+            item_id: (metadata or {}).get("content_hash")
+            for item_id, metadata in zip(
+                existing.get("ids") or [],
+                existing.get("metadatas") or [],
+            )
+        }
+        changed = [
+            candidate_id
+            for candidate_id, document in documents.items()
+            if existing_hashes.get(self._stable_id(candidate_id)) != self._hash(document)
+        ]
+
+        for start in range(0, len(changed), 100):
+            batch_ids = changed[start : start + 100]
+            batch_documents = [documents[candidate_id] for candidate_id in batch_ids]
+            embeddings = await self.rag.get_embeddings(
+                batch_documents,
+                provider=settings.MATCHING_EMBEDDING_PROVIDER,
+                model=settings.MATCHING_EMBEDDING_MODEL,
                 allow_fallback=False,
             )
-        )[0]
-
-        matches = []
-        for candidate, vector in zip(request.candidates, candidate_vectors):
-            embedding_score = round(
-                max(0.0, min(100.0, self._cosine(job_vector, vector) * 100.0)),
-                2,
-            )
-            algorithm_score, reasons, strengths = self._algorithm_score(
-                request.job, candidate
-            )
-            matches.append(
-                TalentRerankMatch(
-                    freelancer_id=candidate.freelancer_id,
-                    embedding_score=embedding_score,
-                    algorithm_score=algorithm_score,
-                    match_reasons=reasons,
-                    semantic_strengths=strengths,
-                )
-            )
-
-        matches.sort(
-            key=lambda item: (
-                -(0.6 * item.embedding_score + 0.4 * item.algorithm_score),
-                item.freelancer_id,
-            )
-        )
-        embedding_model = f"{provider}:{model}"
-        return TalentRerankResponse(
-            matches=matches[: min(request.top_k, len(matches))],
-            algorithm_version=request.algorithm_version,
-            embedding_model=embedding_model,
-            scoring_version=request.scoring_version,
-        )
-
-    @staticmethod
-    def _normalise(values: List[str]) -> set[str]:
-        return {value.strip().casefold() for value in values if value.strip()}
-
-    @staticmethod
-    def _tokens(value: Optional[str]) -> set[str]:
-        return set(re.findall(r"[\w+#.-]+", (value or "").casefold()))
-
-    @classmethod
-    def _algorithm_score(
-        cls, job: TalentRerankJob, candidate: TalentRerankCandidate
-    ) -> tuple[float, List[str], List[str]]:
-        required = cls._normalise(job.skills + job.custom_skills)
-        candidate_skills = cls._normalise(candidate.skills)
-        verified_skills = cls._normalise(
-            [skill for work in candidate.verified_work for skill in work.skills]
-        )
-        effective_skills = candidate_skills | verified_skills
-        matched = sorted(required & effective_skills)
-
-        skill_score = 55.0 * len(matched) / len(required) if required else 0.0
-        job_tokens = cls._tokens(f"{job.title} {job.description}")
-        profile_tokens = cls._tokens(f"{candidate.title or ''} {candidate.bio or ''}")
-        text_score = (
-            25.0 * len(job_tokens & profile_tokens) / len(job_tokens)
-            if job_tokens
-            else 0.0
-        )
-        job_taxonomy = cls._normalise(
-            [job.major_name or "", job.category_name or ""]
-        )
-        candidate_taxonomy = cls._normalise(
-            [candidate.major_name or ""] + candidate.categories
-        )
-        taxonomy_score = 15.0 if job_taxonomy & candidate_taxonomy else 0.0
-        availability_score = 5.0 if candidate.availability == 0 else (
-            2.5 if candidate.availability == 1 else 0.0
-        )
-        score = round(
-            min(100.0, skill_score + text_score + taxonomy_score + availability_score),
-            2,
-        )
-
-        reasons = []
-        strengths = []
-        if required:
-            reasons.append(f"{len(matched)}/{len(required)} requested skills matched")
-        if matched:
-            strengths.append(f"Skill alignment: {', '.join(matched[:5])}")
-        if verified_skills & required:
-            strengths.append("Relevant skills are supported by verified work")
-        if taxonomy_score:
-            strengths.append("Major or category aligns with the job")
-        if not reasons:
-            reasons.append("Candidate assessed using semantic profile similarity")
-        return score, reasons[:3], strengths[:5]
-
-    @staticmethod
-    def _cosine(left: List[float], right: List[float]) -> float:
-        if not left or len(left) != len(right):
-            return 0.0
-        denominator = math.sqrt(sum(x * x for x in left)) * math.sqrt(
-            sum(x * x for x in right)
-        )
-        if denominator == 0:
-            return 0.0
-        return sum(x * y for x, y in zip(left, right)) / denominator
-
-    @staticmethod
-    def _job_text(job: TalentRerankJob) -> str:
-        return " | ".join(
-            filter(
-                None,
+            if len(embeddings) != len(batch_ids):
+                raise RAGException("Embedding provider returned an incomplete profile batch.")
+            await asyncio.to_thread(
+                self.chroma.upsert_documents,
+                collection_name,
+                [self._stable_id(candidate_id) for candidate_id in batch_ids],
+                embeddings,
+                batch_documents,
                 [
-                    job.title,
-                    job.description,
-                    job.industry,
-                    job.major_name,
-                    job.category_name,
-                    ", ".join(job.skills + job.custom_skills),
-                    job.location,
+                    {
+                        "freelancer_id": candidate_id,
+                        "content_hash": self._hash(documents[candidate_id]),
+                        "embedding_provider": settings.MATCHING_EMBEDDING_PROVIDER,
+                        "embedding_model": settings.MATCHING_EMBEDDING_MODEL,
+                    }
+                    for candidate_id in batch_ids
                 ],
             )
-        )
 
-    @staticmethod
-    def _candidate_text(candidate: TalentRerankCandidate) -> str:
-        work = " ".join(
-            f"{item.title} {item.description or ''} "
-            f"{item.major_name or ''} {item.category_name or ''} "
-            f"{' '.join(item.skills)}"
-            for item in candidate.verified_work
+    async def _retrieve(
+        self,
+        collection_name: str,
+        job: TalentRerankJob,
+        eligible_ids: List[str],
+    ) -> List[tuple[str, float]]:
+        query_embeddings = await self.rag.get_embeddings(
+            [self._job_document(job)],
+            provider=settings.MATCHING_EMBEDDING_PROVIDER,
+            model=settings.MATCHING_EMBEDDING_MODEL,
+            allow_fallback=False,
         )
-        return " | ".join(
-            filter(
-                None,
-                [
-                    candidate.title,
-                    candidate.bio,
-                    candidate.major_name,
-                    ", ".join(candidate.categories),
-                    ", ".join(candidate.skills),
-                    candidate.location,
-                    work,
-                ],
+        if len(query_embeddings) != 1:
+            raise RAGException("Embedding provider returned an invalid job embedding.")
+
+        retrieval_count = min(settings.MATCHING_RETRIEVAL_LIMIT, len(eligible_ids))
+        result = await asyncio.to_thread(
+            self.chroma.query_documents,
+            collection_name,
+            query_embeddings,
+            retrieval_count,
+            {"freelancer_id": {"$in": eligible_ids}},
+        )
+        ids = (result.get("ids") or [[]])[0]
+        metadatas = (result.get("metadatas") or [[]])[0]
+        distances = (result.get("distances") or [[]])[0]
+        if not (len(ids) == len(metadatas) == len(distances) == retrieval_count):
+            raise RAGException("Chroma returned an incomplete retrieval result.")
+
+        eligible = set(eligible_ids)
+        seen: set[str] = set()
+        retrieved: List[tuple[str, float]] = []
+        for stable_id, metadata, distance in zip(ids, metadatas, distances):
+            candidate_id = (metadata or {}).get("freelancer_id")
+            if (
+                not candidate_id
+                or candidate_id not in eligible
+                or stable_id != self._stable_id(candidate_id)
+                or candidate_id in seen
+            ):
+                raise RAGException("Chroma returned an unknown or duplicate freelancer ID.")
+            seen.add(candidate_id)
+            similarity = max(0.0, min(100.0, (1.0 - float(distance)) * 100.0))
+            retrieved.append((candidate_id, round(similarity, 2)))
+        return retrieved
+
+    def _evaluate_algorithm(
+        self,
+        job: TalentRerankJob,
+        candidate_ids: List[str],
+        candidates: Dict[str, TalentRerankCandidate],
+    ) -> Dict[str, tuple[float, List[str], List[str]]]:
+        candidate_documents = {
+            candidate_id: self._candidate_tokens(candidates[candidate_id])
+            for candidate_id in candidate_ids
+        }
+        idf = self._inverse_document_frequency(candidate_documents.values())
+        job_role_tokens = self._tokens(
+            job.title,
+            job.industry,
+            job.major_name,
+            job.category_name,
+        )
+        job_task_tokens = self._tokens(job.title, job.description)
+        job_skill_phrases = self._phrases([*job.skills, *job.custom_skills])
+
+        evaluations: Dict[str, tuple[float, List[str], List[str]]] = {}
+        for candidate_id in candidate_ids:
+            candidate = candidates[candidate_id]
+            role_tokens = self._tokens(
+                candidate.title,
+                candidate.major_name,
+                *candidate.categories,
+                *(work.title for work in candidate.verified_work),
+                *(work.major_name for work in candidate.verified_work),
+                *(work.category_name for work in candidate.verified_work),
             )
-        )
+            task_tokens = self._tokens(
+                candidate.title,
+                candidate.bio,
+                *(work.title for work in candidate.verified_work),
+                *(work.description for work in candidate.verified_work),
+            )
+            role_score = self._token_relevance(job_role_tokens, role_tokens, idf)
+            task_score = self._token_relevance(job_task_tokens, task_tokens, idf)
+            skill_score = self._skill_relevance(job_skill_phrases, candidate)
+            verified_work_score = self._verified_work_relevance(job, candidate, idf)
 
-    async def match_talent(self, request: TalentMatchingRequest) -> TalentMatchingResponse:
-        logger.info(f"Running semantic matching for job post ID: {request.job_id}")
-        
-        # Load job post details from cache/database
-        job_details = await self.memory.get_domain_context("job_posts", request.job_id)
-        if not job_details:
-            # Fallback mock job post if not indexed
-            job_details = {
-                "title": "Senior Backend Developer",
-                "category": "Web Development",
-                "skills": ["C#", "ASP.NET Core", "PostgreSQL", "Docker"],
-                "description": "Seeking a backend engineer specializing in C#, ASP.NET Core, database design, and CI/CD pipelines."
-            }
-
-        # Query vector database for candidate resumes/profiles
-        search_query = f"{job_details['title']}. Required skills: {', '.join(job_details['skills'])}"
-        candidates = await self.rag.retrieve_context(
-            collection_name=self.collection_name,
-            query=search_query,
-            top_k=request.top_k * 2  # Retrieve more than requested to allow filtering/rerank
-        )
-
-        # Mocking candidates indexing if vector DB is empty (first run fallback)
-        if not candidates:
-            logger.info("Vector store empty. Injecting mock developer profiles for matching demonstration.")
-            mock_resumes = [
-                ("freelancer_01", "Nguyễn Văn Trí", "Senior Backend Developer", "ASP.NET Core, PostgreSQL, Docker, AWS, microservices design. 6 years experience."),
-                ("freelancer_02", "Trần Quốc Bảo", "Flutter Mobile App Developer", "Flutter, React Native, Dart, REST APIs, clean architecture. 3 years experience."),
-                ("freelancer_03", "Ngô Phương Thảo", "Smart Contract Engineer", "Solidity, Ethereum, Web3.js, Rust, security audits. 4 years experience."),
-                ("freelancer_04", "Lê Thị Hoa", "Frontend React Developer", "React, TypeScript, Redux, Tailwind CSS, performance tuning. 4 years experience.")
+            components: List[tuple[float, float]] = [
+                (30.0, role_score),
+                (30.0, task_score),
+                (15.0, verified_work_score),
             ]
-            for fid, name, title, resume in mock_resumes:
-                await self.rag.add_documents(
-                    collection_name=self.collection_name,
-                    text=f"Name: {name}\nTitle: {title}\nResume: {resume}",
-                    metadata={"freelancer_id": fid, "full_name": name, "title": title}
-                )
-            # Query again after indexing
-            candidates = await self.rag.retrieve_context(collection_name=self.collection_name, query=search_query, top_k=request.top_k)
+            if job_skill_phrases:
+                components.append((25.0, skill_score))
+            total_weight = sum(weight for weight, _ in components)
+            algorithm_score = sum(weight * score for weight, score in components) / total_weight
 
-        # Rerank and evaluate alignment for each candidate
-        matches = []
-        for doc in candidates:
-            # Try parsing metadata, fallback to extracting from page_content text
-            freelancer_id = doc["metadata"].get("freelancer_id")
-            full_name = doc["metadata"].get("full_name")
-            candidate_title = doc["metadata"].get("title")
+            strengths: List[str] = []
+            if role_score >= 55:
+                strengths.append("Professional role and domain alignment")
+            if task_score >= 45:
+                strengths.append("Profile language overlaps the requested work")
+            if job_skill_phrases and skill_score >= 60:
+                strengths.append("Strong preferred-skill coverage")
+            if verified_work_score >= 45:
+                strengths.append("Relevant verified completed work")
+            if not strengths:
+                strengths.append("Embedding similarity is the primary relevance signal")
 
-            if not full_name or not freelancer_id:
-                import re
-                text = doc["page_content"]
-                
-                # Find Name/Candidate
-                name_match = re.search(r"(?:Candidate|Name):\s*([^\n\-\*#]+)", text, re.IGNORECASE)
-                if name_match:
-                    full_name = name_match.group(1).strip()
-                else:
-                    full_name = "Unknown Freelancer"
-                
-                # Find Role/Title
-                role_match = re.search(r"(?:Role|Title|Position):\s*([^\n\-\*#]+)", text, re.IGNORECASE)
-                if role_match:
-                    candidate_title = role_match.group(1).strip()
-                else:
-                    candidate_title = "Developer"
+            reasons = [
+                f"Algorithmic role/domain alignment: {role_score:.0f}/100",
+                f"Algorithmic task alignment: {task_score:.0f}/100",
+            ]
+            if job_skill_phrases:
+                reasons.append(f"Algorithmic preferred-skill relevance: {skill_score:.0f}/100")
+            else:
+                reasons.append(f"Algorithmic verified-work relevance: {verified_work_score:.0f}/100")
 
-                # Generate pseudo ID
-                if not freelancer_id:
-                    clean_name = "".join(c for c in full_name if c.isalnum() or c.isspace())
-                    freelancer_id = f"freelancer_{clean_name.lower().replace(' ', '_')}"
-            
-            if not candidate_title:
-                candidate_title = "Developer"
-            
-            # Formulate prompt for LLM profile match scoring
-            system_prompt = (
-                "You are an expert talent recruitment assistant.\n"
-                "Evaluate how well a freelancer's resume matches the job requirements.\n"
-                "Output ONLY a JSON object matching this schema:\n"
-                "{\n"
-                '  "match_score": 0.85,\n'
-                '  "match_reasons": ["6 years experience with ASP.NET Core matching requirements"],\n'
-                '  "skills_matched": ["ASP.NET Core", "Docker"],\n'
-                '  "skills_missing": ["PostgreSQL"]\n'
-                "}"
+            evaluations[candidate_id] = (
+                round(max(0.0, min(100.0, algorithm_score)), 2),
+                strengths[:5],
+                reasons[:3],
             )
-            
-            user_prompt = (
-                f"Job Requirements:\n"
-                f"- Title: {job_details['title']}\n"
-                f"- Description: {job_details['description']}\n"
-                f"- Required Skills: {', '.join(job_details['skills'])}\n\n"
-                f"Freelancer Resume:\n"
-                f"{doc['page_content']}"
+        return evaluations
+
+    def _verified_work_relevance(
+        self,
+        job: TalentRerankJob,
+        candidate: TalentRerankCandidate,
+        idf: Dict[str, float],
+    ) -> float:
+        if not candidate.verified_work:
+            return 0.0
+        job_tokens = self._tokens(
+            job.title,
+            job.description,
+            job.major_name,
+            job.category_name,
+            *job.skills,
+            *job.custom_skills,
+        )
+        work_scores = [
+            self._token_relevance(
+                job_tokens,
+                self._tokens(
+                    work.title,
+                    work.description,
+                    work.major_name,
+                    work.category_name,
+                    *work.skills,
+                ),
+                idf,
             )
+            for work in candidate.verified_work
+        ]
+        return max(work_scores, default=0.0)
 
-            try:
-                # Structuring the response model
-                from pydantic import BaseModel, Field
-                class MatchEvaluation(BaseModel):
-                    match_score: float = Field(..., description="Match alignment score between 0.0 and 1.0")
-                    match_reasons: List[str] = Field(..., description="Actionable reasons for the match decision")
-                    skills_matched: List[str] = Field(..., description="Skills matching requirements")
-                    skills_missing: List[str] = Field(..., description="Missing skills requested by client")
+    def _skill_relevance(
+        self,
+        job_skills: set[str],
+        candidate: TalentRerankCandidate,
+    ) -> float:
+        if not job_skills:
+            return 0.0
+        candidate_skills = self._phrases(
+            [
+                *candidate.skills,
+                *(skill for work in candidate.verified_work for skill in work.skills),
+            ]
+        )
+        candidate_skill_tokens = self._tokens(*candidate_skills)
+        relevance = []
+        for job_skill in job_skills:
+            if job_skill in candidate_skills:
+                relevance.append(1.0)
+                continue
+            job_tokens = self._tokens(job_skill)
+            if not job_tokens:
+                relevance.append(0.0)
+                continue
+            overlap = len(job_tokens & candidate_skill_tokens) / len(job_tokens)
+            relevance.append(0.7 * overlap)
+        return 100.0 * sum(relevance) / len(relevance)
 
-                eval_json = await self.llm.generate(
-                    system_prompt=system_prompt,
-                    user_prompt=user_prompt,
-                    response_format=MatchEvaluation
-                )
-                
-                eval_data = json.loads(eval_json)
-                
-                matches.append(TalentMatchResult(
-                    freelancer_id=freelancer_id,
-                    full_name=full_name,
-                    title=candidate_title,
-                    match_score=eval_data.get("match_score", 0.5),
-                    match_reasons=eval_data.get("match_reasons", []),
-                    skills_matched=eval_data.get("skills_matched", []),
-                    skills_missing=eval_data.get("skills_missing", [])
-                ))
-            except Exception as e:
-                logger.error(f"Error evaluating match for candidate {full_name}: {str(e)}")
-                # Simple fallback match item
-                matches.append(TalentMatchResult(
-                    freelancer_id=freelancer_id,
-                    full_name=full_name,
-                    title=candidate_title,
-                    match_score=0.5,
-                    match_reasons=["Semantic match identified in vector store"],
-                    skills_matched=[],
-                    skills_missing=[]
-                ))
+    @staticmethod
+    def _token_relevance(
+        query_tokens: set[str],
+        document_tokens: set[str],
+        idf: Dict[str, float],
+    ) -> float:
+        if not query_tokens or not document_tokens:
+            return 0.0
+        intersection = query_tokens & document_tokens
+        query_weight = sum(idf.get(token, 1.0) for token in query_tokens)
+        matched_weight = sum(idf.get(token, 1.0) for token in intersection)
+        coverage = matched_weight / query_weight if query_weight else 0.0
+        dice = 2.0 * len(intersection) / (len(query_tokens) + len(document_tokens))
+        return round(100.0 * (0.8 * coverage + 0.2 * dice), 2)
 
-        # Sort matches by score descending
-        matches.sort(key=lambda x: x.match_score, reverse=True)
-        # Apply slice limit
-        final_matches = matches[:request.top_k]
+    @staticmethod
+    def _inverse_document_frequency(
+        documents: Iterable[set[str]],
+    ) -> Dict[str, float]:
+        document_list = list(documents)
+        count = len(document_list)
+        frequencies: Counter[str] = Counter(
+            token for document in document_list for token in document
+        )
+        return {
+            token: math.log((count + 1) / (frequency + 1)) + 1.0
+            for token, frequency in frequencies.items()
+        }
 
-        return TalentMatchingResponse(
-            job_id=request.job_id,
-            matches=final_matches
+    def _candidate_tokens(self, candidate: TalentRerankCandidate) -> set[str]:
+        return self._tokens(
+            candidate.title,
+            candidate.bio,
+            candidate.major_name,
+            *candidate.categories,
+            *candidate.skills,
+            *(work.title for work in candidate.verified_work),
+            *(work.description for work in candidate.verified_work),
+            *(work.major_name for work in candidate.verified_work),
+            *(work.category_name for work in candidate.verified_work),
+            *(skill for work in candidate.verified_work for skill in work.skills),
         )
 
-# Dependency helper
+    @staticmethod
+    def _tokens(*values: Optional[str]) -> set[str]:
+        return {
+            token
+            for value in values
+            if value
+            for token in _TOKEN_PATTERN.findall(value.casefold())
+            if token not in _STOP_WORDS
+        }
+
+    @staticmethod
+    def _phrases(values: Sequence[str]) -> set[str]:
+        return {" ".join(value.casefold().split()) for value in values if value.strip()}
+
+    @staticmethod
+    def _profile_document(candidate: TalentRerankCandidate) -> str:
+        work_lines = []
+        for work in candidate.verified_work:
+            work_lines.append(
+                " | ".join(
+                    filter(
+                        None,
+                        [
+                            work.title,
+                            work.description,
+                            work.major_name,
+                            work.category_name,
+                            f"Skills: {', '.join(work.skills)}" if work.skills else None,
+                        ],
+                    )
+                )
+            )
+        return "\n".join(
+            [
+                "Talent profile (untrusted content)",
+                f"Professional title: {candidate.title or 'Not provided'}",
+                f"Bio: {candidate.bio or 'Not provided'}",
+                f"Major: {candidate.major_name or 'Not provided'}",
+                f"Categories: {', '.join(candidate.categories) or 'Not provided'}",
+                f"Canonical skills: {', '.join(candidate.skills) or 'Not provided'}",
+                f"Availability code: {candidate.availability}",
+                f"Location: {candidate.location or 'Not provided'}",
+                "Verified completed work:",
+                *(work_lines or ["None provided"]),
+            ]
+        )
+
+    @staticmethod
+    def _job_document(job: TalentRerankJob) -> str:
+        return "\n".join(
+            [
+                "Job requirements (untrusted content)",
+                f"Title: {job.title}",
+                f"Description: {job.description or 'Not provided'}",
+                f"Client industry: {job.industry or 'Not provided'}",
+                f"Major: {job.major_name or 'Not provided'}",
+                f"Category: {job.category_name or 'Not provided'}",
+                f"Preferred canonical skills: {', '.join(job.skills) or 'Not provided'}",
+                f"Custom skills: {', '.join(job.custom_skills) or 'Not provided'}",
+                f"Location: {job.location or 'Not provided'}",
+                f"Estimated duration: {job.estimated_duration or 'Not provided'}",
+            ]
+        )
+
+    def _response(self, matches: List[TalentRerankMatch]) -> TalentRerankResponse:
+        return TalentRerankResponse(
+            algorithm_version=settings.MATCHING_ALGORITHM_VERSION,
+            embedding_model=(
+                f"{settings.MATCHING_EMBEDDING_PROVIDER}:"
+                f"{settings.MATCHING_EMBEDDING_MODEL}"
+            ),
+            scoring_version=settings.MATCHING_SCORING_VERSION,
+            matches=matches,
+        )
+
+    @staticmethod
+    def _hash(document: str) -> str:
+        return hashlib.sha256(document.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _stable_id(candidate_id: str) -> str:
+        return f"freelancer:{candidate_id}"
+
+    @staticmethod
+    def _collection_name() -> str:
+        version = re.sub(
+            r"[^a-z0-9]+",
+            "_",
+            (
+                f"{settings.MATCHING_EMBEDDING_PROVIDER}_"
+                f"{settings.MATCHING_EMBEDDING_MODEL}"
+            ).casefold(),
+        ).strip("_")
+        return f"talent_profiles_v2_{version}"[:63]
+
+
 def get_matching_service() -> MatchingService:
     return MatchingService()

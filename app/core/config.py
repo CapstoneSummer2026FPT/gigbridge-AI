@@ -38,6 +38,16 @@ class Settings(BaseSettings):
     MATCHING_EMBEDDING_PROVIDER: str = Field(default="openai")
     MATCHING_EMBEDDING_MODEL: str = Field(default="text-embedding-3-large")
 
+    # Smart talent matching uses one embedding model and a deterministic scorer.
+    MATCHING_EMBEDDING_PROVIDER: Literal["openai", "gemini", "ollama"] = Field(
+        default="openai"
+    )
+    MATCHING_EMBEDDING_MODEL: str = Field(default="text-embedding-3-large")
+    MATCHING_SCORING_VERSION: str = Field(default="weighted-features-v1")
+    MATCHING_ALGORITHM_VERSION: str = Field(default="2.0")
+    MATCHING_RETRIEVAL_LIMIT: int = Field(default=50, ge=1, le=100)
+    MATCHING_RERANK_LIMIT: int = Field(default=50, ge=1, le=50)
+
     # ── Voice Provider Settings ──────────────────────────────────
     # Redis
     REDIS_URL: str = Field(default="redis://localhost:6379/0")

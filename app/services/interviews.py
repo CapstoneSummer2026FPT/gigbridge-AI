@@ -105,6 +105,11 @@ class InterviewService:
                 audio_access_token.encode("utf-8")
             ).hexdigest(),
             "question_index": 1,
+            "question_count": (
+                len(request.job_questions)
+                if request.job_questions
+                else request.question_count or self.max_questions
+            ),
             "job_title": job_title,
             "job_description": job_description,
             "job_skills": job_skills,
@@ -189,7 +194,7 @@ class InterviewService:
             session_id=session.session_id,
             audio_access_token=audio_access_token,
             question_index=1,
-            question_count=len(session.job_questions) or self.max_questions,
+            question_count=len(session.job_questions) or session.question_count,
             question_text=first_question,
             language=session.language,
             audio_base64=audio_base64,
@@ -228,12 +233,12 @@ class InterviewService:
         )
 
         # Check if interview is complete
-        if session.question_index >= self.max_questions:
+        if session.question_index >= (len(session.job_questions) or session.question_count):
             feedback = await self._generate_feedback(session_id)
             return InterviewQuestionResponse(
                 session_id=session_id,
                 question_index=session.question_index,
-                question_count=len(session.job_questions) or self.max_questions,
+                question_count=len(session.job_questions) or session.question_count,
                 is_completed=True,
                 feedback=feedback,
             )
@@ -261,7 +266,7 @@ class InterviewService:
         return InterviewQuestionResponse(
             session_id=session_id,
             question_index=next_index,
-            question_count=len(session.job_questions) or self.max_questions,
+            question_count=len(session.job_questions) or session.question_count,
             question_text=next_question,
             language=session.language,
             audio_base64=audio_base64,
@@ -432,11 +437,8 @@ class InterviewService:
         answer_history_ms = (time.perf_counter() - answer_history_started) * 1000
 
         # 6. Check if interview is complete
-        total_predefined = len(session.job_questions) if session.job_questions else 0
-        if session.job_questions:
-            is_complete = session.question_index >= total_predefined
-        else:
-            is_complete = session.question_index >= self.max_questions
+        question_count = len(session.job_questions) or session.question_count
+        is_complete = session.question_index >= question_count
 
         if is_complete:
             feedback_started = time.perf_counter()
@@ -456,7 +458,7 @@ class InterviewService:
             return InterviewQuestionResponse(
                 session_id=session_id,
                 question_index=session.question_index,
-                question_count=len(session.job_questions) or self.max_questions,
+                question_count=question_count,
                 is_completed=True,
                 feedback=feedback,
                 job_id=session.job_id,
@@ -525,7 +527,7 @@ class InterviewService:
         return InterviewQuestionResponse(
             session_id=session_id,
             question_index=next_index,
-            question_count=len(session.job_questions) or self.max_questions,
+            question_count=question_count,
             question_text=next_question,
             language=session.language,
             audio_base64=audio_base64,

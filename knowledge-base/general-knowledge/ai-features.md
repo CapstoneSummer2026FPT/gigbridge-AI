@@ -21,10 +21,11 @@ Clients can generate optimized job descriptions automatically.
 
 ## 2. AI Talent Matching
 
-Our platform leverages vector embeddings to bypass standard keyword searches.
-* **Embedding Model**: Profile data (freelancer title, bio, skills, portfolio links) and job descriptions are converted into high-dimensional vector representations.
+Our platform combines vector retrieval with deterministic feature scoring.
+* **Embedding Model**: Trusted profile data (title, bio, taxonomy, skills, availability, location, and verified completed work) and job descriptions are converted into vector representations.
 * **Vector Similarity**: The AI service queries a disk-persisted vector store (Chroma DB) to rank candidates by cosine similarity against open job requirements.
-* **Recommendation**: Clients receive matched candidate lists highlighting the most relevant talent profiles automatically.
+* **Algorithmic Reranking**: A versioned weighted algorithm scores role/domain, task, preferred-skill, and verified-work relevance without a generative LLM.
+* **Recommendation**: The backend combines embedding and algorithm scores with authoritative platform evidence before returning explained matches.
 
 ---
 

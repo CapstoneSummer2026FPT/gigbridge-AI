@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+import re
 import tempfile
 import time
 from typing import Optional
@@ -118,12 +119,12 @@ class FasterWhisperEngine(BaseSTTEngine):
                 if chunk_lang and detected_lang == "auto":
                     detected_lang = chunk_lang
 
-            if not transcript_parts:
-                raise VoiceProviderException(
-                    "Faster-Whisper returned no segments - audio may be silent"
-                )
-
             full_text = " ".join(transcript_parts).strip()
+            clean_speech = re.sub(r"[^\w\s]", "", full_text).strip()
+            if not transcript_parts or not clean_speech or full_text in {"...", "…", ".", "..", "....", "[music]", "[blank_audio]"}:
+                raise VoiceProviderException(
+                    "Faster-Whisper returned no speech segments - audio may be silent"
+                )
             avg_logprob = np.mean(log_probs) if log_probs else -1.0
             confidence = float(max(0.0, min(1.0, avg_logprob + 1.0)))
             logger.info(
