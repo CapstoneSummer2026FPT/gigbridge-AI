@@ -23,6 +23,12 @@ class StartInterviewRequest(BaseModel):
         default_factory=list,
         description="Required skills, tools, technologies, or keywords from the job post",
     )
+    job_major: Optional[str] = Field(
+        None, max_length=200, description="Major taxonomy name from the job post"
+    )
+    job_category: Optional[str] = Field(
+        None, max_length=200, description="Category taxonomy name from the job post"
+    )
     job_phonetic_aliases: Dict[str, List[str]] = Field(
         default_factory=dict,
         description="Optional job-scoped phonetic aliases keyed by canonical term",
@@ -163,7 +169,7 @@ class DraftDataResponse(BaseModel):
     question_index: int = Field(..., description="Question index this draft belongs to")
     transcript: str = Field(..., description="Corrected transcript text from STT")
     language: str = Field(..., description="Detected or requested language")
-    stt_provider: str = Field(..., description="STT provider used (google_stt, faster_whisper)")
+    stt_provider: str = Field(..., description="STT provider used (google_stt, faster_whisper, gladia)")
     confidence: float = Field(
         ..., ge=0.0, le=1.0, description="Confidence score (0.0-1.0)"
     )

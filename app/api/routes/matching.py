@@ -45,3 +45,22 @@ async def rerank_talent(
         data=data,
         errors=[]
     )
+
+
+@router.post(
+    "/rerank",
+    response_model=StandardResponse[TalentRerankResponse],
+    status_code=status.HTTP_200_OK,
+)
+async def rerank_talent(
+    request: TalentRerankRequest,
+    service: MatchingService = Depends(get_matching_service),
+):
+    """Score and rank a backend-provided candidate pool."""
+    data = await service.rerank_talent(request)
+    return StandardResponse(
+        success=True,
+        message="Talent reranking complete.",
+        data=data,
+        errors=[],
+    )

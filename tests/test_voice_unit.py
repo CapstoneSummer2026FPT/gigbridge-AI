@@ -189,6 +189,56 @@ class TestConfig:
         assert settings.MAX_INTERVIEW_QUESTIONS == 3
 
 
+class TestGladiaSTT:
+    def test_factory_supports_gladia(self):
+        from app.clients.voice.factories.stt_factory import STTFactory
+        from app.clients.voice.stt_engine.gladia import GladiaSTTEngine
+        from app.core.config import settings
+
+        with patch.object(settings, "GLADIA_API_KEY", "test-key"):
+            assert isinstance(STTFactory.create("gladia"), GladiaSTTEngine)
+
+    def test_uses_required_solaria_live_configuration(self):
+        from app.clients.voice.stt_engine.gladia import GladiaSTTEngine
+        from app.core.config import settings
+
+        with patch.object(settings, "GLADIA_API_KEY", "test-key"):
+            config = GladiaSTTEngine().build_session_config()
+
+        assert config["model"] == "solaria-3"
+        assert config["language_config"] == {
+            "languages": ["vi", "en"],
+            "code_switching": True,
+        }
+        assert config["pre_processing"] == {
+            "speech_threshold": 0.8,
+            "audio_enhancer": False,
+        }
+        assert config["endpointing"] == 3
+        assert config["maximum_duration_without_endpointing"] == 15
+        assert config["realtime_processing"]["named_entity_recognition"] is True
+        assert config["realtime_processing"]["sentiment_analysis"] is True
+        assert set(config["messages_config"]) == {
+            "receive_partial_transcripts",
+            "receive_final_transcripts",
+            "receive_speech_events",
+            "receive_pre_processing_events",
+            "receive_post_processing_events",
+            "receive_acknowledgments",
+            "receive_lifecycle_events",
+        }
+        assert all(config["messages_config"].values())
+
+    def test_requires_api_key(self):
+        from app.clients.voice.stt_engine.gladia import GladiaSTTEngine
+        from app.core.config import settings
+        from app.core.exceptions import VoiceProviderException
+
+        with patch.object(settings, "GLADIA_API_KEY", ""):
+            with pytest.raises(VoiceProviderException, match="GLADIA_API_KEY"):
+                GladiaSTTEngine()
+
+
 # ═══════════════════════════════════════════════════════════════
 # Transcript correction
 # ═══════════════════════════════════════════════════════════════

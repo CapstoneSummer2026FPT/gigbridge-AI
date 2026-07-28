@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from openai import AsyncOpenAI
 from tenacity import retry, wait_exponential
 import litellm
+import httpx
 from litellm import acompletion, completion
 
 from app.clients.db.chroma import ChromaDBClient, get_chroma_client

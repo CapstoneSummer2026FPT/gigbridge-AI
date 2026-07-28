@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     # RAG Settings
     CHROMA_DB_PATH: str = Field(default="./chroma_db")
     EMBEDDING_MODEL: str = Field(default="text-embedding-3-large")
+    MATCHING_EMBEDDING_PROVIDER: str = Field(default="openai")
+    MATCHING_EMBEDDING_MODEL: str = Field(default="text-embedding-3-large")
 
     # Smart talent matching uses one embedding model and a deterministic scorer.
     MATCHING_EMBEDDING_PROVIDER: Literal["openai", "gemini", "ollama"] = Field(
@@ -64,6 +66,9 @@ class Settings(BaseSettings):
     FASTER_WHISPER_CHUNK_SECONDS: int = Field(default=30)
     FASTER_WHISPER_CHUNK_OVERLAP_SECONDS: int = Field(default=2)
     GOOGLE_STT_HOTWORD_BOOST: float = Field(default=5.0)
+    GLADIA_API_KEY: str = Field(default="")
+    GLADIA_API_BASE_URL: str = Field(default="https://api.gladia.io/v2")
+    HOTWORD_MAX_TERMS: int = Field(default=50, ge=1, le=100)
 
     # Audio Decode — ALL formats decoded to WAV 16kHz mono PCM before STT
     AUDIO_DECODE_SAMPLE_RATE: int = 16000
