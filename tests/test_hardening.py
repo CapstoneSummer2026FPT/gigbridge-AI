@@ -618,18 +618,27 @@ def test_transcribe_preserves_auto_mode_and_reports_real_expiry():
     assert expiry.timestamp() <= after.timestamp() + settings.REDIS_DRAFT_TTL
 
 
-def test_hotword_heuristic_rejects_numeric_ranges_and_all_caps_noise():
+def test_hotword_builder_uses_structured_layers_and_rejects_description_noise():
     InterviewService = _import_interview_service()
     hotwords = InterviewService._build_hotwords(
         "Backend Engineer",
         ["PostgreSQL"],
         "ERROR 12.5 3-5 node.js camelCase ordinary words",
+        job_major="Development & IT",
+        job_category="Backend Development",
+        job_questions=["How did you use FastAPI?"],
     )
-    assert "node.js" in hotwords
-    assert "camelCase" in hotwords
+    assert hotwords == [
+        "PostgreSQL",
+        "Backend Development",
+        "Development & IT",
+        "Backend Engineer",
+        "FastAPI",
+    ]
     assert "ERROR" not in hotwords
     assert "12.5" not in hotwords
     assert "3-5" not in hotwords
+    assert "node.js" not in hotwords
 
 
 def test_malformed_feedback_degrades_to_safe_result():
