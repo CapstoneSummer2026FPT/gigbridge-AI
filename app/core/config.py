@@ -1,6 +1,6 @@
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Literal
+from typing import Literal, Any
 
 from pydantic import Field, model_validator
 
@@ -118,8 +118,46 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def format_redis_url_before(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            redis_url = data.get("REDIS_URL")
+            if isinstance(redis_url, str) and redis_url:
+                redis_url = redis_url.strip()
+                if (redis_url.startswith("redis://") or redis_url.startswith("rediss://")) and "," not in redis_url:
+                    pass
+                else:
+                    scheme = "redis"
+                    temp_url = redis_url
+                    if temp_url.startswith("redis://"):
+                        temp_url = temp_url[8:]
+                    elif temp_url.startswith("rediss://"):
+                        scheme = "rediss"
+                        temp_url = temp_url[9:]
+
+                    parts = temp_url.split(",")
+                    host_port = parts[0]
+
+                    options = {}
+                    for part in parts[1:]:
+                        if "=" in part:
+                            k, v = part.split("=", 1)
+                            options[k.strip().lower()] = v.strip()
+
+                    if options.get("ssl") in ("true", "1", "yes"):
+                        scheme = "rediss"
+
+                    password = options.get("password")
+                    if password:
+                        data["REDIS_URL"] = f"{scheme}://:{password}@{host_port}"
+                    else:
+                        data["REDIS_URL"] = f"{scheme}://{host_port}"
+        return data
+
     @model_validator(mode="after")
     def validate_server_api_key(self) -> "Settings":
+
         """Reject missing/public placeholder credentials outside explicit dev/test."""
         insecure_values = {
             "",

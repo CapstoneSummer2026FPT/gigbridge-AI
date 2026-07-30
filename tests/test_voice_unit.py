@@ -178,6 +178,31 @@ class TestConfig:
         from app.core.config import settings
         assert "redis://" in settings.REDIS_URL
 
+    def test_redis_url_parsing(self):
+        from app.core.config import Settings
+        
+        # Test standard URL
+        s1 = Settings(APP_ENV="development", REDIS_URL="redis://localhost:6379/0")
+        assert s1.REDIS_URL == "redis://localhost:6379/0"
+        
+        # Test Render format without scheme
+        s2 = Settings(APP_ENV="development", REDIS_URL="biophilic-shade-enthused-56455.db.redis.io:15847,password=mock_password")
+        assert s2.REDIS_URL == "redis://:mock_password@biophilic-shade-enthused-56455.db.redis.io:15847"
+        
+        # Test Render format with scheme
+        s3 = Settings(APP_ENV="development", REDIS_URL="redis://biophilic-shade-enthused-56455.db.redis.io:15847,password=mock_password")
+        assert s3.REDIS_URL == "redis://:mock_password@biophilic-shade-enthused-56455.db.redis.io:15847"
+        
+        # Test SSL options
+        s4 = Settings(APP_ENV="development", REDIS_URL="biophilic-shade-enthused-56455.db.redis.io:15847,password=mock_password,ssl=true")
+        assert s4.REDIS_URL == "rediss://:mock_password@biophilic-shade-enthused-56455.db.redis.io:15847"
+
+        # Test empty password
+        s5 = Settings(APP_ENV="development", REDIS_URL="biophilic-shade-enthused-56455.db.redis.io:15847")
+        assert s5.REDIS_URL == "redis://biophilic-shade-enthused-56455.db.redis.io:15847"
+
+
+
     def test_audio_limits_reasonable(self):
         from app.core.config import settings
         assert settings.AUDIO_MAX_SIZE_BYTES == 3_145_728  # 3MB
