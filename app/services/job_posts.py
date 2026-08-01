@@ -5,7 +5,19 @@ from app.services.memory import MemoryManager, get_memory_manager
 from app.prompts.manager import PromptManager, get_prompt_manager
 from app.core.exceptions import AIServerException
 
+import datetime
+
 logger = logging.getLogger("ai_server.job_posts_service")
+
+def convert_date_to_iso(date_str: str) -> str:
+    if not date_str:
+        return date_str
+    for fmt in ("%m/%d/%Y", "%Y-%m-%d", "%d/%m/%Y"):
+        try:
+            return datetime.datetime.strptime(date_str.strip(), fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+    return date_str
 
 def is_vietnamese(text: str) -> bool:
     vietnamese_chars = set("áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđĐ")
@@ -84,6 +96,11 @@ class JobPostService:
                 errors=["policy_violation"]
             )
 
+        # Normalize milestone due dates to yyyy-MM-dd
+        if response_data.milestones:
+            for milestone in response_data.milestones:
+                milestone.due_date = convert_date_to_iso(milestone.due_date)
+
         # Ensure total skills (system + custom) do not exceed 10, prioritizing system skills
         total_system = len(response_data.system_skill_ids)
         if total_system > 10:
@@ -123,7 +140,8 @@ class JobPostService:
             "custom_skills": response_data.custom_skills,
             "client_prompt": request.client_prompt,
             "question_recruitment": response_data.question_recruitment,
-            "description": response_data.description
+            "description": response_data.description,
+            "milestones": [m.dict() for m in response_data.milestones]
         })
 
         return response_data

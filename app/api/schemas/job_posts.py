@@ -16,6 +16,15 @@ class SkillOption(BaseModel):
     skill_id: str = Field(..., description="The unique database identifier of the skill")
     name: str = Field(..., description="The display name of the skill")
 
+class MilestoneGenerationResponse(BaseModel):
+    title: str = Field(..., description="Tên milestone / Milestone title")
+    amount: float = Field(..., description="Số tiền / Amount for the milestone")
+    estimated_duration: str = Field(..., description="Thời lượng / Time frame (e.g. '2 tuần' or '2 weeks')")
+    due_date: str = Field(..., description="Hạn hoàn thành / Milestone deadline in mm/dd/yyyy format")
+    description: str = Field(..., description="Mô tả công việc và kết quả mong đợi / Detailed summary of scope")
+    deliverables: str = Field(..., description="Sản phẩm bàn giao / Deliverables list")
+    acceptance_criteria: str = Field(..., description="Tiêu chí nghiệm thu / Acceptance criteria")
+
 class JobPostGenerationRequest(BaseModel):
     client_prompt: str = Field(
         ...,
@@ -33,4 +42,8 @@ class JobPostGenerationResponse(BaseModel):
     question_recruitment: List[str] = Field(
         default=[],
         description="A list of generated recruitment/vetting questions based on the prompt. MUST be in Vietnamese if client_prompt is in Vietnamese, and MUST be in English if client_prompt is in English."
+    )
+    milestones: List[MilestoneGenerationResponse] = Field(
+        default=[],
+        description="A list of proposed milestones for the job post. MUST follow the prompt language."
     )

@@ -29,6 +29,7 @@ Based on the client's prompt:
    - custom_skills: []
    - description: "This request violates the platform safety guidelines."
    - question_recruitment: []
+   - milestones: []
    If the request is safe and does not violate policy, proceed with the following steps:
 1. Refine the suitable Job Title (title). CRITICAL: This title MUST be written in English.
 2. Select the single most appropriate Major. Set "major_id" to its exact ID from the list.
@@ -55,3 +56,16 @@ Based on the client's prompt:
    CRITICAL LANGUAGE RULE:
    - If the client's prompt is written in Vietnamese, generate these questions in Vietnamese.
    - If the client's prompt is written in English or any other language, generate these questions in English.
+9. Generate a logical list of milestone plans (milestones) for the job post appropriate for the project's scope, budget, and estimated duration. Typically, propose 2-4 milestones.
+   Today's reference date is: {{ current_date }} (format: mm/dd/yyyy).
+   Each milestone object in the list MUST contain the following properties:
+   - title: Milestone name (Tên milestone).
+   - amount: Allocated budget/amount (Số tiền) for this milestone as a number/float. Propose a logical distribution of funds (e.g. dividing the total estimated budget, or proposing reasonable amounts if the budget is not specified).
+   - estimated_duration: Expected timeframe to complete this specific milestone from its start. (Thời lượng, e.g. "2 weeks", "2 tuần", "1 month", "1 tháng").
+   - due_date: The deadline date when the freelancer must complete and submit the milestone deliverables, formatted strictly as "mm/dd/yyyy". Calculate these dates sequentially based on the milestone durations starting from {{ current_date }}.
+   - description: A brief summary of the scope and expected results for this milestone. (Mô tả, e.g. "Thiết kế và duyệt các màn hình chính").
+   - deliverables: Specifically list the files, features, or products the freelancer must hand over. (Sản phẩm bàn giao, e.g. "Tệp Figma và đặc tả giao diện responsive").
+   - acceptance_criteria: The criteria the client will use to review and approve the milestone deliverables. (Tiêu chí nghiệm thu).
+   CRITICAL LANGUAGE RULE:
+   - If the client's prompt is written in Vietnamese, generate all milestone fields (title, estimated_duration, description, deliverables, acceptance_criteria) in Vietnamese.
+   - If the client's prompt is written in English or any other language, generate these fields in English.
