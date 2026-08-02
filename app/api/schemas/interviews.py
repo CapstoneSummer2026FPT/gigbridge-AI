@@ -113,7 +113,7 @@ class AnalyzeVettingRequest(BaseModel):
 class GradedQuestion(BaseModel):
     question_index: int = Field(..., description="1-indexed question identifier")
     question_text: str = Field(..., description="The question text asked")
-    question_type: Literal["theoretical", "problem_solving"] = Field(..., description="Question classification")
+    question_type: Literal["theoretical", "problem_solving", "experience"] = Field(..., description="Question classification")
     difficulty: Literal["easy", "medium", "hard"] = Field(..., description="Difficulty rating")
     candidate_answer: str = Field(..., description="The raw answer provided by the candidate")
     score: int = Field(..., ge=0, le=100, description="Score on a scale of 0 to 100")

@@ -171,7 +171,7 @@ class JobPostService:
         )
 
         config = AnswerConfig(
-            style="fast",
+            style="precision",
             collection_name="ai-create-job-post",
             response_format=JobPostDetailsGenerationResponse,
             retrieval_groups=[
@@ -235,7 +235,7 @@ class JobPostService:
         )
 
         config = AnswerConfig(
-            style="fast",
+            style="precision",
             collection_name="ai-create-job-post",
             response_format=JobPostHiringPlanGenerationResponse,
             retrieval_groups=[],
