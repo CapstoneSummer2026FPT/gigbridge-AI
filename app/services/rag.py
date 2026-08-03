@@ -698,12 +698,14 @@ With this context, please answer the user's question. Be accurate, relevant and 
                             seen_skills.add(sid)
                             available_skills.append(SkillOption(skill_id=sid, name=meta["name"]))
 
+                import datetime
                 user_prompt = pm.render_prompt(config.user_template, {
                     "client_prompt": question,
                     "allowed_majors": allowed_majors,
                     "allowed_categories": allowed_categories,
                     "available_skills": available_skills,
-                    "target_language": "Vietnamese" if any(char in "áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđĐ" for char in question) else "English"
+                    "target_language": "Vietnamese" if any(char in "áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđĐ" for char in question) else "English",
+                    "current_date": datetime.date.today().strftime("%m/%d/%Y")
                 })
             else:
                 user_prompt = config.user_template

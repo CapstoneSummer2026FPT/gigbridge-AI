@@ -220,3 +220,68 @@ def test_invalid_payload_triggers_validation_error():
     
     assert response.status_code == 422
     assert "errors" in response.json()
+
+
+def test_experience_question_exclusion():
+    # Test that experience questions are ignored in weighted average math:
+    # 1. Easy Theoretical: score 80 (weight 1.0)
+    # 2. Medium Problem Solving: score 90 (weight 1.5)
+    # 3. Medium Experience: score 30 (weight 1.5) -> should be excluded!
+    # Expected weighted score: (80*1.0 + 90*1.5) / (1.0 + 1.5) = 215 / 2.5 = 86
+    service = InterviewService(llm_gateway=MagicMock(), voice_service=MagicMock())
+    
+    mock_feedback = InterviewFeedback(
+        score=0,
+        summary="Test summary",
+        technical_skills=["Python"],
+        soft_skills=["Communication"],
+        recommended_hire=True,
+        holistic_adjustment=0,
+        holistic_adjustment_reason="Experience excluded from score",
+        graded_questions=[
+            GradedQuestion(
+                question_index=1,
+                question_text="Q1",
+                question_type="theoretical",
+                difficulty="easy",
+                candidate_answer="A1",
+                score=80,
+                feedback="Good",
+            ),
+            GradedQuestion(
+                question_index=2,
+                question_text="Q2",
+                question_type="problem_solving",
+                difficulty="medium",
+                candidate_answer="A2",
+                score=90,
+                feedback="Very Good",
+            ),
+            GradedQuestion(
+                question_index=3,
+                question_text="Q3",
+                question_type="experience",
+                difficulty="medium",
+                candidate_answer="A3",
+                score=30,
+                feedback="Vague background, but does not affect tech score",
+            ),
+        ]
+    )
+
+    service.llm.generate = AsyncMock(return_value=mock_feedback.model_dump_json())
+
+    request = AnalyzeVettingRequest(
+        freelancer_id="free-1",
+        job_title="Dev",
+        job_description="Desc",
+        job_skills=["Python"],
+        qa_pairs=[
+            QuestionAnswerPair(question_index=1, question_text="Q1", candidate_answer="A1"),
+            QuestionAnswerPair(question_index=2, question_text="Q2", candidate_answer="A2"),
+            QuestionAnswerPair(question_index=3, question_text="Q3", candidate_answer="A3"),
+        ]
+    )
+
+    result = asyncio.run(service.analyze_vetting(request))
+    assert result.score == 86
