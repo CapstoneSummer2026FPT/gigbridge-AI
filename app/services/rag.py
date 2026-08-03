@@ -598,30 +598,88 @@ Reply only with the list of ranked chunk ids, nothing else. Include all the chun
         if config.retrieval_groups:
             # Query multiple metadata-filtered groups in parallel
             try:
-                prompt_embeddings = await self.get_embeddings([question])
-                query_vector = prompt_embeddings[0]
-                embedding_tokens = len(question.split()) # Estimate of token count
-
-                async def query_group(group):
-                    results = await asyncio.to_thread(
-                        self.chroma.query_documents,
-                        collection_name=config.collection_name,
-                        query_embeddings=[query_vector],
-                        n_results=group.n_results,
-                        where=group.where
-                    )
+                if config.style == "precision":
+                    rewritten_query = await self.rewrite_query(question)
+                    logger.info(f"Group Precision - Original query: '{question}' | Rewritten query: '{rewritten_query}'")
                     
-                    group_chunks = []
-                    if results and "documents" in results and results["documents"]:
-                        for i in range(len(results["documents"][0])):
-                            group_chunks.append(Result(
-                                page_content=results["documents"][0][i],
-                                metadata=results["metadatas"][0][i] if results["metadatas"] else {}
-                            ))
-                    return group_chunks
+                    # Generate embeddings for both original and rewritten query
+                    embeddings = await self.get_embeddings([question, rewritten_query])
+                    original_vector = embeddings[0]
+                    rewritten_vector = embeddings[1]
+                    embedding_tokens = len(question.split()) + len(rewritten_query.split())
 
-                # Run parallel group queries
-                group_results = await asyncio.gather(*(query_group(g) for g in config.retrieval_groups))
+                    async def query_group_precision(group):
+                        # Query Chroma DB using both embedding vectors in parallel
+                        results1, results2 = await asyncio.gather(
+                            asyncio.to_thread(
+                                self.chroma.query_documents,
+                                collection_name=config.collection_name,
+                                query_embeddings=[original_vector],
+                                n_results=max(group.n_results * 2, 20),
+                                where=group.where
+                            ),
+                            asyncio.to_thread(
+                                self.chroma.query_documents,
+                                collection_name=config.collection_name,
+                                query_embeddings=[rewritten_vector],
+                                n_results=max(group.n_results * 2, 20),
+                                where=group.where
+                            )
+                        )
+                        
+                        group_chunks1 = []
+                        if results1 and "documents" in results1 and results1["documents"]:
+                            for i in range(len(results1["documents"][0])):
+                                group_chunks1.append(Result(
+                                    page_content=results1["documents"][0][i],
+                                    metadata=results1["metadatas"][0][i] if results1["metadatas"] else {}
+                                ))
+                                
+                        group_chunks2 = []
+                        if results2 and "documents" in results2 and results2["documents"]:
+                            for i in range(len(results2["documents"][0])):
+                                group_chunks2.append(Result(
+                                    page_content=results2["documents"][0][i],
+                                    metadata=results2["metadatas"][0][i] if results2["metadatas"] else {}
+                                ))
+                        
+                        # Merge and deduplicate
+                        merged = self.merge_chunks(group_chunks1, group_chunks2)
+                        
+                        # For categories and skills, run the LLM reranker to select the top n_results
+                        if group.name in ["categories", "skills"] and len(merged) > group.n_results:
+                            reranked = await self.rerank(question, merged, final_k=group.n_results)
+                            return reranked
+                        return merged[:group.n_results]
+
+                    # Run parallel group queries with precision
+                    group_results = await asyncio.gather(*(query_group_precision(g) for g in config.retrieval_groups))
+                else:
+                    # Fast style retrieval (single query, no rewriting, no reranking)
+                    prompt_embeddings = await self.get_embeddings([question])
+                    query_vector = prompt_embeddings[0]
+                    embedding_tokens = len(question.split())
+
+                    async def query_group_fast(group):
+                        results = await asyncio.to_thread(
+                            self.chroma.query_documents,
+                            collection_name=config.collection_name,
+                            query_embeddings=[query_vector],
+                            n_results=group.n_results,
+                            where=group.where
+                        )
+                        
+                        group_chunks = []
+                        if results and "documents" in results and results["documents"]:
+                            for i in range(len(results["documents"][0])):
+                                group_chunks.append(Result(
+                                    page_content=results["documents"][0][i],
+                                    metadata=results["metadatas"][0][i] if results["metadatas"] else {}
+                                ))
+                        return group_chunks
+
+                    # Run parallel group queries fast
+                    group_results = await asyncio.gather(*(query_group_fast(g) for g in config.retrieval_groups))
                 
                 # Merge and deduplicate
                 seen_content = set()
