@@ -1,4 +1,5 @@
 import logging
+import re
 from app.api.schemas.job_posts import (
     JobPostGenerationRequest,
     JobPostDetailsGenerationResponse,
@@ -24,8 +25,38 @@ def convert_date_to_iso(date_str: str) -> str:
     return date_str
 
 def is_vietnamese(text: str) -> bool:
+    # 1. Check for accented Vietnamese characters
     vietnamese_chars = set("áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđĐ")
-    return any(char in vietnamese_chars for char in text)
+    if any(char in vietnamese_chars for char in text):
+        return True
+
+    # 2. Check for uniquely Vietnamese unaccented words/syllables
+    # These are words common in Vietnamese text (specifically job posts) and do not exist in English.
+    uniquely_vietnamese = {
+        "tuyen", "trinh", "vien", "thiet", "phan", "mem", "phat", "trien", "yeu",
+        "nghiem", "luong", "tuyendung", "khoi", "chuc", "danh", "cong", "nghe",
+        "khach", "quan", "tai", "chinh", "toan", "dich", "thuat", "xay", "kien",
+        "truc", "truyen", "vietnam", "viec", "dung", "giup", "tro", "viet"
+    }
+    
+    text_lower = text.lower()
+    
+    # Check for multi-word phrases first
+    for phrase in ["tuyen dung", "lap trinh", "phat trien", "kinh nghiem", "yeu cau", 
+                   "thiet ke", "phan mem", "he thong", "lam viec", "cong ty", "du an", 
+                   "nhan su", "tai chinh", "ke toan", "ban hang", "dich vu", "ky thuat", 
+                   "xay dung", "kien truc", "do hoa"]:
+        if phrase in text_lower:
+            return True
+            
+    # Tokenize and check if any word is uniquely Vietnamese
+    words = re.findall(r"\b[a-z]+\b", text_lower)
+    if any(w in uniquely_vietnamese for w in words):
+        return True
+        
+    return False
+
+
 
 class JobPostService:
     """Service handling AI-assisted job description writing workflows"""
