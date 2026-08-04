@@ -155,7 +155,9 @@ class JobPostService:
             f"Original user requirement:\n{request.client_prompt}\n\n"
             f"Generated/Approved Job Details:\n"
             f"Title: {request.title}\n"
-            f"Description: {request.description}"
+            f"Description: {request.description}\n"
+            f"Budget Range: {request.budget_min} to {request.budget_max} GC\n"
+            f"Estimated Duration/Timeline: {request.estimated_duration}"
         )
 
         config = AnswerConfig(
