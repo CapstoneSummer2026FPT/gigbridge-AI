@@ -50,6 +50,7 @@ class JobPostHiringPlanGenerationRequest(BaseModel):
     budget_min: Optional[float] = Field(None, description="The approved minimum budget")
     budget_max: Optional[float] = Field(None, description="The approved maximum budget")
     estimated_duration: Optional[str] = Field(None, description="The approved estimated duration/timeline")
+    proposal_closing_date: str = Field(..., description="The proposal closing date / deadline in YYYY-MM-DD or MM/DD/YYYY format")
 
 class JobPostHiringPlanGenerationResponse(BaseModel):
     question_recruitment: List[str] = Field(
