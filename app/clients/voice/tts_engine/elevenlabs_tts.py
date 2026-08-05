@@ -27,6 +27,9 @@ class ElevenLabsTTSEngine(BaseTTSEngine):
             "text": text,
             "model_id": settings.ELEVENLABS_MODEL,
         }
+        normalized_language = (language or "").strip().lower()[:2]
+        if normalized_language in {"vi", "en"}:
+            payload["language_code"] = normalized_language
 
         try:
             audio_bytes = await asyncio.to_thread(self._post_json, url, payload)

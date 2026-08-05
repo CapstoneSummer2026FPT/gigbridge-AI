@@ -156,14 +156,16 @@ class TestExceptions:
 # ═══════════════════════════════════════════════════════════════
 
 class TestConfig:
-    def test_default_stt_provider_is_faster_whisper(self):
-        """Faster-Whisper is the cheap local/testing primary provider."""
+    def test_default_stt_provider_is_gladia(self):
         from app.core.config import settings
-        assert settings.STT_PRIMARY_PROVIDER == "faster_whisper"
+        assert settings.STT_PRIMARY_PROVIDER == "gladia"
+        assert settings.STT_FALLBACK_PROVIDER == "faster_whisper"
 
-    def test_default_tts_provider_is_edge_tts(self):
+    def test_default_tts_provider_is_elevenlabs_v3(self):
         from app.core.config import settings
-        assert settings.TTS_PRIMARY_PROVIDER == "edge_tts"
+        assert settings.TTS_PRIMARY_PROVIDER == "elevenlabs"
+        assert settings.TTS_FALLBACK_PROVIDER == "edge_tts"
+        assert settings.ELEVENLABS_MODEL == "eleven_v3"
 
     def test_google_tts_requires_credentials_at_init(self):
         from app.clients.voice.tts_engine.google_tts import GoogleTTSEngine
@@ -526,7 +528,7 @@ class TestElevenLabsTTSEngine:
 
         with (
             patch.object(settings, "ELEVENLABS_API_KEY", "test-key"),
-            patch.object(settings, "ELEVENLABS_MODEL", "eleven_multilingual_v2"),
+            patch.object(settings, "ELEVENLABS_MODEL", "eleven_v3"),
             patch.object(settings, "ELEVENLABS_OUTPUT_FORMAT", "mp3_44100_128"),
             patch.object(settings, "ELEVENLABS_VOICE_ID", "default-voice"),
             patch.object(settings, "ELEVENLABS_VOICE_ID_EN", "english-voice"),
@@ -544,7 +546,8 @@ class TestElevenLabsTTSEngine:
         assert calls[0]["headers"]["Xi-api-key"] == "test-key"
         assert calls[0]["json"] == {
             "text": "Hello React",
-            "model_id": "eleven_multilingual_v2",
+            "model_id": "eleven_v3",
+            "language_code": "en",
         }
         assert calls[0]["timeout"] == settings.TTS_PROVIDER_TIMEOUT
 

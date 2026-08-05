@@ -57,8 +57,8 @@ class Settings(BaseSettings):
     REDIS_HISTORY_TTL: int = 7200           # 2 hours
 
     # STT
-    STT_PRIMARY_PROVIDER: str = Field(default="faster_whisper")
-    STT_FALLBACK_PROVIDER: str = Field(default="google")
+    STT_PRIMARY_PROVIDER: str = Field(default="gladia")
+    STT_FALLBACK_PROVIDER: str = Field(default="faster_whisper")
     STT_PROVIDER_TIMEOUT: float = Field(default=30.0)
     FASTER_WHISPER_MODEL: str = Field(default="base")
     FASTER_WHISPER_DEVICE: str = Field(default="cpu")
@@ -74,8 +74,8 @@ class Settings(BaseSettings):
     AUDIO_DECODE_SAMPLE_RATE: int = 16000
 
     # TTS
-    TTS_PRIMARY_PROVIDER: str = Field(default="edge_tts")
-    TTS_FALLBACK_PROVIDER: str = Field(default="google")
+    TTS_PRIMARY_PROVIDER: str = Field(default="elevenlabs")
+    TTS_FALLBACK_PROVIDER: str = Field(default="edge_tts")
     TTS_PROVIDER_TIMEOUT: float = Field(default=120.0)
     TTS_CHUNK_CHARS: int = Field(default=220)
     TTS_BATCH_CONCURRENCY: int = Field(default=1)
@@ -83,7 +83,7 @@ class Settings(BaseSettings):
     EDGE_TTS_MULTILINGUAL_VOICE: str = Field(default="en-US-AvaMultilingualNeural")
     EDGE_TTS_VOICE_VI: str = Field(default="vi-VN-HoaiMyNeural")
     EDGE_TTS_VOICE_EN: str = Field(default="en-US-JennyNeural")
-    ELEVENLABS_MODEL: str = Field(default="eleven_multilingual_v2")
+    ELEVENLABS_MODEL: str = Field(default="eleven_v3")
     ELEVENLABS_OUTPUT_FORMAT: str = Field(default="mp3_44100_128")
     ELEVENLABS_VOICE_ID: str = Field(default="")
     ELEVENLABS_VOICE_ID_VI: str = Field(default="")
