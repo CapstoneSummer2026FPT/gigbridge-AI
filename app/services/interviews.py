@@ -1024,17 +1024,25 @@ class InterviewService:
             "2. Classify the Question Type:\n"
             "   - \"theoretical\": Concepts, architecture, definitions.\n"
             "   - \"problem_solving\": Practical tasks, coding, debugging, scenario resolution.\n"
+            "   - \"experience\": Questions checking candidate's years of experience, history, background, or direct suitability for the role.\n"
             "3. Classify the Question Difficulty:\n"
             "   - \"easy\": Basic conceptual queries or simple syntax.\n"
             "   - \"medium\": Standard scenarios, intermediate logic, or typical debugging.\n"
             "   - \"hard\": High-scale design, deep performance tuning, concurrency, or advanced algorithms.\n"
             "4. Extract the Candidate's Answer.\n"
             "5. Grade the Candidate's Answer (Score 0-100) using these strict guidelines:\n"
-            "   - 90-100: Flawless, detailed, covers edge cases and best practices.\n"
-            "   - 70-89: Solid correctness, competent, minor gaps.\n"
-            "   - 50-69: Basic understanding, lacks detail, minor flaws.\n"
-            "   - 1-49: Incorrect, major misconceptions.\n"
-            "   - 0: Skipped, refused, or completely irrelevant.\n"
+            "   - For theoretical and problem_solving questions:\n"
+            "     - 90-100: Flawless, detailed, covers edge cases and best practices.\n"
+            "     - 70-89: Solid correctness, competent, minor gaps.\n"
+            "     - 50-69: Basic understanding, lacks detail, minor flaws.\n"
+            "     - 1-49: Incorrect, major misconceptions.\n"
+            "     - 0: Skipped, refused, or completely irrelevant.\n"
+            "   - For experience questions:\n"
+            "     - 90-100: Experience level perfectly matches or exceeds job requirements.\n"
+            "     - 70-89: Good match with minor gaps.\n"
+            "     - 50-69: Borderline or vague experience reported.\n"
+            "     - 1-49: Significant mismatch between experience level and job requirements.\n"
+            "     - 0: No experience or answer skipped.\n"
             "6. Provide a concise, recruiter-focused justification Feedback for this specific answer.\n"
             "\n"
             "Also, provide an overall evaluation:\n"
@@ -1103,6 +1111,8 @@ class InterviewService:
         total_weight = 0.0
 
         for gq in feedback.graded_questions:
+            if gq.question_type.lower() == "experience":
+                continue
             weight = difficulty_weights.get(gq.difficulty.lower(), 1.0)
             total_weighted_score += gq.score * weight
             total_weight += weight

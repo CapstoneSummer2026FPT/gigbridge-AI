@@ -123,7 +123,44 @@ def fetch_documents():
                         if not line:
                             continue
                         data = json.loads(line)
-                        text = data.get("text") or data.get("content") or json.dumps(data, ensure_ascii=False)
+                        
+                        # Build search-optimized bilingual text representations without JSON noise or UUIDs
+                        type_val = data.get("type")
+                        major_translations = {
+                            "dd491f54-221f-4b80-aa10-227f1ea49a12": "Information Technology (IT, Software, Hardware, Cybersecurity)",
+                            "cb887a7d-2539-469b-98b7-a4417207242e": "AI, Data & Automation (Machine Learning, NLP, Computer Vision, RPA, Analytics)",
+                            "f84d17f5-ab06-4773-8863-4da24fa8a502": "Design & Digital Creative (UI/UX, Graphic Design, Video Editing, 3D Art)",
+                            "78cff18c-16fd-4654-8782-f1fbe85c5e89": "Marketing & Growth (SEO, SEM, Copywriting, Social Media, Growth Hacking)",
+                            "5ceb0a5e-e851-4e07-90f8-edc08410af69": "Content, Writing & Translation (Translation, Blog, Copywriting, Scriptwriting)",
+                            "9e65412d-a7b8-41ef-bebf-611e555cf33a": "Product, Project Management & QA (Scrum Master, Product Manager, QA Tester)",
+                            "31ebb0b3-8d48-42d2-86f3-65edc75b5a11": "Business, Operations & Virtual Assistant (SDR, Operations, Virtual Assistant)",
+                            "9aad2513-e82d-474f-ae10-b56fed4c6353": "Finance, Legal & Online Consulting (Accounting, Bookkeeper, Legal Assistant)",
+                            "10191a40-2a6b-41b4-a247-ddbbb18d6cff": "Online Education & E-learning (Instructional Design, Online Tutor, LMS)",
+                            "53c6622e-0e40-4e9c-889e-b8fc0ab228fe": "Blockchain, Game & XR (Unity, Unreal Engine, Smart Contract, Web3, Game Design)"
+                        }
+                        major_vietnamese = {
+                            "dd491f54-221f-4b80-aa10-227f1ea49a12": "Công nghệ thông tin",
+                            "cb887a7d-2539-469b-98b7-a4417207242e": "AI, Dữ liệu & Tự động hóa",
+                            "f84d17f5-ab06-4773-8863-4da24fa8a502": "Thiết kế & Sáng tạo số",
+                            "78cff18c-16fd-4654-8782-f1fbe85c5e89": "Marketing & Growth",
+                            "5ceb0a5e-e851-4e07-90f8-edc08410af69": "Nội dung, Viết lách & Dịch thuật",
+                            "9e65412d-a7b8-41ef-bebf-611e555cf33a": "Sản phẩm, Quản lý dự án & QA",
+                            "31ebb0b3-8d48-42d2-86f3-65edc75b5a11": "Kinh doanh, Vận hành & Hỗ trợ ảo",
+                            "9aad2513-e82d-474f-ae10-b56fed4c6353": "Tài chính, Pháp lý & Tư vấn online",
+                            "10191a40-2a6b-41b4-a247-ddbbb18d6cff": "Giáo dục trực tuyến & E-learning",
+                            "53c6622e-0e40-4e9c-889e-b8fc0ab228fe": "Blockchain, Game & XR"
+                        }
+                        
+                        if type_val == "major":
+                            mid = data.get("major_id")
+                            text = f"Major: {data.get('name', '')} / {major_translations.get(mid, '')}"
+                        elif type_val == "category":
+                            mid = data.get("major_id")
+                            text = f"Category: {data.get('name', '')}. Belongs to Major: {major_vietnamese.get(mid, '')} / {major_translations.get(mid, '')}"
+                        elif type_val == "skill":
+                            text = f"Skill: {data.get('name', '')}"
+                        else:
+                            text = data.get("text") or data.get("content") or json.dumps(data, ensure_ascii=False)
                         
                         metadata = data.get("metadata", {})
                         for k, v in data.items():
