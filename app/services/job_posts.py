@@ -126,6 +126,9 @@ def _clamp_milestone_durations(milestones: list, approved_weeks: float) -> None:
     total_weeks = sum(individual_weeks)
 
     if total_weeks <= approved_weeks:
+        for m, mw in zip(milestones, individual_weeks):
+            if mw > 0:
+                m.estimated_duration = format_weeks_to_duration(mw)
         return  # already within limit
 
     # Proportional scale-down
