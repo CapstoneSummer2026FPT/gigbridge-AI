@@ -1,54 +1,25 @@
 ---
 title: "GigBridge AI Features"
-source: "AI Service Architecture"
-description: "Documentation on AI job posting, talent matching, mock voice interviews, analytics, and cheating/focus detection."
+source: "Current frontend and AI service implementation"
+description: "Current user-facing AI assistant, job drafting, talent matching, and voice interview capabilities."
 ---
 
-# AI Subsystem Features
+# AI Features
 
-GigBridge integrates an independent AI service (built on FastAPI) that provides core intelligence functions: automatic job posting, semantic candidate matching, mock voice interviews, work analysis, and anti-cheating tracking.
+## AI Assistant
 
----
+The in-app assistant answers questions about GigBridge by querying the `general-knowledge` vector collection. It uses conversation history and retrieved Markdown context, but it cannot execute account, wallet, proposal, or contract actions.
 
-## 1. AI Job Post Creator
+## AI-Assisted Job Drafting
 
-Clients can generate optimized job descriptions automatically.
-* **Inputs**: The client inputs a job title, primary category, and required skills.
-* **Processing**: The AI engine uses LLM templates to draft a structured, professional markdown job description detailing role responsibilities, deliverables, and skill expectations.
-* **Workflow**: The client can review, edit, and publish the AI-generated description directly, saving drafting time.
+Eligible Client Premium users can describe a project in a prompt. The AI proposes structured job fields such as title, category, description, skills, and related planning content. The result remains a client-reviewed, editable draft; it is not published automatically.
 
----
+## Smart Talent Matching
 
-## 2. AI Talent Matching
+Client Premium users can choose an open job and generate a ranked freelancer shortlist. The current matching service combines semantic retrieval with deterministic evidence/scoring. Results expose factors such as relevant skills/categories, track record, and platform activity instead of asking a generative model to invent candidate facts.
 
-Our platform combines vector retrieval with deterministic feature scoring.
-* **Embedding Model**: Trusted profile data (title, bio, taxonomy, skills, availability, location, and verified completed work) and job descriptions are converted into vector representations.
-* **Vector Similarity**: The AI service queries a disk-persisted vector store (Chroma DB) to rank candidates by cosine similarity against open job requirements.
-* **Algorithmic Reranking**: A versioned weighted algorithm scores role/domain, task, preferred-skill, and verified-work relevance without a generative LLM.
-* **Recommendation**: The backend combines embedding and algorithm scores with authoritative platform evidence before returning explained matches.
+## AI Voice Interview
 
----
+Eligible freelancer applications can use a voice-led interview based on the job's configured questions. The browser records an answer, speech-to-text produces a transcript for review, and text-to-speech plays interviewer prompts. Microphone permission and a supported browser are required.
 
-## 3. AI Mock Voice Interview
-
-Clients can request candidates to undergo automated screening.
-* **Transcription (STT)**: The system listens to candidate spoken responses and converts voice to text using OpenAI Whisper API.
-* **AI Evaluation**: The LLM processes the transcript to analyze accuracy and clarity, scoring candidate responses.
-* **Voice Synthesis (TTS)**: The AI speaks questions back to the candidate dynamically utilizing the ElevenLabs Text-to-Speech API.
-
----
-
-## 4. Work Analytics & Insights
-
-The AI service assists in project tracking.
-* **Code & File Auditing**: Analyzes project files and milestone updates.
-* **Dispute Summarization**: Generates timeline audits of workspace logs, communication history, and milestone deliverables to assist administrators during dispute resolutions.
-
----
-
-## 5. Anti-Cheating & Plagiarism Monitoring
-
-To ensure assessment and interview integrity:
-* **Browser Focus Loss Logs**: During AI interviews or skill tests, the frontend monitors browser focus events. If the candidate switches tabs, minimizes the window, or opens another application to search for answers, a focus loss event is recorded.
-* **Plagiarism Audits**: If a candidate copy-pastes pre-written text, the platform logs the action.
-* **Administrator Review Dashboard**: All cheating logs, page exit timestamps, and copy-paste events are recorded and displayed on the `/admin/cheating` screen for moderator audits.
+Earlier documentation referred to user-facing plagiarism/focus-loss monitoring and an `/admin/cheating` screen. Those are not present in the current router and should not be presented as current functionality.

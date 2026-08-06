@@ -1,34 +1,26 @@
 ---
 title: "About GigBridge"
 source: "https://gigbridge.id.vn/about"
-description: "Overview of the GigBridge freelance connection engine, its offerings, functions, and core company values."
+description: "Mission, story, values, and figures displayed on the current About page."
 ---
 
 # About GigBridge
 
-GigBridge is an advanced freelance marketplace platform designed to bridge the gap between skilled developers, designers, and tech professionals and the businesses seeking to build high-quality solutions. 
+**Route:** `/about`
 
-Rather than functioning as a basic job board, GigBridge operates as a trusted connection engine, integrating contract protection, secure milestone-based escrows, digital electronic signatures, and AI-powered screening tools directly into the collaboration lifecycle.
+**Access:** Public.
 
-## What GigBridge Offers
+GigBridge describes its mission as combining human talent with artificial intelligence so freelancers and clients can connect, find opportunities, and work efficiently.
 
-* **Smart Matchmaking**: An intelligent engine matching freelancer profiles with open client projects based on semantic analysis of skills, experience, and historical reviews.
-* **Escrow Contract Protection**: Legally-binding e-signed contract templates linked to milestone-based payments.
-* **AI Copilot Utilities**: Pre-screening mock voice interviews, automatic job description drafting, and code repository/milestone analysis.
-* **Structured Workspaces**: Dedicated collaborative environments containing task boards, shared files, and communication hubs.
+The page says GigBridge was founded in 2025 after observing that clients spent too long reviewing proposals, freelancers spent time on unsuccessful applications, and good matches were lost in information overload. It presents machine-learning matching, automated interviews, and AI-generated proposals as answers to that problem.
 
-## What GigBridge Does
+## Values displayed on the page
 
-* **For Clients**: Helps businesses find vetted engineering and design talent quickly, screen them automatically using AI-led voice interviews, establish legally-compliant milestones, and secure project funds in escrow.
-* **For Freelancers**: Provides a secure platform to showcase verified skills, build a reputable rating, safely sign contracts online, and guarantee payouts once milestones are approved.
+* **People First:** Technology should empower freelancers and clients.
+* **Global Community:** Talent and opportunities can cross borders.
+* **Excellence:** The platform and work performed through it should meet high quality standards.
+* **Trust & Safety:** Secure payments, verified profiles, and fraud detection support community safety.
 
-## Core Values
+## Figures displayed on the page
 
-* **People First**: Technology exists to enhance human collaboration. GigBridge builds AI tools to empower users, not replace them.
-* **Global Community**: Talent has no geographic borders. We connect experts with opportunities everywhere.
-* **Excellence**: We set high standards for platform usability, code quality, and project execution.
-* **Trust & Safety**: Secure wallets, verified profiles, and escrow safeguards ensure every party is protected.
-
-## Platform Access
-
-GigBridge is a web-only platform accessed exclusively via web browsers at https://gigbridge.id.vn. There is no native mobile or desktop application (no iOS, Android, macOS, or Windows app available on any app stores). All features, including the interactive workspace, e-signatures, wallet payments, and AI candidate pre-screenings, are optimized for both desktop and mobile web browsers.
+The About page currently displays 52,847 freelancers, 18,234 clients, 28.4M G-coin paid out, and a 96.4% success rate. These are marketing figures embedded in the page, not live account data, and may require a frontend update to change.
