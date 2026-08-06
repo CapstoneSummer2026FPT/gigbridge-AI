@@ -157,6 +157,7 @@ chroma_db/
 
 # Markdown docs / notes
 *.md
+!knowledge-base/general-knowledge/*.md
 
 # AI coding assistant files
 .codex/

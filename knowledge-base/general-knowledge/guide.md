@@ -9,64 +9,52 @@ description: "Step-by-step guides and tips to help freelancers and clients succe
 > [!IMPORTANT]
 > GigBridge is a web-only platform. You do not need to download a mobile app. Access all features directly through your desktop or mobile web browser at https://gigbridge.id.vn.
 
-Step-by-step tutorials to navigate and succeed on the GigBridge freelance platform.
+This guide summarizes the main freelancer and client workflows, from profile setup through contracts, escrow, delivery, and payment.
 
 ---
 
+## 1. Freelancer Workflow
 
-## Guide for Freelancers
-
-### 1. Getting Started as a Freelancer
-* **Step 1: Create Your Profile**: Sign up, choose the "Freelancer" role, and complete your profile wizard. Add detailed skills, professional experience, and portfolio links.
-* **Step 2: Take Skill Assessments**: Complete platform skill tests to verify your expertise and earn verified badges that boost search rankings.
-* **Step 3: Research Rates**: Check market demand and target rates using platform features to price your services competitively.
-* **Step 4: Browse Jobs**: Navigate the Browse Jobs section, filter by budget, category, or skills, or review automated AI job recommendation matches.
-* **Step 5: Submit Proposals**: Bid on open job posts by writing custom proposals, detailing your proposed pricing, and specifying timelines.
-
-### 2. Winning Projects
-* **Optimize Your Profile**: Add a professional profile photo, write a detailed and clear bio, showcase your best work in the portfolio section, and request client testimonials.
-* **Respond Quickly**: Reply to incoming messages and job interview invitations within 24 hours. Profile response speed increases matching visibility.
-* **Personalize Bids**: Read job postings carefully, mention specific project requirements in your cover letter, and explain why your skills align. Avoid copy-pasting generic proposals.
-* **Leverage AI Features**: Freelancer Premium members can utilize the AI Proposal Generator to write tailored proposals.
-
-### 3. Managing Projects
-* **Clarify Requirements**: Discuss and lock down project scope, deliverables, and timelines using workspace chat before starting code development.
-* **Define Milestones**: Ensure large contracts are split into manageable milestones with specific budgets.
-* **Provide Frequent Updates**: Keep clients informed of progress, ask questions early, and respond promptly to feedback.
-* **Deliver Quality Work**: Meet agreed deadlines, ensure deliverable code is tested, and request client reviews upon completion.
+1. **Create an account and profile**: Register as a freelancer, then complete the required Profile Setup fields, including professional title, major, categories, location, availability, and biography.
+2. **Find suitable work**: Browse open jobs, search and filter the listings, save interesting opportunities, and review invitations sent by clients.
+3. **Review the job**: Open the job details to confirm its requirements, skills, budget, timeline, milestones, and any interview questions.
+4. **Submit a proposal**: Write a proposal that addresses the client's needs, propose a price and schedule, provide a milestone plan, and answer any required questions.
+5. **Complete an AI interview when offered**: Jobs with interview questions may provide a voice-led AI interview. Allow microphone access, listen to each prompt, and record a clear answer.
+6. **Negotiate and sign**: Use GigBridge Messages to discuss scope and final terms. Review the final offer and contract carefully before signing.
+7. **Deliver milestone work**: Submit the requested deliverables from the contract workspace and respond to revision requests when necessary.
+8. **Track earnings and feedback**: Review contract status, wallet transactions, and reviews. Only eligible earned GigCoin can be requested for withdrawal.
 
 ---
 
-## Guide for Clients
+## 2. Client Workflow
 
-### 1. Hiring Your First Freelancer
-* **Step 1: Post a Clear Job**: Outline project goals, budget parameters, estimated completion schedules, required skills, and add screening questions.
-* **Step 2: Review AI Matches**: Check the candidate recommendations provided by the smart talent matching algorithm.
-* **Step 3: Screen via AI Interviews**: Enable automated screening voice interviews to assess freelancer communication and technical skills.
-* **Step 4: Invite Candidates**: Send direct job invitations to promising freelancers to invite proposals.
-* **Step 5: Hire the Best Fit**: Compare proposals, review screening responses, and hire the top candidate.
-
-### 2. Working with Freelancers
-* **Onboard Properly**: Share project repository links, documents, credentials, and context inside the Workspace.
-* **Manage Milestones**: Establish clear milestone deliverables. Work should only begin on a milestone after it has been funded in escrow.
-* **Provide Construction Feedback**: Review intermediate code and designs early. Frequent communication prevents scope creep and defects.
-* **Approve Work Promptly**: Review deliverable submittals quickly. Approve milestones to release escrow funds on time once work requirements are met.
-
-### 3. Payment & Budgeting
-* **Fund Milestones**: When starting a milestone, deposit the required funds into the escrow balance. Freelancers only start working once milestones are funded.
-* **Request Revisions**: If a deliverable doesn't meet the agreed requirements, request revisions with specific feedback before releasing funds.
-* **Dispute Mediation**: Use the dispute system if a resolution cannot be reached. Platform support will investigate the workspace logs and deliverables to split funds.
+1. **Complete the client profile**: Add the required company name, industry, location, and supporting company details.
+2. **Create a project request**: Start from the posting guide, enter the project requirements manually or use the Premium AI drafting option, and define the budget, duration, skills, milestones, and optional interview questions.
+3. **Publish and manage the job**: Review the prepared plan, publish the request, then manage its status, questions, proposals, and invitations.
+4. **Find candidates**: Review applicants, browse or save freelancer profiles, and invite suitable candidates. Premium Smart Matching requires an open job before it can recommend candidates.
+5. **Evaluate proposals**: Compare each freelancer's proposal, price, milestone plan, question answers, profile, and available interview results.
+6. **Agree on final terms**: Discuss the work in Messages, send or accept a final offer, create the contract, and make sure both parties sign it.
+7. **Fund and review milestones**: Fund the required escrow amount before work begins. Review submitted deliverables and approve satisfactory work or request a revision.
+8. **Close the engagement**: Complete the contract and leave an accurate review. Use the reporting or dispute flow if the parties cannot resolve a serious issue directly.
 
 ---
 
-## Platform Features
+## 3. Wallet, Escrow & Premium
 
-### 1. Security Best Practices
-* **Keep Work On-Platform**: All project discussions, file sharing, and payments must remain within GigBridge to ensure dispute protection and escrow coverage.
-* **Verify Client/Freelancer Reputations**: Audit reviews, ratings, and profile status before signing contracts.
-* **Enable Two-Factor Authentication**: Protect your wallet balance and credentials by configuring 2FA in security settings.
+- **GigCoin Rate**: The wallet deposit page displays the current conversion of **1 GigCoin = 1,000 VND**.
+- **Wallet Deposit**: Add funds through the PayOS checkout flow at `/wallet/deposit`. A cancelled or pending order does not count as a successful credit.
+- **Balance Types**: Deposited GigCoin can be spent on the platform but cannot be withdrawn. Withdrawal eligibility is tracked separately for GigCoin earned from approved work.
+- **Escrow**: Contract milestone funds remain in escrow until the client approves the associated deliverable or the platform resolves the payment through the supported process.
+- **Wallet History**: Use Wallet History to review deposits, payments, releases, refunds, Premium purchases, and other recorded transactions.
+- **Premium Plans**: Current plans, prices, billing periods, and included benefits are shown on the Premium page before purchase.
 
-### 2. Quick Tips for Success
-* **Response Speed**: Faster response times lead to higher search visibility and customer satisfaction.
-* **Profile Completeness**: Complete profiles receive 3x more visibility in AI-matched job lists.
-* **Reviews**: Positive 5-star ratings increase hiring rates significantly. Always leave honest feedback after completing contracts.
+---
+
+## 4. Platform Safety
+
+- **Keep Records On-Platform**: Use GigBridge Messages, contracts, milestones, and deliverable tools so important agreements and activity remain documented.
+- **Check Contract State**: Confirm that a contract is signed and the relevant milestone is funded before starting work.
+- **Review Before Approval**: A deliverable submission does not release escrow by itself. Clients should inspect the work before approving it.
+- **Protect Account Access**: Use a strong, unique password and never share passwords, verification codes, or wallet credentials in chat.
+- **Use Reporting Tools**: Report suspicious users, jobs, messages, or contract activity through the available platform flow and provide clear supporting information.
+- **Leave Honest Reviews**: Reviews should describe the completed engagement accurately and avoid sharing private information.
