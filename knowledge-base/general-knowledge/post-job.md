@@ -1,17 +1,60 @@
 ---
 title: "GigBridge Create Project Request"
 source: "https://gigbridge.id.vn/jobs/post"
-description: "Primary client form for drafting a GigBridge job or project request."
+description: "Detailed Client form for job requirements, taxonomy, skills, attachments, budget, schedule, visibility, drafts, and AI-assisted details."
 ---
 
 # Create Project Request
 
-**Route:** `/jobs/post`
+This is the first substantive step of the Client job-posting wizard. It creates or updates a server-side draft and collects the core information later reviewed by Freelancers, proposal evaluators, and contract workflows.
 
-**Access:** Clients with a completed profile.
+---
 
-The job form collects the project title, major, category, visibility, helpful skills, requirement details, expected budget, estimated duration, end date, and optional interview questions. Budget values are expressed in **GigCoin**; the interface explains the current VND conversion and top-up route.
+## 1. Page Access & Draft Handling
 
-Major selection controls the available categories, and category selection controls the official skill suggestions. Interview questions may be required or optional and can be added, removed, and reordered.
+- **Route**: `/jobs/post`
+- **Access**: Clients with completed profile setup.
+- **Continue Draft**: Loads existing draft job posts and lets the Client resume one.
+- **Create New Draft**: Clears the active draft context and begins a separate record.
+- **Autosave/Leave Protection**: Unsaved navigation can offer Save Draft, Discard, or Stay; failed autosave provides Retry.
+- **Save & Exit**: Persists the current draft without publishing it.
 
-Clients can save a draft or continue to milestone setup. Premium clients may use the AI prompt bar to generate proposed job details, but must review the generated fields before continuing.
+---
+
+## 2. Core Project Fields
+
+- **Job Title (Required)**: Maximum 200 characters.
+- **Major (Required)**: Loads the corresponding categories.
+- **Category (Required)**: Loads related official skills.
+- **Skills**: Add or remove suggested official skills and custom skill names. Skill entry is disabled until a category is selected.
+- **Description (Required)**: Detailed project requirements entered in a large text area.
+- **Attachments**: Supporting files/images displayed with filenames and removable before final submission where allowed.
+
+Changing major or category updates dependent taxonomy selections so incompatible values are not retained.
+
+---
+
+## 3. Budget, Schedule & Visibility
+
+- **Expected Budget**: Numeric GigCoin value; it can later be synchronized from the milestone total.
+- **Estimated Duration**: Positive numeric value plus a supported duration unit.
+- **End Date (Required)**: Target project deadline.
+- **Visibility**: Controls whether the job is Public, Private, or Invite Only according to supported values.
+
+The wizard summary shows title, budget, duration, question count, and milestone information as the draft develops.
+
+---
+
+## 4. AI-Assisted Detail Generation
+
+When Instant Job Detail mode and Client Premium are available, the Client can describe the requirement to the AI service. The service may propose structured job fields, milestones, or vetting questions.
+
+Generated details open in a review modal. The Client must inspect and accept/edit them; AI generation does not bypass form validation, create escrow, or publish the job automatically.
+
+---
+
+## 5. Continue to Planning
+
+Selecting the primary Continue action validates the current draft, saves it, and opens `/jobs/post/plan`. Missing required fields, taxonomy errors, attachment failures, invalid schedule values, or backend errors keep the user on the form with guidance.
+
+The job remains a Draft until the final Review step successfully publishes it.

@@ -1,25 +1,51 @@
 ---
 title: "GigBridge Press Kit"
 source: "https://gigbridge.id.vn/press-kit"
-description: "Company facts, statistics, brand assets, colors, and media contact displayed in the Press Kit."
+description: "Media resources and brand guidelines for GigBridge partners and press."
 ---
 
 # Press Kit
 
-**Route:** `/press-kit`
+Brand assets, styling tokens, and guidelines for partners and media inquiries.
 
-**Access:** Public.
+## Brand Assets & Guidelines
 
-The page describes GigBridge as an AI-powered freelance marketplace founded in 2025. Its embedded company facts list San Francisco, California as headquarters, 50–100 employees, Series A funding of $15M, 70,000+ users, and 150+ countries.
+### Logos
 
-## Statistics displayed
+We provide official logo assets in multiple resolutions:
 
-The Press Kit currently shows 52,847 active freelancers, 18,234 active clients, 134,562 completed projects, 28.4M G-coin paid out, an average match time under two hours, and a 96.4% success rate. These are static press-page claims rather than live analytics.
+- **GigBridge Main Logo**: Standard layout for dark/light backgrounds.
+- **GigBridge Light/White Logo**: Optimized for high contrast layouts.
+- **GigBridge Icon Only**: Visual mark for applications and favicon use.
 
-## Brand resources
+### Brand Guidelines
 
-The asset catalog lists PNG/SVG logos, screenshots, brand guidelines, a fact sheet, and a press-release template. Primary colors are Cyan `#0077FF` and Purple `#9F4BFF`; state colors include Green `#22C55E`, Amber `#F59E0B`, and Red `#EF4444`.
+- Do not distort, rotate, or alter the GigBridge logo shape or typography.
+- Maintain a clear buffer space around the logo (minimum 20px padding).
+- Utilize official brand colors only; do not create alternate custom color versions.
 
-Brand guidance says not to modify/rotate the logo, to maintain at least 20px clear space, to use official colors, and not to incorporate the logo into another product/company name.
+---
 
-The current download buttons are display controls without file-download handlers. Media inquiries are directed to `press@gigbridge.com`, with a displayed response target of 24 hours.
+## Brand Styling & Colors
+
+GigBridge utilizes a premium, dark-themed UI palette with the following primary color tokens:
+
+### Primary Accents
+
+- **Primary Cyan Accent**: `#0077FF` (rgb(0, 119, 255))
+- **Primary Purple Accent**: `#9F4BFF` (rgb(159, 75, 255))
+
+### State Indicators
+
+- **Success Green**: `#22C55E` (rgb(34, 197, 94))
+- **Warning Amber**: `#F59E0B` (rgb(245, 158, 11))
+- **Error Red**: `#EF4444` (rgb(239, 68, 68))
+
+---
+
+## Media Inquiries
+
+For press inquiries, brand permissions, or interview requests, please contact:
+
+- Email: `press@gigbridge.com`
+- Typical response window: Within 24 hours

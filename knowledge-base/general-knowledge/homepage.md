@@ -1,30 +1,35 @@
 ---
 title: "GigBridge Homepage"
 source: "https://gigbridge.id.vn"
-description: "Current GigBridge landing-page message, feature sections, navigation, and calls to action."
+description: "Overview of the GigBridge landing page sections and core platform features."
 ---
 
-# GigBridge Homepage
+# Welcome to GigBridge
 
-**Route:** `/`
+GigBridge is a modern, trusted freelance connection engine built to bridge the gap between skilled technical freelancers and businesses looking to build high-quality solutions.
 
-**Access:** Public for guests. Signed-in users are redirected according to application access rules.
+## Core Platform Ecosystem
 
-The homepage presents GigBridge as an AI-powered freelance marketplace and trusted connection engine. Its main message is to discover skilled freelancers and connect through smart matching.
+### 1. Smart Matchmaking
 
-## Main actions
+Our intelligent matching engine automatically connects freelancer profiles with client project demands based on semantic skill alignment, history, and profile tags, reducing search friction.
 
-* **Find Work** takes a guest toward the freelancer signup flow.
-* **Hire Talent** takes a guest toward the client signup flow.
-* The navigation links to Browse Jobs, About, FAQ, and the contact section. Logged-in users can open their dashboard.
-* The story section links to the public User Guide, and the final call to action starts registration.
+### 2. Secure Escrow
 
-## Featured ecosystem
+GigBridge uses milestone-based escrow contracts to safeguard transactions. Clients fund milestones before work begins, and funds are held securely by the platform until deliverables are reviewed and approved.
 
-* **Smart matchmaking:** Connects freelancer profiles to project demands using skills and history.
-* **Secure escrow:** Uses milestone-based holds and wallets so approved work can be paid through the platform.
-* **Digital contracts:** Integrates e-signed agreement templates into the collaboration flow.
-* **AI copilot:** Supports candidate interviews, platform questions, and drafting detailed project scope.
-* **Workspaces:** Represents the shared project area available after users progress into contract work.
+### 3. Digital E-Sign Contracts
 
-The homepage is marketing/entry content. Account-specific jobs, balances, matches, and contracts come from authenticated pages rather than homepage statistics.
+Collaborations are protected with legally-binding, digitally e-signed contract templates. Both parties review and draw digital signatures using an interactive signature canvas before contracts activate.
+
+### 4. AI-Powered Assistant & Screening
+
+Clients can use automated AI voice interviews (using speech-to-text and text-to-speech) to pre-screen candidates. Freelancers can utilize AI tools to optimize profile descriptions and draft proposals.
+
+### 5. Dedicated Workspaces
+
+Once a contract starts, both parties access a dedicated Workspace containing:
+
+- Task boards (tracking items in progress)
+- Code and file sharing
+- Project messaging and discussion logs
