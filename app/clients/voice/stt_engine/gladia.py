@@ -1,4 +1,4 @@
-"""Gladia v2 Live Speech-to-Text engine using Solaria-3."""
+"""Gladia v2 Live multilingual Speech-to-Text engine."""
 
 import asyncio
 import json
@@ -15,6 +15,7 @@ from app.core.exceptions import VoiceProviderException
 logger = logging.getLogger("ai_server.voice.gladia_stt")
 
 _AUDIO_CHUNK_BYTES = 64 * 1024
+_INTERVIEW_LANGUAGES = ("vi", "en")
 
 
 class GladiaSTTEngine(BaseSTTEngine):
@@ -26,17 +27,47 @@ class GladiaSTTEngine(BaseSTTEngine):
         self._client = client
 
     @staticmethod
-    def build_session_config() -> dict[str, Any]:
-        """Return the project's required Gladia Live configuration."""
+    def build_session_config(
+        language: str = "auto",
+        primary_language: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Return a Gladia Live configuration for the requested language mode.
+
+        ``auto``/``mixed`` enables Vietnamese-English code switching. An
+        explicit supported language constrains recognition to that language,
+        which improves accuracy when the caller deliberately opts out of
+        automatic detection.
+        """
+        requested = (language or "auto").strip().lower().replace("_", "-")
+        requested_code = requested.split("-", 1)[0]
+        primary_code = (
+            (primary_language or "")
+            .strip()
+            .lower()
+            .replace("_", "-")
+            .split("-", 1)[0]
+        )
+
+        if requested_code in _INTERVIEW_LANGUAGES:
+            languages = [requested_code]
+            code_switching = False
+        else:
+            # Put the session's question language first as a weak hint while
+            # retaining both supported interview languages for every answer.
+            languages = list(_INTERVIEW_LANGUAGES)
+            if primary_code in languages:
+                languages.remove(primary_code)
+                languages.insert(0, primary_code)
+            code_switching = True
+
         return {
             "encoding": "wav/pcm",
             "bit_depth": 16,
             "sample_rate": settings.AUDIO_DECODE_SAMPLE_RATE,
             "channels": 1,
-            "model": "solaria-3",
             "language_config": {
-                "languages": ["vi", "en"],
-                "code_switching": True,
+                "languages": languages,
+                "code_switching": code_switching,
             },
             "pre_processing": {
                 "speech_threshold": 0.8,
@@ -70,7 +101,7 @@ class GladiaSTTEngine(BaseSTTEngine):
         hotwords: Optional[list[str]] = None,
         primary_language: Optional[str] = None,
     ) -> TranscriptionResult:
-        del language, hotwords, primary_language
+        del hotwords
         headers = {
             "x-gladia-key": settings.GLADIA_API_KEY,
             "Content-Type": "application/json",
@@ -84,7 +115,7 @@ class GladiaSTTEngine(BaseSTTEngine):
             response = await client.post(
                 f"{settings.GLADIA_API_BASE_URL.rstrip('/')}/live",
                 headers=headers,
-                json=self.build_session_config(),
+                json=self.build_session_config(language, primary_language),
             )
             response.raise_for_status()
             websocket_url = response.json().get("url")
