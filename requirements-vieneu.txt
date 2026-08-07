@@ -1,0 +1,4 @@
+# Optional local Vietnamese/English TTS provider for development/testing.
+# Install with:
+#   python -m pip install -r requirements-vieneu.txt
+vieneu>=3.0.12
