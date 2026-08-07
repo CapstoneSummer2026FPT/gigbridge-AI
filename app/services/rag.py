@@ -979,6 +979,42 @@ With this context, please answer the user's question. Be accurate, relevant and 
 
         return total_chunks
 
+    async def auto_ingest_if_empty(self) -> None:
+        """
+        Checks if the required vector collections exist and contain documents.
+        If they are missing or empty, triggers ingestion of all knowledge base files
+        in the background.
+        """
+        expected_collections = [
+            "general-knowledge",
+            "ai-chatbot",
+            "ai-candidate-matching",
+            "ai-create-job-post",
+            "ai-interview"
+        ]
+
+        needs_ingestion = False
+        for col in expected_collections:
+            try:
+                c = self.chroma.get_or_create_collection(col)
+                if c.count() == 0:
+                    needs_ingestion = True
+                    break
+            except Exception as e:
+                logger.warning(f"Error checking collection '{col}': {e}")
+                needs_ingestion = True
+                break
+
+        if needs_ingestion:
+            logger.info("Chroma DB collections are missing or empty. Starting automatic database ingestion...")
+            try:
+                total_chunks = await self.ingest_documents(collection_name="all")
+                logger.info(f"Automatic database ingestion completed. Indexed {total_chunks} chunks.")
+            except Exception as e:
+                logger.error(f"Automatic database ingestion failed: {e}")
+        else:
+            logger.info("Chroma DB collections verified and contain documents.")
+
 # Dependency helper
 _rag_service = RAGService()
 

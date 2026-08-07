@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from contextlib import asynccontextmanager
 
 import redis.asyncio as aioredis
@@ -23,6 +24,12 @@ logging.basicConfig(
 async def lifespan(_: FastAPI):
     """Validate dependencies and cleanly drain resources."""
     await validate_voice_dependencies()
+    
+    # Trigger background auto-ingestion of knowledge base if database is empty
+    from app.services.rag import get_rag_service
+    rag_service = get_rag_service()
+    asyncio.create_task(rag_service.auto_ingest_if_empty())
+
     try:
         yield
     finally:
