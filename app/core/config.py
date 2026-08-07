@@ -35,8 +35,6 @@ class Settings(BaseSettings):
     # RAG Settings
     CHROMA_DB_PATH: str = Field(default="./chroma_db")
     EMBEDDING_MODEL: str = Field(default="text-embedding-3-large")
-    MATCHING_EMBEDDING_PROVIDER: str = Field(default="openai")
-    MATCHING_EMBEDDING_MODEL: str = Field(default="text-embedding-3-large")
 
     # Smart talent matching uses one embedding model and a deterministic scorer.
     MATCHING_EMBEDDING_PROVIDER: Literal["openai", "gemini", "ollama"] = Field(
