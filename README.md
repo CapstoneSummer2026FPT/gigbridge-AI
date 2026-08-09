@@ -1,6 +1,6 @@
 # GigBridge AI Server
 
-This is the independent AI microservice for the **GigBridge** freelance marketplace. Built using Python and **FastAPI**, it provides core intelligent features (Job Post Generation, AI Interviews with voice processing, Talent Matching, and Analytics) via secure REST API endpoints.
+This is the independent AI server for the **GigBridge** freelance marketplace. Built using Python and **FastAPI**, it provides core intelligent features (Job Post Generation, AI Interviews with voice processing, Talent Matching, and Analytics) via secure REST API endpoints.
 
 ---
 
