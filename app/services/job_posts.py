@@ -222,8 +222,8 @@ class JobPostService:
             "- You MUST NOT generate job posts for illegal, harmful, or dangerous jobs (e.g., selling illegal substances/drugs, weapons, violence, hacking/cyberattacks, human trafficking, fraud, etc.).\n"
             "- If the client's prompt requests any such illegal activity, you MUST return title='POLICY_VIOLATION' and set the other fields as specified in the template.\n"
             "LANGUAGE CONSTRAINTS:\n"
-            f"- You MUST generate the 'description' field strictly in {target_lang}.\n"
-            "- All other fields (specifically 'title' and 'custom_skills') MUST ALWAYS be generated in English, regardless of the prompt's language."
+            f"- You MUST generate both the 'title' and 'description' fields strictly in {target_lang}.\n"
+            "- Custom skills can be in English or Vietnamese matching the prompt context."
         )
 
         config = AnswerConfig(
