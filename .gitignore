@@ -154,6 +154,7 @@ cython_debug/
 
 # Local databases / Vector DBs
 chroma_db/
+chroma_db_ollama/
 
 # Markdown docs / notes
 *.md
