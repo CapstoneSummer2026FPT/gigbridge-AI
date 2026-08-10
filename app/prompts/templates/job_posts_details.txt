@@ -29,18 +29,40 @@ Based on the client's prompt:
    - custom_skills: []
    - description: "This request violates the platform safety guidelines."
    If the request is safe and does not violate policy, proceed with the following steps:
-1. Refine the suitable Job Title (title). CRITICAL: This title MUST be written in English.
+1. Synthesize a comprehensive un-cut Job Title (title).
+   CRITICAL TITLE TEMPLATE & LANGUAGE RULE:
+   - The title MUST match the language of the client's prompt/document (Vietnamese if prompt is Vietnamese, English if prompt is English).
+   - Use natural hiring intent prefixes:
+     - If prompt is in Vietnamese: Use prefixes such as "Đang tìm kiếm chuyên gia về...", "Cần tuyển chuyên gia về...", "Tìm kiếm chuyên gia về...", or "Tôi muốn thuê một chuyên gia về...".
+     - If prompt is in English: Use prefixes such as "Looking for a specialist in...", "Seeking a specialist in...", "Hiring a specialist in...", "Need a specialist in...", or "I want to hire a specialist in...".
+   - The title MUST comprehensively convey the seniority level, core role, primary tech stack, AND the full scope of responsibilities/objectives specified in the prompt/document. Do NOT cut short or artificially truncate key requirements.
 2. Select the single most appropriate Major. Set "major_id" to its exact ID from the list.
 3. Select the single most appropriate Category. Set "category_id" to its exact ID from the list. 
    CRITICAL CONSTRAINT: The chosen Category MUST belong to the chosen Major (i.e. category.major_id == chosen major_id).
 4. Identify matching System Skills from the "Available System Skills" list. Set "system_skill_ids" to a list containing their exact IDs.
-5. Identify all key skills, frameworks, and technologies required for the project (e.g., specialized AI/RAG tools, libraries, or concepts mentioned or implied by the prompt). If any of these required skills are NOT present in the "Available System Skills" list, you MUST list them as custom skill strings in "custom_skills". Do not duplicate system skills here. CRITICAL: These custom skill names MUST be written in English.
+5. Identify all key skills, frameworks, and technologies required for the project (e.g., specialized AI/RAG tools, libraries, or concepts mentioned or implied by the prompt). If any of these required skills are NOT present in the "Available System Skills" list, you MUST list them as custom skill strings in "custom_skills". Do not duplicate system skills here. Custom skill names can be in English or Vietnamese matching the prompt context.
 6. CRITICAL CONSTRAINT: The total combined number of skills (system_skill_ids + custom_skills) MUST NOT exceed 10. You MUST prioritize and list these skills in order of relevance (from most critical/relevant to least critical).
-7. Generate the detailed Job Description in plain text format (description). All section headers MUST be uppercase (i.e. ABOUT THE ROLE, KEY RESPONSIBILITIES, REQUIREMENTS, WHAT WE OFFER). Place blank lines before and after headers to create vertical spacing. Do NOT use markdown formatting (like `**`, `#`, `##`, or italic styling).
-   CRITICAL CONCISENESS RULE: Keep the description concise and punchy, under 250 words total (around 2-3 bullet points per section).
-   CRITICAL LANGUAGE RULE: 
-   - You MUST generate the description in either English or Vietnamese (no other languages are allowed).
-   - If the client's prompt is written in Vietnamese, generate the description in Vietnamese.
-   - If the client's prompt is written in English or any other language, generate the description in English.
-8. Estimate a sensible exact expected budget in GC (GigCoins, the platform currency) for the job. Both "budget_min" and "budget_max" MUST be set to the exact same value (i.e. budget_min = budget_max = exact estimated budget). If the user prompt mentions a budget, use/convert that budget exactly (e.g., if the user says "500 GC", set both budget_min and budget_max to 500.0). If the prompt mentions a budget range, use the maximum value of the range as the exact budget (e.g., if the user says "300 - 500 GC", set both budget_min and budget_max to 500.0). If no budget is mentioned, estimate a reasonable exact budget based on the complexity, skills required, and standard rates for similar work.
+7. Generate the detailed Job Description in plain text format (description).
+   CRITICAL ADAPTIVE CONTENT & FIDELITY RULE:
+   - IF AN ATTACHED DOCUMENT OR DETAILED SPECIFICATION IS PRESENT (e.g. contains "--- ATTACHED SPECIFICATION DOCUMENT ---" or prompt length >= 300 characters):
+     - You MUST NOT compress, truncate, or omit details from the original document.
+     - Retain 100% of all real technical requirements, responsibilities, prerequisites, deliverables, and company notes.
+     - Clean up bad linebreaks, fix typos, and organize messy text into standard uppercase section headers (e.g., ABOUT THE ROLE, KEY RESPONSIBILITIES, REQUIREMENTS, WHAT WE OFFER).
+     - Remove extraneous PDF noise (like page numbers, confidential footers, or document metadata).
+   - IF SHORT PROMPT IS PROVIDED (simple summary prompt under 300 characters without attached document):
+     - Generate a concise, structured job description around 250 words total.
+   CRITICAL FORMATTING & LANGUAGE RULES:
+   - All section headers MUST be uppercase (e.g. ABOUT THE ROLE, KEY RESPONSIBILITIES, REQUIREMENTS, WHAT WE OFFER). Place blank lines before and after headers to create vertical spacing. Do NOT use markdown formatting (like `**`, `#`, `##`, or italic styling).
+   - If the client's prompt/document is in Vietnamese, generate both title and description in Vietnamese.
+   - If the client's prompt/document is in English, generate both title and description in English.
+8. Determine the expected budget in GC (GigCoins, the platform currency) for the job:
+   CRITICAL BUDGET CONVERSION & ADHERENCE RULE (1 GC = 1,000 VND):
+   - If the client prompt or attached document states an explicit budget in VND / VNĐ / triệu VNĐ, you MUST convert it to GigCoins (GC) using the exact rate: 1 GC = 1,000 VND.
+     - Example: "15 triệu VNĐ" or "15.000.000 VNĐ" = 15,000.0 GC. Set budget_min = 15000.0, budget_max = 15000.0.
+     - Example: "20 triệu VNĐ" = 20,000.0 GC. Set budget_min = 20000.0, budget_max = 20000.0.
+     - Example: If a range is stated in VND (e.g., "10 - 15 triệu VNĐ"), set budget_min = 10000.0 and budget_max = 15000.0.
+   - If the prompt specifies a budget in GC (e.g., "500 GC"), use that exact GC value (e.g., budget_min = 500.0, budget_max = 500.0).
+   - If a range in GC is stated (e.g., "300 - 500 GC"), set budget_min = 300.0 and budget_max = 500.0.
+   - Do NOT override an explicit budget stated in the user's prompt or document with an AI estimate.
+   - If NO budget is mentioned in the prompt or document, estimate a reasonable budget in GC based on complexity and skills.
 9. Estimate a sensible duration/timeline for the project, set "estimated_duration" in format "N weeks" or "N months" or "N years" (e.g., "2 weeks", "1 month", "3 months"). Use the information in the user prompt if available, or make a reasonable estimate based on the scope. Must follow standard formats that can be parsed by `parseJobDuration` (like "N weeks", "N months", etc.).
