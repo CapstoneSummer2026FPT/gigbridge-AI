@@ -1,6 +1,6 @@
 # GigBridge Platform Overview
 
-GigBridge is an advanced microservice-driven platform designed to connect corporate clients with independent freelancers, gig workers, and contractors. 
+GigBridge is an advanced platform designed to connect corporate clients with independent freelancers, gig workers, and contractors. 
 
 ## Key Features
 
