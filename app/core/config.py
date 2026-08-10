@@ -28,14 +28,14 @@ class Settings(BaseSettings):
     ELEVENLABS_API_KEY: str = Field(default="")
 
     # LLM Router Configurations
-    DEFAULT_LLM_PROVIDER: str = Field(default="openai")
+    DEFAULT_LLM_PROVIDER: str = Field(default="local")
     LOCAL_OLLAMA_URL: str = Field(default="http://localhost:11434")
     LOCAL_MODEL_NAME: str = Field(default="llama3.2")
 
     # RAG Settings
     CHROMA_DB_PATH: str = Field(default="./chroma_db")
     EMBEDDING_MODEL: str = Field(default="text-embedding-3-large")
-    MATCHING_EMBEDDING_PROVIDER: str = Field(default="openai")
+    MATCHING_EMBEDDING_PROVIDER: str = Field(default="local")
     MATCHING_EMBEDDING_MODEL: str = Field(default="text-embedding-3-large")
 
     # Smart talent matching uses one embedding model and a deterministic scorer.
@@ -68,6 +68,7 @@ class Settings(BaseSettings):
     GOOGLE_STT_HOTWORD_BOOST: float = Field(default=5.0)
     GLADIA_API_KEY: str = Field(default="")
     GLADIA_API_BASE_URL: str = Field(default="https://api.gladia.io/v2")
+    GLADIA_MODEL: str = Field(default="solaria-3")
     HOTWORD_MAX_TERMS: int = Field(default=50, ge=1, le=100)
 
     # Audio Decode — ALL formats decoded to WAV 16kHz mono PCM before STT
