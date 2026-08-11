@@ -62,3 +62,35 @@ class SystemStatsResponse(BaseModel):
     system_ram_percent: float
     ai_process_ram_mb: float
     status: str = "healthy"
+
+
+class JobPostEvalRequest(BaseModel):
+    client_prompt: str = Field(..., description="User prompt for job creation e.g. 'Need a Senior Python Backend Dev...'")
+
+
+class JobPostEvalResponse(BaseModel):
+    details: Dict[str, Any]
+    hiring_plan: Dict[str, Any]
+    jd_quality_score: float
+    taxonomy_match_ok: bool
+    budget_clamped_ok: bool
+    duration_clamped_ok: bool
+    summary_html: str
+
+
+class FunctionBenchmarkResult(BaseModel):
+    function_name: str
+    task_type: str
+    collection_used: str
+    benchmark_cases_count: int
+    primary_metrics: Dict[str, Any]
+
+
+class MultiFunctionEvalResponse(BaseModel):
+    total_test_cases: int
+    overall_system_mrr: float
+    overall_system_ndcg: float
+    overall_system_coverage: float
+    functions: List[FunctionBenchmarkResult]
+
+
