@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG & AI Evidence Evaluation Dashboard</title>
+    <!-- Tailwind CSS CDN with dark mode enabled -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#eef2ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .metric-card { transition: all 0.2s ease-in-out; }
+        .metric-card:hover { transform: translateY(-2px); }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 antialiased min-h-screen pb-16 transition-colors duration-200">
+
+    <!-- Top Navigation & Live RAM Header -->
+    <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50 shadow-sm transition-colors duration-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>📊 RAG & AI Evidence Evaluation Dashboard</span>
+                </h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">GigBridge AI Infrastructure • Real-time Benchmarks & Factuality Verification</p>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <!-- Live RAM Indicator Badge -->
+                <div id="ram-widget" class="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-xl text-xs shadow-sm">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span class="font-semibold text-slate-700 dark:text-slate-300">EC2 RAM:</span>
+                        <span id="ram-system" class="font-mono text-slate-900 dark:text-slate-100 font-bold">Loading...</span>
+                    </div>
+                    <div class="h-4 w-px bg-slate-300 dark:bg-slate-600"></div>
+                    <div>
+                        <span class="font-semibold text-slate-700 dark:text-slate-300">AI Process:</span>
+                        <span id="ram-proc" class="font-mono text-indigo-600 dark:text-indigo-400 font-bold">Loading...</span>
+                    </div>
+                </div>
+
+                <!-- Dark Mode Toggle Button -->
+                <button id="theme-toggle" onclick="toggleDarkMode()" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center gap-2 text-xs font-semibold" title="Toggle Light/Dark Theme">
+                    <span id="theme-toggle-icon" class="text-sm">🌙</span>
+                    <span id="theme-toggle-text" class="hidden sm:inline">Dark</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-10">
+
+        <!-- SECTION 1: RETRIEVAL EVALUATION -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200 dark:border-slate-800 transition-colors duration-200">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <span>🔍 Retrieval Evaluation</span>
+                    </h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Evaluates Mean Reciprocal Rank (MRR), nDCG, and Keyword Coverage across document categories.</p>
+                </div>
+                <button id="btn-run-retrieval" onclick="runRetrievalEval()" class="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold px-6 py-2.5 rounded-xl shadow-md transition flex items-center gap-2">
+                    <span id="spin-retrieval" class="hidden animate-spin">🌀</span>
+                    <span>Run Retrieval Evaluation</span>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Left: Metric Cards -->
+                <div id="retrieval-metrics-container" class="space-y-4">
+                    <div class="p-6 text-center text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
+                        Click 'Run Retrieval Evaluation' to start benchmark calculation.
+                    </div>
+                </div>
+
+                <!-- Right: Bar Chart -->
+                <div class="bg-slate-50 dark:bg-slate-800/50 p-4 sm:p-6 rounded-xl border border-slate-200 dark:border-slate-700/60 flex flex-col justify-center">
+                    <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Average MRR by Category</h3>
+                    <div class="relative h-64 sm:h-72">
+                        <canvas id="chart-retrieval"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: ANSWER QUALITY EVALUATION -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200 dark:border-slate-800 transition-colors duration-200">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <span>💬 Answer Quality Evaluation</span>
+                    </h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Evaluates generated answers on Accuracy, Completeness, and Relevance (1–5 scale).</p>
+                </div>
+                <button id="btn-run-answer" onclick="runAnswerEval()" class="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold px-6 py-2.5 rounded-xl shadow-md transition flex items-center gap-2">
+                    <span id="spin-answer" class="hidden animate-spin">🌀</span>
+                    <span>Run Answer Evaluation</span>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Left: Metric Cards -->
+                <div id="answer-metrics-container" class="space-y-4">
+                    <div class="p-6 text-center text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
+                        Click 'Run Answer Evaluation' to start benchmark calculation.
+                    </div>
+                </div>
+
+                <!-- Right: Bar Chart -->
+                <div class="bg-slate-50 dark:bg-slate-800/50 p-4 sm:p-6 rounded-xl border border-slate-200 dark:border-slate-700/60 flex flex-col justify-center">
+                    <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Average Accuracy by Category</h3>
+                    <div class="relative h-64 sm:h-72">
+                        <canvas id="chart-answer"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: AI EVIDENCE & GROUNDEDNESS EVALUATION -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200 dark:border-slate-800 transition-colors duration-200">
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>🛡️ AI Evidence & Groundedness Verification</span>
+                </h2>
+                <p class="text-sm text-slate-500 dark:text-slate-400">Decomposes candidate text into atomic claims and cross-checks each claim against the input source context for truthfulness.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">Source Context (Prompt / Knowledge Base Chunk)</label>
+                    <textarea id="eval-source" rows="6" class="w-full p-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Paste source text context here...">GigBridge mandates that all electrical trade freelancers hold a valid ECS gold card and NVQ Level 3 certification. Weekly timesheets approved by Wednesday 5 PM are paid out on Friday morning via BACS. GigBridge charges a standard 10% platform fee on employer postings.</textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">Candidate Output / Evidence to Verify</label>
+                    <textarea id="eval-candidate" rows="6" class="w-full p-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Paste generated answer or evidence text here...">GigBridge requires electrician freelancers to have NVQ Level 3 certification and an ECS gold card. Timesheets approved by Wednesday are paid on Friday morning. Additionally, freelancers receive free tools and health insurance from GigBridge.</textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end mb-8">
+                <button id="btn-eval-evidence" onclick="runEvidenceEval()" class="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold px-8 py-3 rounded-xl shadow-md transition flex items-center gap-2">
+                    <span id="spin-evidence" class="hidden animate-spin">🌀</span>
+                    <span>Evaluate AI Evidence Truthfulness</span>
+                </button>
+            </div>
+
+            <!-- Evidence Results Output -->
+            <div id="evidence-output" class="hidden space-y-6">
+                <div class="p-6 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div>
+                        <div class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">AI Evidence Truthfulness Ratio</div>
+                        <div id="truth-percent-val" class="text-4xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">94.5%</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">Calculated Factuality & Groundedness Score</div>
+                    </div>
+                    
+                    <div class="flex items-center gap-4 text-xs font-semibold">
+                        <div class="bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 px-3 py-1.5 rounded-lg border border-emerald-300 dark:border-emerald-800">Verified True: <span id="cnt-supported">0</span></div>
+                        <div class="bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800">Partial Evidence: <span id="cnt-partial">0</span></div>
+                        <div class="bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 px-3 py-1.5 rounded-lg border border-rose-300 dark:border-rose-800">Unverified/False: <span id="cnt-unsupported">0</span></div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Sentence-Level Fact Verification Annotations</h3>
+                    <div id="annotated-html-box" class="space-y-3"></div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- JavaScript Logic & AJAX Handlers -->
+    <script>
+        let retrievalChart = null;
+        let answerChart = null;
+
+        // Dark Mode Logic (Default Dark)
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
+                document.documentElement.classList.add('light');
+                document.documentElement.classList.remove('dark');
+                updateThemeToggleUI(false);
+            } else {
+                // Default to Dark Mode
+                document.documentElement.classList.add('dark');
+                document.documentElement.classList.remove('light');
+                updateThemeToggleUI(true);
+            }
+        }
+
+        function toggleDarkMode() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            document.documentElement.classList.toggle('light', !isDark);
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            updateThemeToggleUI(isDark);
+            
+            // Redraw charts with dark/light themes
+            if (retrievalChart) updateChartTheme(retrievalChart);
+            if (answerChart) updateChartTheme(answerChart);
+        }
+
+        function updateThemeToggleUI(isDark) {
+            document.getElementById('theme-toggle-icon').innerText = isDark ? '☀️' : '🌙';
+            document.getElementById('theme-toggle-text').innerText = isDark ? 'Light' : 'Dark';
+        }
+
+        function getChartTextColor() {
+            return document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b';
+        }
+
+        function getChartGridColor() {
+            return document.documentElement.classList.contains('dark') ? '#334155' : '#e2e8f0';
+        }
+
+        function updateChartTheme(chart) {
+            if (!chart) return;
+            const textColor = getChartTextColor();
+            const gridColor = getChartGridColor();
+            chart.options.scales.x.ticks.color = textColor;
+            chart.options.scales.y.ticks.color = textColor;
+            chart.options.scales.x.grid.color = gridColor;
+            chart.options.scales.y.grid.color = gridColor;
+            chart.update();
+        }
+
+        // Fetch Live System RAM Stats
+        async function fetchSystemStats() {
+            try {
+                const res = await fetch('/api/ai/system-stats');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('ram-system').innerText = `${data.system_ram_used_gb} GB / ${data.system_ram_total_gb} GB (${data.system_ram_percent}%)`;
+                    document.getElementById('ram-proc').innerText = `${data.ai_process_ram_mb} MB`;
+                }
+            } catch (err) {
+                console.warn('System stats fetch error:', err);
+            }
+        }
+
+        // Color coding thresholds matching script
+        function getColor(value, metricType) {
+            if (metricType === "mrr" || metricType === "ndcg") {
+                return value >= 0.9 ? "#10b981" : (value >= 0.75 ? "#f59e0b" : "#ef4444");
+            } else if (metricType === "coverage") {
+                return value >= 90.0 ? "#10b981" : (value >= 75.0 ? "#f59e0b" : "#ef4444");
+            } else if (["accuracy", "completeness", "relevance"].includes(metricType)) {
+                return value >= 4.5 ? "#10b981" : (value >= 4.0 ? "#f59e0b" : "#ef4444");
+            }
+            return "#334155";
+        }
+
+        function formatMetricCardHTML(label, value, metricType, isPercentage = false, scoreFormat = false) {
+            const color = getColor(value, metricType);
+            let valStr = "";
+            if (isPercentage) valStr = `${value.toFixed(1)}%`;
+            else if (scoreFormat) valStr = `${value.toFixed(2)}/5`;
+            else valStr = `${value.toFixed(4)}`;
+
+            return `
+            <div class="metric-card p-4 bg-slate-50 dark:bg-slate-800/80 rounded-xl border-l-4 shadow-sm" style="border-left-color: ${color};">
+                <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">${label}</div>
+                <div class="text-2xl font-bold" style="color: ${color};">${valStr}</div>
+            </div>
+            `;
+        }
+
+        // Run Retrieval Evaluation
+        async function runRetrievalEval() {
+            const spin = document.getElementById('spin-retrieval');
+            spin.classList.remove('hidden');
+            try {
+                const res = await fetch('/api/ai/eval/retrieval', { method: 'POST' });
+                const data = await res.json();
+
+                const container = document.getElementById('retrieval-metrics-container');
+                container.innerHTML = `
+                    ${formatMetricCardHTML("Mean Reciprocal Rank (MRR)", data.avg_mrr, "mrr")}
+                    ${formatMetricCardHTML("Normalized DCG (nDCG)", data.avg_ndcg, "ndcg")}
+                    ${formatMetricCardHTML("Keyword Coverage", data.avg_coverage, "coverage", true)}
+                    <div class="p-3 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 rounded-xl text-center text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                        ✓ Evaluation Complete: ${data.test_count} benchmark tests
+                    </div>
+                `;
+
+                // Update Chart
+                const categories = Object.keys(data.category_mrr);
+                const mrrScores = Object.values(data.category_mrr);
+
+                if (retrievalChart) retrievalChart.destroy();
+                const ctx = document.getElementById('chart-retrieval').getContext('2d');
+                retrievalChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: categories,
+                        datasets: [{
+                            label: 'Average MRR',
+                            data: mrrScores,
+                            backgroundColor: '#6366f1',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { ticks: { color: getChartTextColor() }, grid: { color: getChartGridColor() } },
+                            y: { min: 0, max: 1, ticks: { color: getChartTextColor() }, grid: { color: getChartGridColor() } }
+                        }
+                    }
+                });
+            } catch (err) {
+                alert('Retrieval evaluation failed: ' + err);
+            } finally {
+                spin.classList.add('hidden');
+                fetchSystemStats();
+            }
+        }
+
+        // Run Answer Quality Evaluation
+        async function runAnswerEval() {
+            const spin = document.getElementById('spin-answer');
+            spin.classList.remove('hidden');
+            try {
+                const res = await fetch('/api/ai/eval/answer', { method: 'POST' });
+                const data = await res.json();
+
+                const container = document.getElementById('answer-metrics-container');
+                container.innerHTML = `
+                    ${formatMetricCardHTML("Accuracy", data.avg_accuracy, "accuracy", false, true)}
+                    ${formatMetricCardHTML("Completeness", data.avg_completeness, "completeness", false, true)}
+                    ${formatMetricCardHTML("Relevance", data.avg_relevance, "relevance", false, true)}
+                    <div class="p-3 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 rounded-xl text-center text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                        ✓ Evaluation Complete: ${data.test_count} benchmark tests
+                    </div>
+                `;
+
+                // Update Chart
+                const categories = Object.keys(data.category_accuracy);
+                const accScores = Object.values(data.category_accuracy);
+
+                if (answerChart) answerChart.destroy();
+                const ctx = document.getElementById('chart-answer').getContext('2d');
+                answerChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: categories,
+                        datasets: [{
+                            label: 'Average Accuracy',
+                            data: accScores,
+                            backgroundColor: '#10b981',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { ticks: { color: getChartTextColor() }, grid: { color: getChartGridColor() } },
+                            y: { min: 1, max: 5, ticks: { color: getChartTextColor() }, grid: { color: getChartGridColor() } }
+                        }
+                    }
+                });
+            } catch (err) {
+                alert('Answer evaluation failed: ' + err);
+            } finally {
+                spin.classList.add('hidden');
+                fetchSystemStats();
+            }
+        }
+
+        // Run Evidence Truthfulness Evaluation
+        async function runEvidenceEval() {
+            const spin = document.getElementById('spin-evidence');
+            spin.classList.remove('hidden');
+
+            const sourceContext = document.getElementById('eval-source').value;
+            const candidateEvidence = document.getElementById('eval-candidate').value;
+
+            try {
+                const res = await fetch('/api/ai/evaluate-evidence', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        source_context: sourceContext,
+                        candidate_evidence: candidateEvidence
+                    })
+                });
+
+                const data = await res.json();
+                document.getElementById('evidence-output').classList.remove('hidden');
+                document.getElementById('truth-percent-val').innerText = `${data.truth_percentage}%`;
+                document.getElementById('cnt-supported').innerText = data.supported_claims;
+                document.getElementById('cnt-partial').innerText = data.partial_claims;
+                document.getElementById('cnt-unsupported').innerText = data.unsupported_claims;
+                document.getElementById('annotated-html-box').innerHTML = data.annotated_html;
+            } catch (err) {
+                alert('Evidence evaluation failed: ' + err);
+            } finally {
+                spin.classList.add('hidden');
+                fetchSystemStats();
+            }
+        }
+
+        // Initialize Page & Theme on Load
+        window.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            fetchSystemStats();
+            setInterval(fetchSystemStats, 10000); // refresh every 10 sec
+        });
+    </script>
+</body>
+</html>
