@@ -51,10 +51,13 @@ Based on the client's prompt:
      - Remove extraneous PDF noise (like page numbers, confidential footers, or document metadata).
    - IF SHORT PROMPT IS PROVIDED (simple summary prompt under 300 characters without attached document):
      - Generate a concise, structured job description around 250 words total.
-   CRITICAL FORMATTING & LANGUAGE RULES:
-   - All section headers MUST be uppercase (e.g. ABOUT THE ROLE, KEY RESPONSIBILITIES, REQUIREMENTS, WHAT WE OFFER). Place blank lines before and after headers to create vertical spacing. Do NOT use markdown formatting (like `**`, `#`, `##`, or italic styling).
-   - If the client's prompt/document is in Vietnamese, generate both title and description in Vietnamese.
-   - If the client's prompt/document is in English, generate both title and description in English.
+    CRITICAL FORMATTING & LANGUAGE RULES:
+    - All section headers MUST be uppercase (e.g. ABOUT THE ROLE, KEY RESPONSIBILITIES, REQUIREMENTS, WHAT WE OFFER). Place blank lines before and after headers to create vertical spacing. Do NOT use markdown formatting (like `**`, `#`, `##`, or italic styling).
+    - If the client's prompt/document is in Vietnamese, generate both title and description in Vietnamese.
+    - If the client's prompt/document is in English, generate both title and description in English.
+    CRITICAL BUDGET & TIMELINE EXCLUSION RULE:
+    - You MUST NOT include any section, header, or text for Budget, Compensation, Timeline, or Duration inside the 'description' plain text body (e.g. do NOT include headers like BUDGET, TIMELINE, ESTIMATED BUDGET, ESTIMATED DURATION, or bullet points like "Estimated budget: 10,000 GC", "Estimated duration: 1 month", or "Competitive salary in GigCoins").
+    - Extract all budget, salary, and timeline information ONLY into the dedicated structured JSON response fields ('budget_min', 'budget_max', and 'estimated_duration').
 8. Determine the expected budget in GC (GigCoins, the platform currency) for the job:
    CRITICAL BUDGET CONVERSION & ADHERENCE RULE (1 GC = 1,000 VND):
    - If the client prompt or attached document states an explicit budget in VND / VNĐ / triệu VNĐ, you MUST convert it to GigCoins (GC) using the exact rate: 1 GC = 1,000 VND.
