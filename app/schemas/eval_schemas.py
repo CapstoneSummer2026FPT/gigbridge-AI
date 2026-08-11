@@ -75,6 +75,10 @@ class JobPostEvalResponse(BaseModel):
     taxonomy_match_ok: bool
     budget_clamped_ok: bool
     duration_clamped_ok: bool
+    skill_recall: float = Field(default=0.0, description="Skill recall score (0.0 - 100.0%)")
+    skill_precision: float = Field(default=0.0, description="Skill precision score (0.0 - 100.0%)")
+    f1_score: float = Field(default=0.0, description="F1-score (0.0 - 100.0%)")
+    budget_variance_gc: float = Field(default=0.0, description="Budget clamping variance in GC")
     summary_html: str
 
 

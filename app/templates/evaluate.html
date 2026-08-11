@@ -353,11 +353,20 @@
                 });
 
                 const data = await res.json();
-                document.getElementById('jp-recall-val').innerText = '93.5%';
-                document.getElementById('jp-precision-val').innerText = '90.0%';
-                document.getElementById('jp-f1-val').innerText = '91.7%';
-                document.getElementById('jp-budget-val').innerText = data.budget_clamped_ok ? '✓ 100% (0 GC)' : '✕ Variance';
-                document.getElementById('jobpost-summary-box').innerHTML = data.summary_html;
+                if (res.ok) {
+                    document.getElementById('jp-recall-val').innerText = data.skill_recall.toFixed(1) + '%';
+                    document.getElementById('jp-precision-val').innerText = data.skill_precision.toFixed(1) + '%';
+                    document.getElementById('jp-f1-val').innerText = data.f1_score.toFixed(1) + '%';
+                    
+                    if (data.budget_clamped_ok) {
+                        document.getElementById('jp-budget-val').innerHTML = '✓ 100% (0 GC)';
+                    } else {
+                        document.getElementById('jp-budget-val').innerHTML = '✕ Variance (' + data.budget_variance_gc.toFixed(2) + ' GC)';
+                    }
+                    document.getElementById('jobpost-summary-box').innerHTML = data.summary_html;
+                } else {
+                    alert('Job Post evaluation failed: ' + (data.detail || 'Unknown error'));
+                }
             } catch (err) {
                 alert('Job Post evaluation failed: ' + err);
             } finally {

@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import json
+import os
+import re
+from pathlib import Path
 from dataclasses import dataclass
 from typing import List, Dict, Any
 
@@ -109,11 +113,64 @@ JOB_POST_BENCHMARKS: List[JobPostBenchmarkCase] = [
 ]
 
 
+# Taxonomy lookup dictionaries
+_taxonomy_loaded = False
+majors_by_id: Dict[str, str] = {}
+categories_by_id: Dict[str, str] = {}
+skills_by_id: Dict[str, str] = {}
+
+
+def load_taxonomy_if_needed():
+    global _taxonomy_loaded, majors_by_id, categories_by_id, skills_by_id
+    if _taxonomy_loaded:
+        return
+    
+    # Locate categories_skills.jsonl
+    base_dir = Path(__file__).parent.parent
+    jsonl_path = base_dir / "knowledge-base" / "ai-create-job-post" / "categories_skills.jsonl"
+    
+    # Fallback to local execution directory if parent check is different
+    if not jsonl_path.exists():
+        jsonl_path = Path("knowledge-base/ai-create-job-post/categories_skills.jsonl")
+
+    if jsonl_path.exists():
+        try:
+            with open(jsonl_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    item = json.loads(line)
+                    type_val = item.get("type")
+                    if type_val == "major":
+                        majors_by_id[item["major_id"]] = item["name"]
+                    elif type_val == "category":
+                        categories_by_id[item["category_id"]] = item["name"]
+                    elif type_val == "skill":
+                        skills_by_id[item["skill_id"]] = item["name"]
+            _taxonomy_loaded = True
+        except Exception as e:
+            print(f"Error loading taxonomy: {e}")
+
+
 def evaluate_job_post_case(case: JobPostBenchmarkCase, ai_details: dict, ai_hiring_plan: dict) -> dict:
     """Evaluate generation fidelity metrics (Skill Recall, Precision, F1, Budget Clamping Faithfulness)."""
-    ai_skills_raw = set(
-        [s.lower() for s in (ai_details.get("system_skill_ids") or []) + (ai_details.get("custom_skills") or [])]
-    )
+    load_taxonomy_if_needed()
+
+    # Resolve system skill IDs to display names
+    ai_resolved_skills = []
+    system_skill_ids = ai_details.get("system_skill_ids") or []
+    for sid in system_skill_ids:
+        # Translate ID to display name if found, otherwise keep as is
+        name = skills_by_id.get(sid, sid)
+        ai_resolved_skills.append(name.lower())
+    
+    # Add custom skills directly (since they are generated as text)
+    custom_skills = ai_details.get("custom_skills") or []
+    for cs in custom_skills:
+        ai_resolved_skills.append(cs.lower())
+
+    ai_skills_raw = set(ai_resolved_skills)
     expected_skills_raw = set([s.lower() for s in case.expected_skills])
 
     # Compute Skill Recall & Precision
