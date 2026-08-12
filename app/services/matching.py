@@ -245,37 +245,50 @@ class MatchingService:
         )
         if len(query_embeddings) != 1:
             raise RAGException("Embedding provider returned an invalid freelancer embedding.")
+        freelancer_vector = query_embeddings[0]
 
-        retrieval_count = min(settings.MATCHING_RETRIEVAL_LIMIT, len(eligible_ids))
-        result = await asyncio.to_thread(
-            self.chroma.query_documents,
+        stable_ids = [self._job_stable_id(jid) for jid in eligible_ids]
+        existing = await asyncio.to_thread(
+            self.chroma.get_documents,
             collection_name,
-            query_embeddings,
-            retrieval_count,
-            {"job_id": {"$in": eligible_ids}},
+            stable_ids,
         )
-        ids = (result.get("ids") or [[]])[0]
-        metadatas = (result.get("metadatas") or [[]])[0]
-        distances = (result.get("distances") or [[]])[0]
-        if not (len(ids) == len(metadatas) == len(distances) == retrieval_count):
-            raise RAGException("Chroma returned an incomplete retrieval result.")
 
-        eligible = set(eligible_ids)
-        seen: set[str] = set()
-        retrieved: List[tuple[str, float]] = []
-        for stable_id, metadata, distance in zip(ids, metadatas, distances):
-            job_id = (metadata or {}).get("job_id")
+        retrieved_ids = existing.get("ids") if existing.get("ids") is not None else []
+        retrieved_embeddings = existing.get("embeddings") if existing.get("embeddings") is not None else []
+        retrieved_metadatas = existing.get("metadatas") if existing.get("metadatas") is not None else []
+
+        retrieved_map = {}
+        for stable_id, emb, meta in zip(retrieved_ids, retrieved_embeddings, retrieved_metadatas):
+            job_id = (meta or {}).get("job_id")
             if (
                 not job_id
-                or job_id not in eligible
+                or job_id not in eligible_ids
                 or stable_id != self._job_stable_id(job_id)
-                or job_id in seen
+                or job_id in retrieved_map
             ):
                 raise RAGException("Chroma returned an unknown or duplicate job ID.")
-            seen.add(job_id)
-            similarity = max(0.0, min(100.0, (1.0 - float(distance)) * 100.0))
-            retrieved.append((job_id, round(similarity, 2)))
-        return retrieved
+            retrieved_map[job_id] = (stable_id, emb)
+
+        missing = [jid for jid in eligible_ids if jid not in retrieved_map]
+        if missing:
+            raise RAGException(
+                f"Chroma returned an incomplete retrieval result. Missing job profiles: {', '.join(missing)}"
+            )
+
+        retrieved: List[tuple[str, float]] = []
+        for job_id in eligible_ids:
+            _, emb = retrieved_map[job_id]
+            dot_product = sum(a * b for a, b in zip(freelancer_vector, emb))
+            norm_a = math.sqrt(sum(a * a for a in freelancer_vector))
+            norm_b = math.sqrt(sum(b * b for b in emb))
+            similarity = dot_product / (norm_a * norm_b) if norm_a > 0 and norm_b > 0 else 0.0
+            similarity_score = max(0.0, min(100.0, similarity * 100.0))
+            retrieved.append((job_id, round(similarity_score, 2)))
+
+        retrieved.sort(key=lambda item: (-item[1], item[0]))
+        retrieval_count = min(settings.MATCHING_RETRIEVAL_LIMIT, len(eligible_ids))
+        return retrieved[:retrieval_count]
 
     def _evaluate_job_algorithm(
         self,
@@ -552,37 +565,50 @@ class MatchingService:
         )
         if len(query_embeddings) != 1:
             raise RAGException("Embedding provider returned an invalid job embedding.")
+        job_vector = query_embeddings[0]
 
-        retrieval_count = min(settings.MATCHING_RETRIEVAL_LIMIT, len(eligible_ids))
-        result = await asyncio.to_thread(
-            self.chroma.query_documents,
+        stable_ids = [self._stable_id(cid) for cid in eligible_ids]
+        existing = await asyncio.to_thread(
+            self.chroma.get_documents,
             collection_name,
-            query_embeddings,
-            retrieval_count,
-            {"freelancer_id": {"$in": eligible_ids}},
+            stable_ids,
         )
-        ids = (result.get("ids") or [[]])[0]
-        metadatas = (result.get("metadatas") or [[]])[0]
-        distances = (result.get("distances") or [[]])[0]
-        if not (len(ids) == len(metadatas) == len(distances) == retrieval_count):
-            raise RAGException("Chroma returned an incomplete retrieval result.")
 
-        eligible = set(eligible_ids)
-        seen: set[str] = set()
-        retrieved: List[tuple[str, float]] = []
-        for stable_id, metadata, distance in zip(ids, metadatas, distances):
-            candidate_id = (metadata or {}).get("freelancer_id")
+        retrieved_ids = existing.get("ids") if existing.get("ids") is not None else []
+        retrieved_embeddings = existing.get("embeddings") if existing.get("embeddings") is not None else []
+        retrieved_metadatas = existing.get("metadatas") if existing.get("metadatas") is not None else []
+
+        retrieved_map = {}
+        for stable_id, emb, meta in zip(retrieved_ids, retrieved_embeddings, retrieved_metadatas):
+            candidate_id = (meta or {}).get("freelancer_id")
             if (
                 not candidate_id
-                or candidate_id not in eligible
+                or candidate_id not in eligible_ids
                 or stable_id != self._stable_id(candidate_id)
-                or candidate_id in seen
+                or candidate_id in retrieved_map
             ):
                 raise RAGException("Chroma returned an unknown or duplicate freelancer ID.")
-            seen.add(candidate_id)
-            similarity = max(0.0, min(100.0, (1.0 - float(distance)) * 100.0))
-            retrieved.append((candidate_id, round(similarity, 2)))
-        return retrieved
+            retrieved_map[candidate_id] = (stable_id, emb)
+
+        missing = [cid for cid in eligible_ids if cid not in retrieved_map]
+        if missing:
+            raise RAGException(
+                f"Chroma returned an incomplete retrieval result. Missing freelancer profiles: {', '.join(missing)}"
+            )
+
+        retrieved: List[tuple[str, float]] = []
+        for candidate_id in eligible_ids:
+            _, emb = retrieved_map[candidate_id]
+            dot_product = sum(a * b for a, b in zip(job_vector, emb))
+            norm_a = math.sqrt(sum(a * a for a in job_vector))
+            norm_b = math.sqrt(sum(b * b for b in emb))
+            similarity = dot_product / (norm_a * norm_b) if norm_a > 0 and norm_b > 0 else 0.0
+            similarity_score = max(0.0, min(100.0, similarity * 100.0))
+            retrieved.append((candidate_id, round(similarity_score, 2)))
+
+        retrieved.sort(key=lambda item: (-item[1], item[0]))
+        retrieval_count = min(settings.MATCHING_RETRIEVAL_LIMIT, len(eligible_ids))
+        return retrieved[:retrieval_count]
 
     def _evaluate_algorithm(
         self,
