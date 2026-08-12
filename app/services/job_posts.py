@@ -189,6 +189,32 @@ def is_vietnamese(text: str) -> bool:
     return False
 
 
+def _strip_budget_and_timeline_sections(text: str) -> str:
+    """Removes any standalone Budget, Timeline, or Compensation section headers
+    and bullet lines from the generated description text body, keeping core sections intact.
+    """
+    if not text:
+        return text
+
+    # Pattern 1: Section headers and everything until the next uppercase section header or end of text
+    budget_timeline_section_pattern = re.compile(
+        r"(?m)^\s*(?:BUDGET|ESTIMATED BUDGET|TIMELINE|ESTIMATED DURATION|DURATION|BUDGET & TIMELINE|BUDGET AND TIMELINE|COMPENSATION|NGÂN SÁCH|THỜI GIAN DỰ KIẾN)\s*$\n.*?(?=\n\s*[A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĐ][A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĐ\s]{2,}\s*$|\Z)",
+        re.DOTALL | re.IGNORECASE
+    )
+    cleaned = budget_timeline_section_pattern.sub("", text)
+
+    # Pattern 2: Standalone bullet lines mentioning estimated budget, duration, or salary in GigCoins
+    budget_timeline_line_pattern = re.compile(
+        r"(?m)^\s*[-•*]?\s*(?:Estimated budget|Estimated duration|Budget|Duration|Ngân sách|Thời gian|Competitive salary in GigCoins|Lương cạnh tranh|Mức lương).*$\n?",
+        re.IGNORECASE
+    )
+    cleaned = budget_timeline_line_pattern.sub("", cleaned)
+
+    # Clean up double blank lines / trailing whitespace
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+    return cleaned
+
+
 
 class JobPostService:
     """Service handling AI-assisted job description writing workflows"""
@@ -264,6 +290,10 @@ class JobPostService:
             response_data.custom_skills = []
         elif total_system + len(response_data.custom_skills) > 10:
             response_data.custom_skills = response_data.custom_skills[:(10 - total_system)]
+
+        # Sanitize description text to strip redundant budget and timeline sections
+        if response_data.description:
+            response_data.description = _strip_budget_and_timeline_sections(response_data.description)
 
         return response_data
 
