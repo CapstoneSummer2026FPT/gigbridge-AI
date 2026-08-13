@@ -26,7 +26,7 @@ class ChromaDBClient:
         if not ids:
             return {"ids": [], "documents": [], "metadatas": []}
         collection = self.get_or_create_collection(collection_name)
-        return collection.get(ids=ids, include=["documents", "metadatas"])
+        return collection.get(ids=ids, include=["documents", "metadatas", "embeddings"])
 
     def upsert_documents(
         self,

@@ -65,6 +65,7 @@ class GladiaSTTEngine(BaseSTTEngine):
             "bit_depth": 16,
             "sample_rate": settings.AUDIO_DECODE_SAMPLE_RATE,
             "channels": 1,
+            "model": settings.GLADIA_MODEL,
             "language_config": {
                 "languages": languages,
                 "code_switching": code_switching,

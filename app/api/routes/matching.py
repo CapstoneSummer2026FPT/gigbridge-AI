@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from app.api.schemas.base import StandardResponse
 from app.api.schemas.matching import (
+    JobRerankRequest,
+    JobRerankResponse,
     TalentMatchingRequest,
     TalentMatchingResponse,
     TalentRerankRequest,
@@ -61,6 +63,25 @@ async def rerank_talent(
     return StandardResponse(
         success=True,
         message="Talent reranking complete.",
+        data=data,
+        errors=[],
+    )
+
+
+@router.post(
+    "/browse-jobs",
+    response_model=StandardResponse[JobRerankResponse],
+    status_code=status.HTTP_200_OK,
+)
+async def rerank_jobs_for_freelancer(
+    request: JobRerankRequest,
+    service: MatchingService = Depends(get_matching_service),
+):
+    """Score and rank a backend-provided pool of open job posts against a freelancer profile."""
+    data = await service.rerank_jobs_for_freelancer(request)
+    return StandardResponse(
+        success=True,
+        message="Job reranking complete.",
         data=data,
         errors=[],
     )

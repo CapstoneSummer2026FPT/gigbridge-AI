@@ -44,6 +44,8 @@ Based on the client's prompt:
    - You MUST generate the description in either English or Vietnamese (no other languages are allowed).
    - If the client's prompt is written in Vietnamese, generate the description in Vietnamese.
    - If the client's prompt is written in English or any other language, generate the description in English.
+   CRITICAL BUDGET & TIMELINE EXCLUSION RULE:
+   - You MUST NOT include any section, header, or text for Budget, Compensation, Timeline, or Duration inside the 'description' plain text body (e.g. do NOT include headers like BUDGET, TIMELINE, ESTIMATED BUDGET, ESTIMATED DURATION, or bullet points like "Estimated budget: 10,000 GC", "Estimated duration: 1 month", or "Competitive salary in GigCoins").
 8. Generate a list of relevant recruitment/vetting questions (question_recruitment) that the client can ask candidates to assess their fit for this role.
    CRITICAL QUESTION GUIDELINES:
    - You MUST generate EXACTLY 4 questions in total.

@@ -15,6 +15,7 @@ from app.services.job_posts import (
     _clamp_milestone_budgets,
     _clamp_milestone_durations,
     _recalculate_due_dates,
+    _strip_budget_and_timeline_sections,
     format_weeks_to_duration,
     parse_duration_to_weeks,
 )
@@ -233,3 +234,50 @@ class TestRecalculateDueDates:
         # Should parse without error
         result = date.fromisoformat(ms[0].due_date)
         assert result > start
+
+
+# ---------------------------------------------------------------------------
+# _strip_budget_and_timeline_sections
+# ---------------------------------------------------------------------------
+
+class TestStripBudgetAndTimelineSections:
+    def test_strips_budget_section(self):
+        raw_text = (
+            "ABOUT THE ROLE\n"
+            "We are seeking an ASP.NET developer.\n\n"
+            "KEY RESPONSIBILITIES\n"
+            "- Build OTP email verification.\n\n"
+            "BUDGET\n"
+            "- Estimated budget: 10,000 GC.\n"
+            "- Estimated duration: 1 month."
+        )
+        cleaned = _strip_budget_and_timeline_sections(raw_text)
+        assert "BUDGET" not in cleaned
+        assert "10,000 GC" not in cleaned
+        assert "1 month" not in cleaned
+        assert "ABOUT THE ROLE" in cleaned
+        assert "KEY RESPONSIBILITIES" in cleaned
+
+    def test_strips_salary_bullet_line_under_what_we_offer(self):
+        raw_text = (
+            "WHAT WE OFFER\n"
+            "- Competitive salary in GigCoins.\n"
+            "- Flexible working environment."
+        )
+        cleaned = _strip_budget_and_timeline_sections(raw_text)
+        assert "Competitive salary in GigCoins" not in cleaned
+        assert "Flexible working environment" in cleaned
+
+    def test_vietnamese_budget_section(self):
+        raw_text = (
+            "YÊU CẦU CÔNG VIỆC\n"
+            "- Có kinh nghiệm React.\n\n"
+            "NGÂN SÁCH\n"
+            "- Ngân sách dự kiến: 15.000.000 VNĐ.\n"
+            "- Thời gian dự kiến: 2 tuần."
+        )
+        cleaned = _strip_budget_and_timeline_sections(raw_text)
+        assert "NGÂN SÁCH" not in cleaned
+        assert "15.000.000 VNĐ" not in cleaned
+        assert "YÊU CẦU CÔNG VIỆC" in cleaned
+

@@ -55,28 +55,21 @@ class _FakeChroma:
         ]
         return {
             "ids": [item_id for item_id, _ in found],
-            "metadatas": [metadata for _, metadata in found],
+            "metadatas": [value[0] for _, value in found],
+            "embeddings": [value[1] for _, value in found],
         }
 
     def upsert_documents(
         self, collection_name, ids, embeddings, documents, metadatas
     ):
-        del collection_name, embeddings, documents
-        for item_id, metadata in zip(ids, metadatas):
-            self.items[item_id] = metadata
+        del collection_name, documents
+        for item_id, emb, metadata in zip(ids, embeddings, metadatas):
+            self.items[item_id] = (metadata, emb)
 
     def query_documents(
         self, collection_name, query_embeddings, n_results, where
     ):
-        del collection_name, query_embeddings
-        eligible = where["freelancer_id"]["$in"][:n_results]
-        return {
-            "ids": [[f"freelancer:{candidate_id}" for candidate_id in eligible]],
-            "metadatas": [
-                [{"freelancer_id": candidate_id} for candidate_id in eligible]
-            ],
-            "distances": [[0.1 for _ in eligible]],
-        }
+        return {"ids": [[]], "metadatas": [[]], "distances": [[]]}
 
 
 class OllamaEmbeddingTests(unittest.TestCase):

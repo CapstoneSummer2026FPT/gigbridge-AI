@@ -21,39 +21,31 @@ class FakeChroma:
 
     def get_documents(self, collection_name, ids):
         del collection_name
+        if self.force_outsider:
+            return {
+                "ids": ["freelancer:outsider", "freelancer:profile-01"],
+                "documents": ["outsider doc", "profile-01 doc"],
+                "metadatas": [
+                    {"freelancer_id": "outsider"},
+                    {"freelancer_id": "profile-01"},
+                ],
+                "embeddings": [[0.1, 0.2], [0.9, 0.0]],
+            }
         found = [(item_id, self.items[item_id]) for item_id in ids if item_id in self.items]
         return {
             "ids": [item_id for item_id, _ in found],
             "documents": [value[0] for _, value in found],
             "metadatas": [value[1] for _, value in found],
+            "embeddings": [value[2] for _, value in found],
         }
 
     def upsert_documents(self, collection_name, ids, embeddings, documents, metadatas):
-        del collection_name, embeddings
-        for item_id, document, metadata in zip(ids, documents, metadatas):
-            self.items[item_id] = (document, metadata)
+        del collection_name
+        for item_id, emb, document, metadata in zip(ids, embeddings, documents, metadatas):
+            self.items[item_id] = (document, metadata, emb)
 
     def query_documents(self, collection_name, query_embeddings, n_results, where):
-        del collection_name, query_embeddings
-        eligible = where["freelancer_id"]["$in"]
-        if self.force_outsider:
-            return {
-                "ids": [["freelancer:outsider", "freelancer:profile-01"]],
-                "metadatas": [[
-                    {"freelancer_id": "outsider"},
-                    {"freelancer_id": "profile-01"},
-                ]],
-                "distances": [[0.1, 0.2]],
-            }
-        ranked = sorted(
-            eligible,
-            key=lambda item: self.distance_by_candidate.get(item, 0.25),
-        )[:n_results]
-        return {
-            "ids": [[f"freelancer:{item}" for item in ranked]],
-            "metadatas": [[{"freelancer_id": item} for item in ranked]],
-            "distances": [[self.distance_by_candidate.get(item, 0.25) for item in ranked]],
-        }
+        return {"ids": [[]], "metadatas": [[]], "distances": [[]]}
 
 
 def build_request() -> TalentRerankRequest:
@@ -93,9 +85,22 @@ def build_request() -> TalentRerankRequest:
 
 def make_service(chroma=None):
     rag = MagicMock()
-    rag.get_embeddings = AsyncMock(
-        side_effect=lambda texts, **kwargs: [[0.1, 0.2] for _ in texts]
-    )
+    def mock_get_embeddings(texts, **kwargs):
+        vectors = []
+        for text in texts:
+            if text.startswith("Job requirements"):
+                vectors.append([1.0, 0.0])
+            elif text.startswith("Talent profile"):
+                if "C# API Developer" in text:
+                    vectors.append([0.9, 0.4358898943540674])
+                elif "Backend Developer" in text:
+                    vectors.append([0.65, 0.7599342076785332])
+                else:
+                    vectors.append([0.1, 0.2])
+            else:
+                vectors.append([0.1, 0.2])
+        return vectors
+    rag.get_embeddings = AsyncMock(side_effect=mock_get_embeddings)
     return MatchingService(
         rag_service=rag,
         chroma_client=chroma or FakeChroma(),
