@@ -61,6 +61,12 @@ class RankOrder(BaseModel):
         description="The order of relevance of chunks, from most relevant to least relevant, by chunk id number"
     )
 
+class RelevanceCheck(BaseModel):
+    related: bool = Field(description="True if the message is related to GigBridge; False otherwise.")
+    topic: str = Field(description="The main topic/subject of the query in the user's language.")
+    language: str = Field(description="The language of the user's message: 'vi' or 'en'.")
+
+
 class RAGService:
     """Service coordinates custom RAG pipelines (indexing, embeddings, retrieval, and reranking)"""
     
@@ -466,6 +472,43 @@ IMPORTANT: Respond ONLY with the precise knowledgebase query, nothing else.
             except Exception:
                 return question
 
+    async def check_relevance(self, question: str, history: List[Dict[str, str]] = []) -> RelevanceCheck:
+        """Check if the question is related to GigBridge."""
+        system_prompt = """You are a classifier for the GigBridge assistant.
+Determine if the user's message is a query or statement related to the company GigBridge, its services, features, platform, job posts, talent matching, candidate vetting, or content in the GigBridge knowledge base.
+Greeting messages (like "hello", "hi", "xin chào") or questions about what you can do/what is your purpose are considered RELATED.
+General knowledge questions, history, coding questions not about GigBridge, arithmetic, or requests about unrelated subjects are UNRELATED.
+
+You must respond ONLY with a JSON object matching this schema:
+{
+  "related": true/false,
+  "topic": "the main topic/subject of the query in the user's language, e.g. 'sự kiện Thiên An Môn' or 'what happened in Tiananmen'",
+  "language": "vi" (Vietnamese) or "en" (English)
+}
+"""
+        history_str = json.dumps(history) if history else "[]"
+        user_prompt = f"Conversation History:\n{history_str}\n\nUser Question:\n{question}"
+        
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        
+        try:
+            response = await acompletion(model=self.qa_model, messages=messages, response_format=RelevanceCheck)
+            reply = response.choices[0].message.content
+            return RelevanceCheck.model_validate_json(reply)
+        except Exception as e:
+            logger.warning(f"Relevance check with {self.qa_model} failed: {e}. Trying fallback {self.fallback_model}...")
+            try:
+                response = await acompletion(model=self.fallback_model, messages=messages, response_format=RelevanceCheck)
+                reply = response.choices[0].message.content
+                return RelevanceCheck.model_validate_json(reply)
+            except Exception as e2:
+                logger.error(f"Relevance check failed completely: {e2}. Defaulting to related=True.")
+                is_vi = any(char in "áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđĐ" for char in question)
+                return RelevanceCheck(related=True, topic="", language="vi" if is_vi else "en")
+
     async def rerank(self, question: str, chunks: List[Result], final_k: int = 10) -> List[Result]:
         """
         Rerank retrieved chunks by relevance using LLM ranking order.
@@ -587,6 +630,26 @@ Reply only with the list of ranked chunk ids, nothing else. Include all the chun
 
         if config is None:
             config = AnswerConfig()
+
+        if config.response_format is None:
+            rel = await self.check_relevance(question, config.history)
+            if not rel.related:
+                topic = rel.topic or ("this topic" if rel.language == "en" else "chủ đề này")
+                if rel.language == "vi":
+                    answer = f"Xin lỗi, nhưng tôi không có thông tin nào về {topic}. Tôi chỉ có thể cung cấp thông tin liên quan đến GigBridge. Nếu bạn có câu hỏi nào về GigBridge, hãy cho tôi biết!"
+                else:
+                    answer = f"Sorry, but I don't have any information about {topic}. I can only provide information related to GigBridge. If you have any questions about GigBridge, please let me know!"
+                
+                total_time = (time.perf_counter() - start_time) * 1000.0
+                return AnswerResult(
+                    answer=answer,
+                    sources=[],
+                    latency_ms=total_time,
+                    retrieval_time_ms=0.0,
+                    llm_time_ms=total_time,
+                    prompt_tokens=0,
+                    completion_tokens=0
+                )
 
         # 1. RETRIEVAL PHASE
         retrieval_start = time.perf_counter()
