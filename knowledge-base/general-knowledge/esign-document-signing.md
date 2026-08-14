@@ -20,15 +20,21 @@ The review step shows the document code/ID, title, creation and expiration infor
 
 ---
 
-## 2. Signature Capture
+## 2. Interactive Signature Field Placement & Canvas Capture
 
-The capture experience offers supported methods such as drawing, typing, or initials. The signer can clear and replace the current mark before confirmation. Already-signed documents suppress another signing submission and direct the user to the recorded status.
+The signature interface includes:
+- **Signature Field Placement**: Visual overlay allowing signers to position, resize, or inspect dedicated signature boxes directly on PDF document pages.
+- **Canvas Signature Pad**: HTML5 drawing pad supporting freehand signature drawing, typed signatures with stylized fonts, or saved digital signature images.
+- **html2pdf Rendering**: Renders the complete legal contract contract into vector-accurate PDF pages with embedded CSS layout.
 
 ---
 
-## 3. Confirmation & Audit Context
+## 3. Digital Certificate & Audit Hash Generation
 
-Before final submission, the page previews the selected signature and identifies the signing user and timestamp/device audit context. It explicitly explains that the action is legally binding. The signer must confirm the final action; incomplete capture or expired/ineligible documents cannot be submitted.
+Before final submission, the system generates:
+- **SHA-256 Signature Hash**: Cryptographic hash embedding user ID, timestamp, IP address, and signature coordinates into the PDF document metadata.
+- **Digital Audit Trail Certificate**: Generates a tamper-evident audit log appended to the PDF file.
+- **Automated Mail Dispatch**: Dispatches signed PDF contract copies to both Client and Freelancer email addresses upon final multi-party completion.
 
 ---
 

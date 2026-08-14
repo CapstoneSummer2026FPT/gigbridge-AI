@@ -47,7 +47,9 @@ The wizard summary shows title, budget, duration, question count, and milestone 
 
 ## 4. AI-Assisted Detail Generation
 
-When Instant Job Detail mode and Client Premium are available, the Client can describe the requirement to the AI service. The service may propose structured job fields, milestones, or vetting questions.
+When Instant Job Detail mode and Client Premium are available, the Client can describe the requirement to the AI service. The AI service includes support for:
+- **Attachment File Extraction**: Uploaded spec documents/PDFs are parsed into text and passed into the AI prompt context to generate highly detailed Job Descriptions and accurate title suggestions.
+- **Dynamic GigCoin Equivalent Calculation**: Calculates budget suggestions and GigCoin equivalents based on taxonomy, skill complexity, and scope without requiring manual budget input in the generation prompt.
 
 Generated details open in a review modal. The Client must inspect and accept/edit them; AI generation does not bypass form validation, create escrow, or publish the job automatically.
 
