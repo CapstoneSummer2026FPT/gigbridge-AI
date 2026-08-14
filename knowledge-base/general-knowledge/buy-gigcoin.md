@@ -22,9 +22,12 @@ Selecting a card highlights it and populates the purchase summary. The purchase 
 
 ---
 
-## 2. Current Button Behavior
+## 2. Integrated Wallet Checkout & PayOS Gateway Flow
 
-The page shows a short processing state and then navigates back. It does not call the wallet API, create a provider checkout, or credit GigCoin. Although the screen displays a “Secure payment powered by Stripe” note, the current component contains no Stripe integration. These package values should therefore not be presented as completed purchases or authoritative exchange pricing.
+Package purchases connect directly to the platform's payment gateway (PayOS):
+- **PayOS Checkout Integration**: Selecting a package generates a PayOS payment link in VND (converted at 1 GigCoin = 1,000 VND exchange rate).
+- **Automated Ledger Credit**: Upon payment completion signal from PayOS webhook, the user's GigCoin balance is automatically credited.
+- **Transaction Audit Logging**: Logged in `/wallet/history` with PayOS order reference code and receipt confirmation.
 
 ---
 

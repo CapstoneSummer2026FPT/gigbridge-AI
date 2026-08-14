@@ -39,5 +39,5 @@ def test_evaluate_dashboard_endpoint():
     client = TestClient(app)
     response = client.get("/evaluate")
     assert response.status_code == 200
-    assert "RAG & AI Evidence Evaluation Dashboard" in response.text
+    assert "GigBridge AI Microservice Evaluation Dashboard" in response.text
 

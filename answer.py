@@ -76,6 +76,49 @@ class RankOrder(BaseModel):
         description="The order of relevance of chunks, from most relevant to least relevant, by chunk id number"
     )
 
+class RelevanceCheck(BaseModel):
+    related: bool = Field(description="True if the message is related to GigBridge; False otherwise.")
+    topic: str = Field(description="The main topic/subject of the query in the user's language.")
+    language: str = Field(description="The language of the user's message: 'vi' or 'en'.")
+
+def check_relevance(question: str, history: list[dict] = []) -> RelevanceCheck:
+    """Check if the question is related to GigBridge."""
+    system_prompt = """You are a classifier for the GigBridge assistant.
+Determine if the user's message is a query or statement related to the company GigBridge, its services, features, platform, job posts, talent matching, candidate vetting, or content in the GigBridge knowledge base.
+Greeting messages (like "hello", "hi", "xin chào") or questions about what you can do/what is your purpose are considered RELATED.
+General knowledge questions, history, coding questions not about GigBridge, arithmetic, or requests about unrelated subjects are UNRELATED.
+
+You must respond ONLY with a JSON object matching this schema:
+{
+  "related": true/false,
+  "topic": "the main topic/subject of the query in the user's language, e.g. 'sự kiện Thiên An Môn' or 'what happened in Tiananmen'",
+  "language": "vi" (Vietnamese) or "en" (English)
+}
+"""
+    history_str = str(history) if history else "[]"
+    user_prompt = f"Conversation History:\n{history_str}\n\nUser Question:\n{question}"
+    
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
+    
+    try:
+        response = completion(model=MODEL, messages=messages, response_format=RelevanceCheck)
+        reply = response.choices[0].message.content
+        return RelevanceCheck.model_validate_json(reply)
+    except Exception as e:
+        print(f"Warning: Relevance check with {MODEL} failed ({e}). Trying fallback {FALLBACK_MODEL}...")
+        try:
+            response = completion(model=FALLBACK_MODEL, messages=messages, response_format=RelevanceCheck)
+            reply = response.choices[0].message.content
+            return RelevanceCheck.model_validate_json(reply)
+        except Exception as e2:
+            print(f"Error: Relevance check failed completely ({e2}). Defaulting to related=True.")
+            is_vi = any(char in "áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđĐ" for char in question)
+            return RelevanceCheck(related=True, topic="", language="vi" if is_vi else "en")
+
+
 @retry(
     wait=wait_exponential(multiplier=1, min=10, max=240),
     stop=stop_after_attempt(5),
@@ -216,6 +259,16 @@ def answer_question(question: str, history: list[dict] = [], style: str = "preci
     """
     Answer a question using RAG and return the answer and the retrieved context
     """
+    # Relevance check to filter off-topic questions
+    rel = check_relevance(question, history)
+    if not rel.related:
+        topic = rel.topic or ("this topic" if rel.language == "en" else "chủ đề này")
+        if rel.language == "vi":
+            answer = f"Xin lỗi, nhưng tôi không có thông tin nào về {topic}. Tôi chỉ có thể cung cấp thông tin liên quan đến GigBridge. Nếu bạn có câu hỏi nào về GigBridge, hãy cho tôi biết!"
+        else:
+            answer = f"Sorry, but I don't have any information about {topic}. I can only provide information related to GigBridge. If you have any questions about GigBridge, please let me know!"
+        return answer, []
+
     if style == "fast":
         chunks = fetch_context_unranked(question)[:5]
         context = "\n\n".join(

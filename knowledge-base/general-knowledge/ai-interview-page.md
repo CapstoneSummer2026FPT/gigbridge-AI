@@ -43,12 +43,13 @@ The page releases the microphone and recording resources after each capture or c
 
 ---
 
-## 4. Transcript Review & Submission
+## 4. Transcript Review, Gladia STT & Anti-Cheating Monitoring
 
-- The transcribed answer appears in a review field.
-- **Record Again** discards the current transcript and returns to the idle recording state.
-- **Submit Answer** requires non-empty transcript text and sends the confirmed text to the session.
-- After success, the next question loads and plays automatically.
+- **Gladia STT Engine**: Audio blobs are transcribed using Gladia Speech-to-Text for ultra-fast, multi-lingual accuracy with custom phonetic hotword resolution.
+- **ElevenLabs TTS**: Streams high-fidelity voice playback for interview question audio.
+- **Anti-Cheating Tab-out Detection**: Tracks candidate window focus and tab switching during active interview sessions. Excessive tab-outs or browser unfocus events are logged to `/admin/cheating` for recruiter compliance review.
+- **Record Again**: Discards the current transcript and resets recording state.
+- **Submit Answer**: Submits confirmed transcript text to advance the interview session.
 - When the service reports completion, the page moves to the Results stage.
 
 Submitting the transcript—not merely recording audio—is what advances the interview.
