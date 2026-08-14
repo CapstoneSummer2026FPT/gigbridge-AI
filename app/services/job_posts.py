@@ -227,6 +227,21 @@ def _strip_budget_and_timeline_sections(text: str) -> str:
 
 
 
+def resolve_canonical_budget(budget_min: float | None, budget_max: float | None) -> float:
+    """Calculates the integer-rounded average budget if both min and max are present,
+    or falls back to max / min if only one is provided.
+    """
+    b_min = float(budget_min) if (budget_min is not None and float(budget_min) > 0) else None
+    b_max = float(budget_max) if (budget_max is not None and float(budget_max) > 0) else None
+    if b_min is not None and b_max is not None:
+        return float(round((b_min + b_max) / 2.0))
+    if b_max is not None:
+        return float(round(b_max))
+    if b_min is not None:
+        return float(round(b_min))
+    return 0.0
+
+
 class JobPostService:
     """Service handling AI-assisted job description writing workflows"""
     
@@ -324,7 +339,7 @@ class JobPostService:
             f"- You MUST generate all text fields (vetting questions and milestone fields) strictly in {target_lang}."
         )
 
-        approved_budget = request.budget_max or request.budget_min or 0.0
+        approved_budget = resolve_canonical_budget(request.budget_min, request.budget_max)
         approved_weeks = parse_duration_to_weeks(request.estimated_duration or "")
 
         # Build explicit numeric constraint block so the LLM has exact targets
