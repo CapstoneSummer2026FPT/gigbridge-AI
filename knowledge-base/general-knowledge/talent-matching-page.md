@@ -62,11 +62,11 @@ The interface explains the weighting as **45% skill match, 35% track record, and
 
 ---
 
-## 5. Invitations & Attribution
+## 5. Invitations, Attribution & Match Event Feedback
 
-Opening a matched profile, saving a match, or sending an invitation can record attribution to the match run. The invitation modal can start with the selected job already chosen.
+Opening a matched profile, saving a candidate, or sending an invitation logs a `record_talent_match_event` feedback payload to the AI recommendation engine (`gigbridge-AI`). This feedback updates model scoring parameters based on client interactions (clicks, saves, hires, ignores). The invitation modal opens pre-populated with the selected job.
 
-Invited status means an invitation was sent; proposal, negotiation, final offer, and contract steps are still required.
+Invited status indicates an active invitation dispatch; proposal submission, screening, contract negotiation, and e-sign signing are still required to complete hiring.
 
 ---
 
