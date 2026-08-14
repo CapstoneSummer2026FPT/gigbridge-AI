@@ -78,70 +78,81 @@ def format_weeks_to_duration(weeks: float) -> str:
 
 
 def _clamp_milestone_budgets(milestones: list, approved_budget: float) -> None:
-    """Scale milestone amounts so they sum to exactly approved_budget.
+    """Scale milestone amounts so they sum to EXACTLY approved_budget.
     Operates in-place. No-op when approved_budget <= 0 or list is empty.
     """
     if not milestones or approved_budget <= 0:
         return
 
+    approved_budget = round(approved_budget, 2)
     total = sum(m.amount for m in milestones)
     if total <= 0:
-        # Distribute evenly when LLM produced zeros
+        # Distribute evenly when LLM produced zeros or non-positive amounts
         per = round(approved_budget / len(milestones), 2)
         for m in milestones:
             m.amount = per
-        # Fix rounding drift on last milestone
         milestones[-1].amount = round(
             approved_budget - sum(m.amount for m in milestones[:-1]), 2
         )
         return
-
-    if abs(total - approved_budget) < 0.01:
-        return  # already correct
 
     # Proportional scaling
     scale = approved_budget / total
     for m in milestones[:-1]:
         m.amount = round(m.amount * scale, 2)
 
-    # Assign remainder to last milestone to absorb rounding drift
+    # Assign exact remainder to last milestone to absorb any decimal rounding drift
     milestones[-1].amount = round(
         approved_budget - sum(m.amount for m in milestones[:-1]), 2
     )
-    # Guard against a negative last milestone (extreme edge case)
     if milestones[-1].amount < 0:
         milestones[-1].amount = 0.0
 
 
 def _clamp_milestone_durations(milestones: list, approved_weeks: float) -> None:
-    """Scale milestone estimated_duration strings so their total does not exceed
-    approved_weeks.  Operates in-place.  No-op when approved_weeks <= 0.
+    """Scale milestone estimated_duration strings so their total equals EXACTLY
+    approved_weeks. Operates in-place. No-op when approved_weeks <= 0.
     """
     if not milestones or approved_weeks <= 0:
         return
 
+    target_weeks = max(len(milestones), round(approved_weeks))
     individual_weeks = [
-        parse_duration_to_weeks(m.estimated_duration) for m in milestones
+        max(1.0, parse_duration_to_weeks(m.estimated_duration)) for m in milestones
     ]
     total_weeks = sum(individual_weeks)
 
-    if total_weeks <= approved_weeks:
-        for m, mw in zip(milestones, individual_weeks):
-            if mw > 0:
-                m.estimated_duration = format_weeks_to_duration(mw)
-        return  # already within limit
+    if total_weeks <= 0:
+        per = max(1, target_weeks // len(milestones))
+        for m in milestones:
+            m.estimated_duration = format_weeks_to_duration(per)
+        rem = target_weeks - (per * (len(milestones) - 1))
+        milestones[-1].estimated_duration = format_weeks_to_duration(max(1, rem))
+        return
 
-    # Proportional scale-down
-    scale = approved_weeks / total_weeks
-    remaining = approved_weeks
-    for i, (m, mw) in enumerate(zip(milestones, individual_weeks)):
-        if i < len(milestones) - 1:
-            new_weeks = max(1.0, mw * scale)
-            remaining -= new_weeks
-            m.estimated_duration = format_weeks_to_duration(new_weeks)
-        else:
-            # Last milestone absorbs the remainder so total == approved_weeks
-            m.estimated_duration = format_weeks_to_duration(max(1.0, remaining))
+    # Scale proportionally
+    scaled_weeks = []
+    for mw in individual_weeks[:-1]:
+        w = max(1, round(mw * target_weeks / total_weeks))
+        scaled_weeks.append(w)
+
+    last_w = target_weeks - sum(scaled_weeks)
+    if last_w < 1:
+        # Rebalance if last milestone gets less than 1 week
+        needed = 1 - last_w
+        last_w = 1
+        for i in range(len(scaled_weeks) - 1, -1, -1):
+            if scaled_weeks[i] > 1:
+                deduct = min(needed, scaled_weeks[i] - 1)
+                scaled_weeks[i] -= deduct
+                needed -= deduct
+                if needed <= 0:
+                    break
+
+    scaled_weeks.append(last_w)
+
+    for m, w in zip(milestones, scaled_weeks):
+        m.estimated_duration = format_weeks_to_duration(w)
 
 
 def _recalculate_due_dates(milestones: list, start: date) -> None:
