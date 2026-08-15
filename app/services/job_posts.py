@@ -395,13 +395,8 @@ class JobPostService:
             # total weeks never exceeds the approved project timeline.
             _clamp_milestone_durations(response_data.milestones, approved_weeks)
 
-            # Step 4: Recalculate due dates sequentially starting strictly AFTER proposal_closing_date.
-            closing_iso = convert_date_to_iso(request.proposal_closing_date)
-            try:
-                start_date = date.fromisoformat(closing_iso)
-            except Exception:
-                start_date = date.today() + timedelta(days=14)
-
+            # Step 4: Recalculate due dates sequentially starting strictly from current day (today).
+            start_date = date.today()
             _recalculate_due_dates(response_data.milestones, start_date)
 
         compulsory_question = "Bạn có bao nhiêu kinh nghiệm cho vai trò này?" if target_lang == "Vietnamese" else "How many experiences do you have for this role?"
