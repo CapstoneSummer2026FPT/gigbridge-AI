@@ -118,6 +118,9 @@ class GradedQuestion(BaseModel):
     candidate_answer: str = Field(..., description="The raw answer provided by the candidate")
     score: int = Field(..., ge=0, le=100, description="Score on a scale of 0 to 100")
     feedback: str = Field(..., description="Short justification highlighting strengths and gaps")
+    is_ai_generated: bool = Field(default=False, description="True if answer shows high confidence AI generation traits")
+    ai_confidence_score: float = Field(default=0.0, ge=0.0, le=1.0, description="AI confidence rating from 0.0 (Human) to 1.0 (AI)")
+    ai_detection_reason: str = Field(default="", description="Specific AI markers or human authenticity traits identified")
 
 
 class InterviewFeedback(BaseModel):
@@ -128,7 +131,11 @@ class InterviewFeedback(BaseModel):
     recommended_hire: bool = Field(..., description="Final hiring recommendation")
     holistic_adjustment: int = Field(default=0, ge=-15, le=15, description="Holistic score modifier (-15 to +15)")
     holistic_adjustment_reason: str = Field(default="", description="Explanation for the holistic adjustment")
+    is_ai_generated: bool = Field(default=False, description="True if candidate answers are flagged as AI-generated")
+    ai_confidence_score: float = Field(default=0.0, ge=0.0, le=1.0, description="Overall proposal AI confidence score (0.0 to 1.0)")
+    ai_detection_summary: str = Field(default="", description="Overall summary of candidate authenticity and AI generation flags")
     graded_questions: List[GradedQuestion] = Field(default_factory=list, description="List of individual question grades and details")
+
 
 
 class InterviewQuestionResponse(BaseModel):
