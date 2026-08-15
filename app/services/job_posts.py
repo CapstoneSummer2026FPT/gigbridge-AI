@@ -342,6 +342,14 @@ class JobPostService:
         approved_budget = resolve_canonical_budget(request.budget_min, request.budget_max)
         approved_weeks = parse_duration_to_weeks(request.estimated_duration or "")
 
+        max_proposal_date = date.today() + timedelta(days=21)
+        raw_closing = convert_date_to_iso(request.proposal_closing_date)
+        try:
+            parsed_closing = date.fromisoformat(raw_closing)
+            clamped_closing = min(parsed_closing, max_proposal_date).isoformat()
+        except Exception:
+            clamped_closing = max_proposal_date.isoformat()
+
         # Build explicit numeric constraint block so the LLM has exact targets
         constraint_block = (
             f"\n\nHARD CONSTRAINTS — these are code-enforced and must not be violated:\n"
@@ -349,7 +357,8 @@ class JobPostService:
             f" (budget_min={request.budget_min}, budget_max={request.budget_max})\n"
             f"- Total milestone duration MUST NOT exceed {approved_weeks:.1f} weeks"
             f" ({request.estimated_duration})\n"
-            f"- Each individual milestone duration must be expressed as 'N weeks' (integer only)."
+            f"- Each individual milestone duration must be expressed as 'N weeks' (integer only).\n"
+            f"- Proposal closing date MUST NOT exceed 3 weeks (21 days) from today (max: {clamped_closing})."
         )
 
         combined_prompt = (
@@ -395,13 +404,8 @@ class JobPostService:
             # total weeks never exceeds the approved project timeline.
             _clamp_milestone_durations(response_data.milestones, approved_weeks)
 
-            # Step 4: Recalculate due dates sequentially starting strictly AFTER proposal_closing_date.
-            closing_iso = convert_date_to_iso(request.proposal_closing_date)
-            try:
-                start_date = date.fromisoformat(closing_iso)
-            except Exception:
-                start_date = date.today() + timedelta(days=14)
-
+            # Step 4: Recalculate due dates sequentially starting strictly from current day (today).
+            start_date = date.today()
             _recalculate_due_dates(response_data.milestones, start_date)
 
         compulsory_question = "Bạn có bao nhiêu kinh nghiệm cho vai trò này?" if target_lang == "Vietnamese" else "How many experiences do you have for this role?"
