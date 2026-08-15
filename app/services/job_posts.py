@@ -342,6 +342,14 @@ class JobPostService:
         approved_budget = resolve_canonical_budget(request.budget_min, request.budget_max)
         approved_weeks = parse_duration_to_weeks(request.estimated_duration or "")
 
+        max_proposal_date = date.today() + timedelta(days=21)
+        raw_closing = convert_date_to_iso(request.proposal_closing_date)
+        try:
+            parsed_closing = date.fromisoformat(raw_closing)
+            clamped_closing = min(parsed_closing, max_proposal_date).isoformat()
+        except Exception:
+            clamped_closing = max_proposal_date.isoformat()
+
         # Build explicit numeric constraint block so the LLM has exact targets
         constraint_block = (
             f"\n\nHARD CONSTRAINTS — these are code-enforced and must not be violated:\n"
@@ -349,7 +357,8 @@ class JobPostService:
             f" (budget_min={request.budget_min}, budget_max={request.budget_max})\n"
             f"- Total milestone duration MUST NOT exceed {approved_weeks:.1f} weeks"
             f" ({request.estimated_duration})\n"
-            f"- Each individual milestone duration must be expressed as 'N weeks' (integer only)."
+            f"- Each individual milestone duration must be expressed as 'N weeks' (integer only).\n"
+            f"- Proposal closing date MUST NOT exceed 3 weeks (21 days) from today (max: {clamped_closing})."
         )
 
         combined_prompt = (

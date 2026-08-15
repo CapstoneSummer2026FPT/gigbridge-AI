@@ -32,6 +32,8 @@ Based on the provided context:
    - description: A brief summary of the scope and expected results for this milestone. (Mô tả, e.g. "Thiết kế và duyệt các màn hình chính").
    - deliverables: Specifically list the files, features, or products the freelancer must hand over. (Sản phẩm bàn giao, e.g. "Tệp Figma và đặc tả giao diện responsive").
    - acceptance_criteria: The criteria the client will use to review and approve the milestone deliverables. (Tiêu chí nghiệm thu).
-   CRITICAL LANGUAGE RULE:
-   - If the client's prompt is written in Vietnamese, generate all milestone fields (title, estimated_duration, description, deliverables, acceptance_criteria) in Vietnamese.
-   - If the client's prompt is written in English or any other language, generate these fields in English.
+    CRITICAL PROPOSAL CLOSING DATE CONSTRAINT:
+    - The proposal closing date / deadline for receiving candidate applications MUST NOT exceed 3 weeks (21 days) from today's reference date ({{ current_date }}).
+    CRITICAL LANGUAGE RULE:
+    - If the client's prompt is written in Vietnamese, generate all milestone fields (title, estimated_duration, description, deliverables, acceptance_criteria) in Vietnamese.
+    - If the client's prompt is written in English or any other language, generate these fields in English.
