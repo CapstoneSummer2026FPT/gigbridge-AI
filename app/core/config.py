@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     LOCAL_MODEL_NAME: str = Field(default="llama3.2")
 
     # RAG Settings
-    CHROMA_DB_PATH: str = Field(default="./chroma_db")
+    CHROMA_DB_PATH: str = Field(default="./data/chroma_db")
     EMBEDDING_MODEL: str = Field(default="text-embedding-3-large")
     MATCHING_EMBEDDING_PROVIDER: str = Field(default="local")
     MATCHING_EMBEDDING_MODEL: str = Field(default="text-embedding-3-large")

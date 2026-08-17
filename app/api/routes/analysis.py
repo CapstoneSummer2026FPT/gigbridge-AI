@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, status
-from app.api.schemas.base import StandardResponse
-from app.api.schemas.analysis import AnalysisRequest, AnalysisResponse
-from app.services.analysis import AnalysisService, get_analysis_service
+from app.schemas.base import StandardResponse
+from app.schemas.analysis import AnalysisRequest, AnalysisResponse
+from app.services.job_posts.analysis import AnalysisService, get_analysis_service
 
 router = APIRouter(prefix="/analysis")
 

@@ -16,8 +16,8 @@ import logging
 import secrets
 from fastapi.responses import StreamingResponse
 
-from app.api.schemas.base import StandardResponse
-from app.api.schemas.interviews import (
+from app.schemas.base import StandardResponse
+from app.schemas.interviews import (
     StartInterviewRequest,
     SubmitAnswerRequest,
     ConfirmAnswerRequest,
@@ -43,7 +43,7 @@ from app.core.exceptions import (
     InvalidSessionDataError,
     SessionAccessDeniedError,
 )
-from app.services.audio_processor import AudioProcessor
+from app.services.audio.audio_processor import AudioProcessor
 from app.services.interviews import InterviewService, get_interview_service
 
 router = APIRouter(prefix="/interviews")

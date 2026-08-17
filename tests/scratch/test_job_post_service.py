@@ -5,7 +5,7 @@ import os
 # Adjust path to import app modules correctly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.api.schemas.job_posts import JobPostGenerationRequest
+from app.schemas.job_posts import JobPostGenerationRequest
 from app.services.job_posts import get_job_post_service
 
 async def test_generation():

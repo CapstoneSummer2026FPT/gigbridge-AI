@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from app.api.schemas.base import StandardResponse
-from app.api.schemas.matching import (
+from app.schemas.base import StandardResponse
+from app.schemas.matching import (
     JobRerankRequest,
     JobRerankResponse,
     TalentMatchingRequest,
