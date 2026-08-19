@@ -53,3 +53,7 @@ class JobPostService(JobPostBaseService):
 def get_job_post_service() -> JobPostService:
     """Dependency injection helper returning instance of JobPostService."""
     return JobPostService()
+
+
+from app.services.job_posts.analysis import AnalysisService, get_analysis_service
+
