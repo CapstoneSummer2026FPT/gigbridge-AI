@@ -39,6 +39,7 @@ async def lifespan(_: FastAPI):
     finally:
         await shutdown()
 
+# Multi-node Load Balanced AI Microservice Instance
 app = FastAPI(
     title="GigBridge AI Service",
     description="Stand-alone Microservice providing NLP and AI intelligence to GigBridge platform.",
@@ -241,7 +242,7 @@ async def validate_voice_dependencies():
 
 async def shutdown():
     """Clean up resources on shutdown."""
-    from app.services.voice import _voice_service
+    from app.services.audio.voice import _voice_service
     from app.services.interviews import _interview_service
 
     if _interview_service is not None:

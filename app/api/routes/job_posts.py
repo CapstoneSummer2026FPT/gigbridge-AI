@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status
-from app.api.schemas.base import StandardResponse
-from app.api.schemas.job_posts import (
+from app.schemas.base import StandardResponse
+from app.schemas.job_posts import (
     JobPostGenerationRequest,
     JobPostDetailsGenerationResponse,
     JobPostHiringPlanGenerationRequest, JobPostHiringPlanGenerationResponse
