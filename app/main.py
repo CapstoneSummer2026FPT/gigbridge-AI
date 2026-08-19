@@ -39,6 +39,7 @@ async def lifespan(_: FastAPI):
     finally:
         await shutdown()
 
+# Multi-node Load Balanced AI Microservice Instance
 app = FastAPI(
     title="GigBridge AI Service",
     description="Stand-alone Microservice providing NLP and AI intelligence to GigBridge platform.",
