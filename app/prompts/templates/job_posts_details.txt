@@ -60,23 +60,25 @@ Based on the client's prompt:
     - Extract all budget, salary, and timeline information ONLY into the dedicated structured JSON response fields ('budget_min', 'budget_max', and 'estimated_duration').
 8. Determine the expected budget in GC (GigCoins, the platform currency) for the job:
    CRITICAL BUDGET CONVERSION & ADHERENCE RULE (1 GC = 1,000 VND):
-   - If the client prompt or attached document states an explicit budget in VND / VNĐ / triệu VNĐ, you MUST convert it to GigCoins (GC) using the exact rate: 1 GC = 1,000 VND.
+   - If the client prompt or attached document states an explicit single budget in VND / VNĐ / triệu VNĐ or GC, you MUST convert it to GigCoins (GC) using the exact rate: 1 GC = 1,000 VND.
      - Example: "15 triệu VNĐ" or "15.000.000 VNĐ" = 15,000.0 GC. Set budget_min = 15000.0, budget_max = 15000.0.
-     - Example: "20 triệu VNĐ" = 20,000.0 GC. Set budget_min = 20000.0, budget_max = 20000.0.
-     - Example: If a range is stated in VND (e.g., "10 - 15 triệu VNĐ"), set budget_min = 10000.0 and budget_max = 15000.0.
-   - If the prompt specifies a budget in GC (e.g., "500 GC"), use that exact GC value (e.g., budget_min = 500.0, budget_max = 500.0).
-   - If a range in GC is stated (e.g., "300 - 500 GC"), set budget_min = 300.0 and budget_max = 500.0.
-   - Do NOT override an explicit budget stated in the user's prompt or document with an AI estimate.
+     - Example: "500 GC" = 500.0 GC. Set budget_min = 500.0, budget_max = 500.0.
+   CRITICAL BUDGET RANGE AVERAGE RULE:
+   - If the client prompt or attached document states an explicit budget RANGE (in VND or GC), you MUST calculate the AVERAGE of the range `(min + max) / 2` and set BOTH `budget_min` AND `budget_max` EQUAL to this average value:
+     - Example: Range "10 - 15 triệu VNĐ" -> Average = 12.5 triệu VNĐ = 12,500.0 GC. Set budget_min = 12500.0, budget_max = 12500.0.
+     - Example: Range "300 - 500 GC" -> Average = 400.0 GC. Set budget_min = 400.0, budget_max = 400.0.
+   - Do NOT override an explicit budget or budget range stated in the user's prompt or document with an AI estimate.
    CRITICAL AUTO-ESTIMATION "AS CHEAP AS POSSIBLE" RULE:
-   - If NO budget is mentioned in the prompt or document, you MUST estimate the budget in GC based on complexity using an ultra-lean "AS CHEAP AS POSSIBLE" strategy (minimizing client cost to the lowest viable market range):
+   - If NO budget is mentioned in the prompt or document, you MUST estimate the budget in GC based on complexity using a lean "AS CHEAP AS POSSIBLE" strategy:
      - Small / simple tasks (bug fix, script, single UI component, minor tweak): set budget_min = 100.0, budget_max = 1000.0 GC.
      - Medium complexity tasks (landing page, API endpoint, backend service module): set budget_min = 300.0, budget_max = 5000.0 GC.
-     - Large / complex / MVP projects (full system MVP, AI integration, complex web application): set budget_min = 1000.0, budget_max = 20000.0 GC (do NOT exceed 3000-5000 GC unless explicitly requested by the user).
-9. Estimate a sensible duration/timeline for the project, set "estimated_duration" in format "N weeks" or "N months" (e.g., "1 week", "2 weeks", "3 weeks", "1 month"):
-   - Do NOT override an explicit timeline stated in the user's prompt or document.
-   CRITICAL AUTO-ESTIMATION "AS FAST AS POSSIBLE" RULE:
-   - If NO timeline is mentioned in the prompt or document, you MUST estimate duration using an ultra-fast "AS FAST AS POSSIBLE" strategy:
+     - Large / complex / MVP projects (full system MVP, AI integration, complex web application): set budget_min = 1000.0, budget_max = 20000.0 GC.
+9. Estimate a sensible duration/timeline for the project, set "estimated_duration" in format "N weeks" or "N months" (e.g., "1 week", "2 weeks", "3 weeks", "1 month", "2 months"):
+   CRITICAL EXPLICIT TIMELINE RULE:
+   - If the client prompt or attached document explicitly specifies a duration or deadline (e.g., "2 weeks", "1 month", "3 tháng"), you MUST take that exact user-specified timeline as estimated_duration.
+   CRITICAL AUTO-ESTIMATION TIMELINE RULE:
+   - If NO timeline is mentioned in the prompt or document, you MUST estimate duration based on project complexity:
      - Small / simple tasks: set estimated_duration = "1 week".
-     - Medium complexity tasks: set estimated_duration = "1 week".
-     - Large / complex / MVP projects: set estimated_duration = "2 weeks" or "3 weeks" (maximum "1 month" or sooner).
+     - Medium complexity tasks: set estimated_duration = "1 week" or "2 weeks".
+     - Large / complex / MVP projects: can be months (e.g., set estimated_duration = "1 month", "2 months", or "3 months" depending on scope complexity).
    - Must follow standard formats that can be parsed by `parseJobDuration` (like "N weeks", "N months", etc.).
