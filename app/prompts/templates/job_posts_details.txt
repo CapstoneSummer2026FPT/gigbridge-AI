@@ -69,9 +69,9 @@ Based on the client's prompt:
    - Do NOT override an explicit budget stated in the user's prompt or document with an AI estimate.
    CRITICAL AUTO-ESTIMATION "AS CHEAP AS POSSIBLE" RULE:
    - If NO budget is mentioned in the prompt or document, you MUST estimate the budget in GC based on complexity using an ultra-lean "AS CHEAP AS POSSIBLE" strategy (minimizing client cost to the lowest viable market range):
-     - Small / simple tasks (bug fix, script, single UI component, minor tweak): set budget_min = 100.0, budget_max = 300.0 GC.
-     - Medium complexity tasks (landing page, API endpoint, backend service module): set budget_min = 300.0, budget_max = 1000.0 GC.
-     - Large / complex / MVP projects (full system MVP, AI integration, complex web application): set budget_min = 1000.0, budget_max = 3000.0 GC (do NOT exceed 3000-5000 GC unless explicitly requested by the user).
+     - Small / simple tasks (bug fix, script, single UI component, minor tweak): set budget_min = 100.0, budget_max = 1000.0 GC.
+     - Medium complexity tasks (landing page, API endpoint, backend service module): set budget_min = 300.0, budget_max = 5000.0 GC.
+     - Large / complex / MVP projects (full system MVP, AI integration, complex web application): set budget_min = 1000.0, budget_max = 20000.0 GC (do NOT exceed 3000-5000 GC unless explicitly requested by the user).
 9. Estimate a sensible duration/timeline for the project, set "estimated_duration" in format "N weeks" or "N months" (e.g., "1 week", "2 weeks", "3 weeks", "1 month"):
    - Do NOT override an explicit timeline stated in the user's prompt or document.
    CRITICAL AUTO-ESTIMATION "AS FAST AS POSSIBLE" RULE:
