@@ -17,6 +17,24 @@ class DeterministicCalculator:
     """Executes verifiable mathematical aggregation on LLM qualitative feature outputs."""
 
     @staticmethod
+    def _parse_duration_to_weeks(duration_str: str | None) -> float:
+        if not duration_str:
+            return 0.0
+        import re
+        lower = duration_str.lower().strip()
+        match = re.search(r'(\d+(\.\d+)?)', lower)
+        if not match:
+            return 0.0
+        val = float(match.group(1))
+        if 'month' in lower:
+            return val * 4.0
+        if 'day' in lower:
+            return val / 7.0
+        if 'week' in lower:
+            return val
+        return val
+
+    @staticmethod
     def calculate(
         llm_eval: LLMQualitativeEvaluation,
         baseline: JobPostBaselineDto,
@@ -35,6 +53,14 @@ class DeterministicCalculator:
             savings_ratio = 0.0
         savings_ratio_percent = round(savings_ratio * 100.0, 2)
         v_sav = min(100.0, savings_ratio_percent)
+
+        # 2b. Timeline Variance Percentage Calculation
+        b_weeks = DeterministicCalculator._parse_duration_to_weeks(baseline.estimated_duration)
+        p_weeks = DeterministicCalculator._parse_duration_to_weeks(proposal.proposed_duration)
+        if b_weeks > 0.0 and p_weeks > 0.0:
+            timeline_variance_percent = round(((b_weeks - p_weeks) / b_weeks) * 100.0, 2)
+        else:
+            timeline_variance_percent = None
 
         # 3. Deterministic Scope Completeness Calculation
         requirements = llm_eval.requirement_fulfillment
@@ -134,6 +160,7 @@ class DeterministicCalculator:
             is_milestone_clamped=is_milestone_clamped,
             savings_ratio=savings_ratio,
             savings_ratio_percent=savings_ratio_percent,
+            timeline_variance_percent=timeline_variance_percent,
             scope_completeness_percent=scope_completeness_percent,
             pillar_scores=pillar_scores,
             overall_technical_quality_tq=tq,

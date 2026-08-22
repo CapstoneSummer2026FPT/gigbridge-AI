@@ -82,6 +82,7 @@ class DeterministicCalculations(BaseModel):
     is_milestone_clamped: bool = Field(..., description="True if milestone_total matches proposed_budget")
     savings_ratio: float = Field(..., ge=0.0, le=1.0, description="Savings ratio as a float between 0.0 and 1.0")
     savings_ratio_percent: float = Field(..., description="Savings percentage vs client budget max (0.0 to 100.0%)")
+    timeline_variance_percent: Optional[float] = Field(None, description="Percentage variance: >0 faster, <0 slower, 0 on schedule")
     scope_completeness_percent: float = Field(..., ge=0.0, le=100.0, description="Percentage of client requirements fulfilled")
     pillar_scores: PillarScores
     overall_technical_quality_tq: float = Field(..., ge=0.0, le=100.0, description="Overall Technical Quality (0.0 to 100.0)")
