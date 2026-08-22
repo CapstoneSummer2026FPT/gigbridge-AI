@@ -10,8 +10,8 @@ load_dotenv()
 # Adjust path to import app modules correctly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.api.schemas.job_posts import JobPostGenerationRequest, JobPostGenerationResponse
-from app.api.schemas.rag import AnswerResult
+from app.schemas.job_posts import JobPostGenerationRequest, JobPostGenerationResponse
+from app.schemas.rag import AnswerResult
 from app.services.job_posts import JobPostService, get_job_post_service
 from app.core.exceptions import AIServerException
 

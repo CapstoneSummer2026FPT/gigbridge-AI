@@ -2,8 +2,11 @@ import logging
 import asyncio
 from contextlib import asynccontextmanager
 
+from pathlib import Path
+import psutil
 import redis.asyncio as aioredis
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
+from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
 
@@ -11,9 +14,10 @@ from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.security import verify_api_key
 from app.core.rate_limit import limiter, rate_limit_exceeded_handler
-from app.api.routes import job_posts, interviews, matching, analysis, rag
+from app.api.routes import job_posts, interviews, matching, analysis, rag, evaluation_api
 
 logger = logging.getLogger("ai_server")
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -35,6 +39,7 @@ async def lifespan(_: FastAPI):
     finally:
         await shutdown()
 
+# Multi-node Load Balanced AI Microservice Instance
 app = FastAPI(
     title="GigBridge AI Service",
     description="Stand-alone Microservice providing NLP and AI intelligence to GigBridge platform.",
@@ -88,6 +93,22 @@ app.include_router(
     tags=["RAG Knowledge Base"],
     dependencies=[Depends(verify_api_key)]
 )
+app.include_router(
+    evaluation_api.router,
+    prefix="/api/ai",
+    tags=["RAG & AI Evidence Evaluation"]
+)
+
+templates_dir = Path(__file__).parent / "templates"
+templates = Jinja2Templates(directory=str(templates_dir))
+
+
+@app.get("/evaluate", tags=["RAG & AI Evidence Evaluation"])
+async def render_evaluate_dashboard(request: Request):
+    """Render the native HTML5 RAG & AI Evidence Evaluation Dashboard."""
+    return templates.TemplateResponse(request=request, name="evaluate.html")
+
+
 
 
 async def validate_voice_dependencies():
@@ -221,7 +242,7 @@ async def validate_voice_dependencies():
 
 async def shutdown():
     """Clean up resources on shutdown."""
-    from app.services.voice import _voice_service
+    from app.services.audio.voice import _voice_service
     from app.services.interviews import _interview_service
 
     if _interview_service is not None:
@@ -235,6 +256,8 @@ async def shutdown():
 @app.get("/health", tags=["Health"])
 async def health_check():
     """Service health status endpoint."""
+    mem = psutil.virtual_memory()
+    proc = psutil.Process()
     return {
         "success": True,
         "message": "GigBridge AI Microservice is running.",
@@ -245,6 +268,11 @@ async def health_check():
             "google_creds_configured": bool(settings.GOOGLE_APPLICATION_CREDENTIALS),
             "stt_primary": settings.STT_PRIMARY_PROVIDER,
             "tts_primary": settings.TTS_PRIMARY_PROVIDER,
+            "system_ram_used_gb": round(mem.used / (1024**3), 2),
+            "system_ram_total_gb": round(mem.total / (1024**3), 2),
+            "system_ram_percent": round(mem.percent, 1),
+            "ai_process_ram_mb": round(proc.memory_info().rss / (1024**2), 1),
         },
         "errors": [],
     }
+

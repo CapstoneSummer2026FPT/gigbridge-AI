@@ -14,7 +14,7 @@ from app.core.config import settings
 from app.core.exceptions import VoiceProviderException
 from app.clients.voice.stt_engine.base import BaseSTTEngine
 from app.clients.voice.models import TranscriptionResult
-from app.services.audio_chunker import AudioChunker
+from app.services.audio.audio_chunker import AudioChunker
 
 logger = logging.getLogger("ai_server.voice.faster_whisper")
 

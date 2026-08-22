@@ -5,7 +5,7 @@ import os
 # Adjust path to import app modules correctly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.api.schemas.rag import AnswerConfig, RetrievalGroup
+from app.schemas.rag import AnswerConfig, RetrievalGroup
 from app.services.rag import get_rag_service
 
 async def test_retrieval():

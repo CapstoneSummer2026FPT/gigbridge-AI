@@ -6,7 +6,7 @@ description: "Master catalog mapping all functional screens and pages in the Gig
 
 # Master Page Directory
 
-The GigBridge web application contains **60 unique screens** serving different roles (Guests, Onboarded Users, Freelancers, Clients, and Administrators). Each page has specific routes and functional responsibilities.
+The GigBridge web application contains **73 unique screens** serving different roles (Guests, Onboarded Users, Freelancers, Clients, and Administrators). Each page has specific routes and functional responsibilities.
 
 ---
 
@@ -18,11 +18,12 @@ The GigBridge web application contains **60 unique screens** serving different r
 - **FAQ Page (`/faq`)**: Interactive list answering questions on fees, contracts, payments, and account security.
 - **User Guide (`/guide`)**: Step-by-step onboarding walkthroughs for freelancers and clients.
 - **Press Kit Page (`/press-kit`)**: Media guidelines, logo links, and hex codes for official brand colors.
-- **Market Insights (`/market-insights`)**: Live trends on active developer niches (left empty).
+- **Market Insights (`/market-insights`)**: Live trends on active developer niches.
 - **Login (`/auth/login`)**: Sign-in portal using email and password.
 - **Signup (`/auth/signup`)**: Platform registration where users choose either "Client" or "Freelancer" role.
 - **Forgot Password (`/auth/forgot-password`)**: Portal to request a password reset email token.
 - **Reset Password (`/auth/reset-password` or `/api/Auth/reset-password`)**: Form to input and save a new account password using verification tokens.
+- **Google Meet Callback (`/integrations/google-meet/callback`)**: OAuth 2.0 redirect callback endpoint for Google Calendar/Meet video integration.
 
 ---
 
@@ -47,6 +48,7 @@ The GigBridge web application contains **60 unique screens** serving different r
 - **Manage Content (`/profile/manage-content`)**: Specialized editor to modify portfolio URLs, skill list, and upload resumes.
 - **Freelancer Premium Dashboard (`/premium/freelancer` or `/premium/freelancer/points` / `/premium/freelancer/rank-protection` / `/premium/freelancer/promotions` / `/premium/freelancer/history`)**: Manage premium points, buy promotions, review points history, and view active rank protection.
 - **Freelancer Pricing (`/premium/freelancer/pricing`)**: Purchase points/premium tiers using GigCoins.
+- **Elo Rating History (`/elo`)**: Personal Elo score breakdown, rank tier status, point adjustment log, and penalty appeal filing.
 
 ---
 
@@ -54,7 +56,7 @@ The GigBridge web application contains **60 unique screens** serving different r
 
 - **Client Dashboard (`/client/dashboard`)**: Displays active hiring posts, matching candidates, and active contracts.
 - **Post Job Guide (`/jobs/post/guide`)**: Contextual instructions advising clients how to structure job posts to attract talent.
-- **Post Job Form (`/jobs/post`)**: Input details for a new job post (title, description, budget, required skills, and screening questions).
+- **Post Job Form (`/jobs/post`)**: Input details for a new job post (title, description, budget, required skills, and screening questions). Supports attaching files into AI prompt.
 - **Create Post Job Contract (`/jobs/post/contract`)**: Link standard contract templates to the job post.
 - **Create Post Job E-Sign (`/jobs/post/esign` or `/jobs/post/contract/esign`)**: Configure e-sign policies and authorization rules.
 - **Edit Job Post (`/jobs/:id/edit`)**: Modify details of an open position.
@@ -71,11 +73,12 @@ The GigBridge web application contains **60 unique screens** serving different r
 - **Create Contract (`/contracts/create/:proposalId`)**: Pre-populates fields based on the proposal to set up milestones and sign rules.
 - **View Contract (`/contracts/:contractId`)**: Visual page showing legal clauses, total budget, freelancer information, and milestone list.
 - **Sign Contract Workflow (`/contracts/:contractId/sign`)**: Initiates verification before signing.
-- **Esign Pad (`/contracts/:contractId/documents/:documentId/sign`)**: Sign screen containing a HTML5 canvas drawing pad for digital signatures.
+- **Esign Document Signing (`/contracts/:contractId/documents/:documentId/sign`)**: Interactive PDF signing screen with html2pdf rendering, drag-and-drop signature field placement, and HTML5 canvas signature pad.
 - **Manage Milestones (`/contracts/:contractId/milestones`)**: Detail view of milestone status (Not Started, Funded, Pending Approval, Released).
 - **Approve Milestone (`/contracts/:contractId/milestones/:milestoneId/approve`)**: Client page to authorize milestone fund release.
 - **Submit Deliverable (`/contracts/:contractId/deliverables/:milestoneId`)**: Freelancer portal to upload deliverable files or code URLs.
-- **Create Dispute (`/contracts/:contractId/disputes/create`)**: Dispute filing form to log complaints, explain issue details, and attach proof files.
+- **My Disputes (`/disputes`)**: Dashboard listing all active, in-review, and closed contract disputes for the user.
+- **Dispute Detail (`/contracts/:contractId/disputes/:disputeId`)**: Dispute filing and evidence inspection workspace.
 
 ---
 
@@ -89,39 +92,42 @@ The GigBridge web application contains **60 unique screens** serving different r
 
 ## 7. AI & Market Features
 
-- **AI Interview (`/ai-interview`)**: Portal conducting mock video/voice interviews utilizing ElevenLabs Text-to-Speech and Whisper Speech-to-Text.
-- **Talent Matching (`/talent-matching`)**: Advanced candidate search page showing matching recommendations ranked by vector similarity.
+- **AI Assistant (`/ai-assistant` / Global Drawer)**: Global AI helper for platform navigation, RAG knowledge retrieval, and action execution.
+- **AI Interview (`/ai-interview` / `/ai-interview/:jobPostId`)**: Conducts mock video/voice interviews utilizing Gladia Speech-to-Text and ElevenLabs Text-to-Speech engines, featuring anti-cheating tab-out detection.
+- **Talent Matching (`/talent-matching`)**: Advanced candidate search page displaying recommendations ranked by vector similarity with feedback event tracking (`record_talent_match_event`).
 
 ---
 
 ## 8. Wallet, Payments & Settings
 
-- **Settings (`/settings`)**: Interface to toggle notifications, change language preferences, or enable Two-Factor Authentication.
+- **Settings (`/settings`)**: Interface to toggle notifications, change language preferences, manage Google Meet OAuth integrations, or enable Two-Factor Authentication.
 - **Wallet Deposit (`/wallet/deposit`)**: Deposit VND via local cards or bank transfers.
 - **Mock Checkout (`/wallet/mock-checkout`)**: Local sandbox card terminal simulator.
 - **Wallet History (`/wallet/history`)**: Chronological transaction statements.
 - **Upload Payment Proof (`/wallet/payment-proof/:transactionId`)**: Receipt proof upload form for manual deposit approval.
-- **Withdrawals (`/wallet/withdrawals`)**: Initiate early payout or manual bank withdrawals.
-- **Buy Gigcoin (`/buy-gigcoin`)**: Purchase token credits.
+- **Withdrawals (`/wallet/withdrawals` / `/wallet/early-payout`)**: Initiate early payout or manual bank withdrawals.
+- **Buy Gigcoin (`/buy-gigcoin`)**: Purchase token credits with updated equivalent rates and payment gateway options.
 - **Subscription Management (`/subscription`)**: View active plan and switch tiers.
-- **Financial Overview (`/financial-overview`)**: Profit/loss dashboards.
+- **Financial Overview (`/financial-overview`)**: Profit/loss dashboards and transaction auditing.
 
 ---
 
 ## 9. Admin Panel Screens (Admin Role Required)
 
 - **Admin Dashboard (`/admin`)**: Summary of system metrics (total commissions, active users, escrow status).
-- **Admin Users (`/admin/users`)**: Search and moderate user profiles (suspend, ban, verify).
-- **Admin Jobs (`/admin/jobs`)**: Review and audit public postings.
-- **Admin Contracts (`/admin/contracts` or `/admin/contract-audit`)**: Tracks contract audit trails.
+- **Admin Users (`/admin/users` & `/admin/users/:userId`)**: Search, preview drawer, identity verification (KYC), and moderate user profiles (suspend, ban).
+- **Admin Jobs (`/admin/jobs`)**: Review public postings, audit AI-generated listings, and enforce take-down policies.
+- **Admin Proposals (`/admin/proposals` & `/admin/proposals/:proposalId`)**: Audit submitted bids and applicant screening answers.
+- **Admin Contracts (`/admin/contracts` or `/admin/contract-audit`)**: Audit active/archived contracts, PDF documents, and SHA-256 e-sign hashes.
+- **Admin E-Sign Contracts (`/admin/contracts/esign`)**: Repository of e-sign document contracts.
 - **Admin Assets (`/admin/assets`)**: Manage platform images, icons, and static assets.
-- **Admin Contract Templates (`/admin/contract-templates`)**: Standardize legal clauses.
+- **Admin Contract Templates (`/admin/contract-templates`)**: Standardize legal clauses and digital signature templates.
 - **Admin FAQ Management (`/admin/faq-management`)**: Edit and publish questions and answers.
-- **Admin Ads Packages (`/admin/ads-packages`)**: Set rates for promotions.
-- **Admin Dispute Management (`/admin/disputes`)**: Admin dashboard to audit deliverables, review workspace chat history, and distribute escrow funds.
-- **Admin Reports (`/admin/reports`)**: Access analytics.
-- **Admin Feedback (`/admin/feedback`)**: Review moderation.
-- **Admin System Tracking (`/admin/system-tracking`)**: Logging backend API errors and performance metrics.
-- **Admin Revenue (`/admin/revenue` or `/admin/system-finance`)**: Statement of platform commission income.
-- **Admin Withdrawals (`/admin/withdrawals`)**: Review and approve user bank withdrawal requests.
-- **Admin Cheating (`/admin/cheating`)**: Monitor candidate browser tab-out logs during AI interviews.
+- **Admin Dispute Management (`/admin/disputes`)**: Administrative dashboard to audit deliverables, review workspace chat history, and issue binding escrow rulings.
+- **Admin Reports (`/admin/reports`, `/admin/reports/accounts/:reportId`, `/admin/reports/contracts/:reportId`)**: Moderation queue for user account and contract violation reports.
+- **Admin Reviews (`/admin/reviews`)**: Review moderation.
+- **Admin System Tracking (`/admin/system-tracking` / `/admin/audit-logs`)**: Real-time logging of backend API errors, API throughput, and system audit logs.
+- **Admin Withdrawals (`/admin/withdrawals`)**: Review and approve user bank withdrawal requests and payout receipts.
+- **Admin Elo Overview (`/admin/elo`, `/admin/elo/history`)**: System-wide Elo analytics, point distribution, and adjustment logs.
+- **Admin Elo Appeals (`/admin/elo/appeals`, `/admin/elo/appeals/:appealId`)**: Moderation inbox to review and approve/reject user Elo penalty appeals.
+
