@@ -97,8 +97,8 @@ def test_mathematical_tq_rounding():
     # Pillar 5: 0.60(95.0) + 0.40(90.0) = 93.0
     assert result.pillar_scores.authenticity_fluff == 93.0
 
-    # TQ = 0.35(84.25) + 0.30(92.0) + 0.20(58.0) + 0.10(96.0) + 0.05(93.0) = 29.4875 + 27.6 + 11.6 + 9.6 + 4.65 = 82.94
-    assert result.overall_technical_quality_tq == 82.94
+    # TQ = 0.35(84.25) + 0.30(92.0) + 0.20(58.0) + 0.15(96.0) = 29.4875 + 27.6 + 11.6 + 14.4 = 83.09
+    assert result.overall_technical_quality_tq == 83.09
     assert result.quality_interpretation_band == "Strong"
 
 

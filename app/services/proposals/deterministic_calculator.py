@@ -78,17 +78,17 @@ class DeterministicCalculator:
         v_time = llm_eval.timeline_feasibility.score
         p3 = round(0.50 * v_sav + 0.30 * v_price + 0.20 * v_time, 2)
 
-        # 7. Pillar 4: Milestone Scope & Deliverables Score (10% weight)
+        # 7. Pillar 4: Milestone Scope & Deliverables Score (15% weight)
         m_struct = llm_eval.milestone_structure.score
         p4 = round(0.60 * scope_completeness_percent + 0.40 * m_struct, 2)
 
-        # 8. Pillar 5: Authenticity & Fluff Control Score (5% weight)
+        # 8. Detailed Metric: Authenticity & Fluff Control Score (Demoted from top pillars to detailed analysis)
         a_spec = llm_eval.project_specificity.score
         a_conc = llm_eval.substance_density.score
         p5 = round(0.60 * a_spec + 0.40 * a_conc, 2)
 
-        # 9. Overall Technical Quality (TQ) Score (0.0 to 100.0)
-        tq = round(0.35 * p1 + 0.30 * p2 + 0.20 * p3 + 0.10 * p4 + 0.05 * p5, 2)
+        # 9. Overall Technical Quality (TQ) Score (4-Pillar Recruiter Decision Model: 35% P1 + 30% P2 + 20% P3 + 15% P4)
+        tq = round(0.35 * p1 + 0.30 * p2 + 0.20 * p3 + 0.15 * p4, 2)
 
         # 10. Capped Value Score (VS) (0.0 to 100.0)
         raw_vs = tq * (1.0 + savings_ratio * 0.5)
