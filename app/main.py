@@ -14,7 +14,7 @@ from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.security import verify_api_key
 from app.core.rate_limit import limiter, rate_limit_exceeded_handler
-from app.api.routes import job_posts, interviews, matching, analysis, rag, evaluation_api
+from app.api.routes import job_posts, interviews, matching, analysis, rag, evaluation_api, candidate_judging_api
 
 logger = logging.getLogger("ai_server")
 
@@ -97,6 +97,11 @@ app.include_router(
     evaluation_api.router,
     prefix="/api/ai",
     tags=["RAG & AI Evidence Evaluation"]
+)
+app.include_router(
+    candidate_judging_api.router,
+    prefix="/api/ai",
+    tags=["Candidate Evaluation Engine"]
 )
 
 templates_dir = Path(__file__).parent / "templates"
