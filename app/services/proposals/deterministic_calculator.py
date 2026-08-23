@@ -54,13 +54,16 @@ class DeterministicCalculator:
         savings_ratio_percent = round(savings_ratio * 100.0, 2)
         v_sav = min(100.0, savings_ratio_percent)
 
-        # 2b. Timeline Variance Percentage Calculation
+        # 2b. Timeline Variance & Time Savings Ratio Calculation
         b_weeks = DeterministicCalculator._parse_duration_to_weeks(baseline.estimated_duration)
         p_weeks = DeterministicCalculator._parse_duration_to_weeks(proposal.proposed_duration)
         if b_weeks > 0.0 and p_weeks > 0.0:
             timeline_variance_percent = round(((b_weeks - p_weeks) / b_weeks) * 100.0, 2)
+            # Duration savings score: 100 on schedule, bonus when faster, reduced when longer
+            v_time_sav = min(100.0, max(0.0, 100.0 + timeline_variance_percent))
         else:
             timeline_variance_percent = None
+            v_time_sav = 100.0
 
         # 3. Deterministic Scope Completeness Calculation
         requirements = llm_eval.requirement_fulfillment
@@ -102,7 +105,7 @@ class DeterministicCalculator:
         # 6. Pillar 3: Financial & Timeline Value Score (20% weight)
         v_price = llm_eval.pricing_realism.score
         v_time = llm_eval.timeline_feasibility.score
-        p3 = round(0.50 * v_sav + 0.30 * v_price + 0.20 * v_time, 2)
+        p3 = round(0.30 * v_sav + 0.20 * v_time_sav + 0.30 * v_price + 0.20 * v_time, 2)
 
         # 7. Pillar 4: Milestone Scope & Deliverables Score (15% weight)
         m_struct = llm_eval.milestone_structure.score
