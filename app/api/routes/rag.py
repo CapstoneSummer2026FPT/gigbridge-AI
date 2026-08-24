@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status
-from app.api.schemas.base import StandardResponse
-from app.api.schemas.rag import QueryRequest, QueryResponse, IngestRequest, IngestResponse, SourceDoc, AnswerConfig
+from app.schemas.base import StandardResponse
+from app.schemas.rag import QueryRequest, QueryResponse, IngestRequest, IngestResponse, SourceDoc, AnswerConfig
 from app.services.rag import RAGService, get_rag_service
 
 router = APIRouter(prefix="/rag")

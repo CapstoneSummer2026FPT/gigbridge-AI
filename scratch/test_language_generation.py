@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO)
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), "../.env"))
 
-from app.api.schemas.job_posts import JobPostGenerationRequest
+from app.schemas.job_posts import JobPostGenerationRequest
 from app.services.job_posts import get_job_post_service
 
 async def run_test(prompt: str, test_name: str):

@@ -16,8 +16,8 @@ from app.schemas.eval_schemas import (
     FunctionBenchmarkResult,
     MultiFunctionEvalResponse,
 )
-from app.services.evaluator import EvidenceEvaluatorService
-from evaluation.eval import evaluate_all_retrieval, evaluate_all_answers
+from app.services.rag.evaluator import EvidenceEvaluatorService
+from evaluation.benchmarks.eval import evaluate_all_retrieval, evaluate_all_answers
 
 router = APIRouter()
 _evaluator_service = EvidenceEvaluatorService()
@@ -104,7 +104,7 @@ async def evaluate_evidence(payload: EvidenceEvalRequest):
         raise HTTPException(status_code=500, detail=f"Evidence evaluation failed: {exc}")
 
 
-from evaluation.benchmark_job_posts import (
+from evaluation.benchmarks.benchmark_job_posts import (
     JOB_POST_BENCHMARKS,
     load_taxonomy_if_needed,
     majors_by_id,
@@ -112,7 +112,8 @@ from evaluation.benchmark_job_posts import (
     skills_by_id,
     evaluate_job_post_case
 )
-from app.services.job_posts import parse_duration_to_weeks
+from app.services.job_posts import JobPostBaseService
+parse_duration_to_weeks = JobPostBaseService.parse_duration_to_weeks
 import re
 
 def find_best_matching_case(prompt: str):
@@ -402,7 +403,7 @@ def generate_comparison_html(
 @router.post("/eval/job-post", response_model=JobPostEvalResponse, tags=["RAG Evaluation"])
 async def run_job_post_eval(payload: JobPostEvalRequest):
     """Mimic real user behavior: Generate AI Job Details & Hiring Plan, evaluating taxonomy matching & budget clamping."""
-    from app.api.schemas.job_posts import JobPostGenerationRequest, JobPostHiringPlanGenerationRequest
+    from app.schemas.job_posts import JobPostGenerationRequest, JobPostHiringPlanGenerationRequest
     from app.services.job_posts import get_job_post_service
 
     service = get_job_post_service()
@@ -503,12 +504,12 @@ async def run_job_post_eval(payload: JobPostEvalRequest):
 @router.post("/eval/multi-function", response_model=MultiFunctionEvalResponse, tags=["RAG Evaluation"])
 async def run_multi_function_eval():
     """Run full task-appropriate multi-function benchmark evaluation across all 4 core AI functions."""
-    from evaluation.benchmark_job_posts import JOB_POST_BENCHMARKS, evaluate_job_post_case
-    from evaluation.benchmark_matching import evaluate_candidate_matching_suite, evaluate_job_matching_suite
-    from evaluation.benchmark_chatbot import evaluate_chatbot_suite
-    from evaluation.benchmark_interviews import evaluate_interview_suite
+    from evaluation.benchmarks.benchmark_job_posts import JOB_POST_BENCHMARKS, evaluate_job_post_case
+    from evaluation.benchmarks.benchmark_matching import evaluate_candidate_matching_suite, evaluate_job_matching_suite
+    from evaluation.benchmarks.benchmark_chatbot import evaluate_chatbot_suite
+    from evaluation.benchmarks.benchmark_interviews import evaluate_interview_suite
     from app.services.job_posts import get_job_post_service
-    from app.api.schemas.job_posts import JobPostGenerationRequest, JobPostHiringPlanGenerationRequest
+    from app.schemas.job_posts import JobPostGenerationRequest, JobPostHiringPlanGenerationRequest
 
     job_service = get_job_post_service()
     
