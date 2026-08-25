@@ -10,11 +10,14 @@ from app.services.matching.job_matching import JobMatchingService
 from app.services.matching.freelancer_matching import FreelancerMatchingService
 from app.services.matching.phonetic_matcher import PhoneticMatcher
 from app.services.matching.typo_matcher import TypoMatcher
+from app.core.config import settings
 from app.schemas.matching import (
     TalentRerankRequest,
     TalentRerankResponse,
+    TalentRerankMatch,
     JobRerankRequest,
     JobRerankResponse,
+    JobRerankMatch,
 )
 from app.services.rag import RAGService, get_rag_service
 from app.clients.db.chroma import ChromaDBClient, get_chroma_client
@@ -37,10 +40,42 @@ class MatchingService(MatchingBaseService):
 
     async def rerank_talent(self, request: TalentRerankRequest) -> TalentRerankResponse:
         """Delegate candidate talent reranking for a job post."""
+        if settings.ENABLE_MOCK_AI:
+            matches = [
+                TalentRerankMatch(
+                    freelancer_id=c.freelancer_id,
+                    embedding_score=92.5,
+                    algorithm_score=95.0,
+                    semantic_strengths=["Matched primary skill", "High availability"],
+                    match_reasons=["Verified contract match"]
+                ) for c in request.candidates[:request.top_k]
+            ]
+            return TalentRerankResponse(
+                algorithm_version="2.0-mock",
+                embedding_model="mock-embedding-v1",
+                scoring_version="mock-scoring-v1",
+                matches=matches
+            )
         return await self.job_matcher.rerank_talent(request)
 
     async def rerank_jobs_for_freelancer(self, request: JobRerankRequest) -> JobRerankResponse:
         """Delegate job post reranking for a freelancer."""
+        if settings.ENABLE_MOCK_AI:
+            matches = [
+                JobRerankMatch(
+                    job_id=c.job_id,
+                    embedding_score=91.0,
+                    algorithm_score=93.5,
+                    semantic_strengths=["Strong domain alignment"],
+                    match_reasons=["Skill overlap"]
+                ) for c in request.candidates[:request.top_k]
+            ]
+            return JobRerankResponse(
+                algorithm_version="2.0-mock",
+                embedding_model="mock-embedding-v1",
+                scoring_version="mock-scoring-v1",
+                matches=matches
+            )
         return await self.freelancer_matcher.rerank_jobs_for_freelancer(request)
 
 
