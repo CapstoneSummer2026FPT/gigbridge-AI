@@ -281,3 +281,27 @@ class TestStripBudgetAndTimelineSections:
         assert "15.000.000 VNĐ" not in cleaned
         assert "YÊU CẦU CÔNG VIỆC" in cleaned
 
+
+# ---------------------------------------------------------------------------
+# validate_client_prompt
+# ---------------------------------------------------------------------------
+
+class TestValidateClientPrompt:
+    def test_nonsense_prompts_raise_400(self):
+        nonsense_list = ["hihi", "hi", "hello", "asdf", "12345", "test", "  hihi  ", "xin chao"]
+        for p in nonsense_list:
+            with pytest.raises(Exception) as exc_info:
+                JobPostBaseService.validate_client_prompt(p)
+            assert exc_info.value.status_code == 400
+            assert "invalid_prompt" in exc_info.value.errors
+
+    def test_valid_prompts_pass(self):
+        valid_list = [
+            "Need a React developer to build an e-commerce dashboard",
+            "Cần tuyển chuyên gia về Node.js và PostgreSQL",
+            "Looking for a Python backend engineer for AI integration"
+        ]
+        for p in valid_list:
+            JobPostBaseService.validate_client_prompt(p)
+
+

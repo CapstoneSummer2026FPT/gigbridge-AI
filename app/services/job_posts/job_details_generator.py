@@ -34,6 +34,7 @@ class JobDetailsGeneratorService(JobPostBaseService):
         7. Return JobPostDetailsGenerationResponse.
         """
         logger.info("Generating job details using RAG pipeline")
+        self.validate_client_prompt(request.client_prompt)
         target_lang = "Vietnamese" if self.is_vietnamese(request.client_prompt) else "English"
 
         system_prompt = (
@@ -51,6 +52,7 @@ class JobDetailsGeneratorService(JobPostBaseService):
             "SAFETY POLICY:\n"
             "- You MUST NOT generate job posts for illegal, harmful, or dangerous jobs.\n"
             "- If the client's prompt requests any such illegal activity, you MUST return title='POLICY_VIOLATION'.\n"
+            "- If the prompt is meaningless, off-topic, gibberish, or greetings-only (e.g. 'hihi', 'hello', 'asdf'), you MUST return title='INVALID_PROMPT'.\n"
             "LANGUAGE CONSTRAINTS:\n"
             f"- You MUST generate both the 'title' and 'description' fields strictly in {target_lang}.\n"
             "- Custom skills can be in English or Vietnamese matching the prompt context."
@@ -86,6 +88,14 @@ class JobDetailsGeneratorService(JobPostBaseService):
                 message="The request violates platform safety guidelines against illegal or harmful activities.",
                 status_code=400,
                 errors=["policy_violation"]
+            )
+
+        if response_data.title == "INVALID_PROMPT":
+            logger.warning(f"Invalid or meaningless prompt detected by LLM: {request.client_prompt}")
+            raise AIServerException(
+                message="The prompt provided is invalid or meaningless. Please describe your project requirements in detail.",
+                status_code=400,
+                errors=["invalid_prompt"]
             )
 
         total_system = len(response_data.system_skill_ids)

@@ -115,6 +115,52 @@ class JobPostBaseService:
 
         return False
 
+    NONSENSE_PROMPT_PATTERNS = {
+        "hi", "hihi", "hihihi", "hello", "hey", "chao", "chào", "xin chao", "xin chào",
+        "alo", "test", "testing", "asdf", "asdfg", "asdfghjkl", "qwerty", "123", "1234",
+        "12345", "123456", "abc", "abcd", "abcxyz", "xxx", "zzz", "aaa", "bbb", "ccc",
+        "haha", "hahaha", "hehe", "hehehe", "kkk", "kkkk"
+    }
+
+    @classmethod
+    def validate_client_prompt(cls, prompt: str) -> None:
+        """Validate client prompt for minimum length and meaningless/nonsense content before calling LLM."""
+        from app.core.exceptions import AIServerException
+
+        if not prompt or not prompt.strip():
+            raise AIServerException(
+                message="The prompt provided is invalid or meaningless. Please describe your project requirements in detail.",
+                status_code=400,
+                errors=["invalid_prompt"]
+            )
+
+        clean_prompt = prompt.strip().lower()
+        words = re.findall(r"\b\w+\b", clean_prompt)
+
+        if not words:
+            raise AIServerException(
+                message="The prompt provided is invalid or meaningless. Please describe your project requirements in detail.",
+                status_code=400,
+                errors=["invalid_prompt"]
+            )
+
+        full_text_condensed = "".join(words)
+        if len(prompt.strip()) < 8 or len(words) < 2:
+            if clean_prompt in cls.NONSENSE_PROMPT_PATTERNS or full_text_condensed in cls.NONSENSE_PROMPT_PATTERNS or len(full_text_condensed) < 5:
+                raise AIServerException(
+                    message="The prompt provided is invalid or meaningless. Please describe your project requirements in detail.",
+                    status_code=400,
+                    errors=["invalid_prompt"]
+                )
+
+        if clean_prompt in cls.NONSENSE_PROMPT_PATTERNS or full_text_condensed in cls.NONSENSE_PROMPT_PATTERNS:
+            raise AIServerException(
+                message="The prompt provided is invalid or meaningless. Please describe your project requirements in detail.",
+                status_code=400,
+                errors=["invalid_prompt"]
+            )
+
+
     @staticmethod
     def convert_date_to_iso(date_str: str) -> str:
         """Convert date string from various formats (MM/DD/YYYY, YYYY-MM-DD, DD/MM/YYYY) to ISO YYYY-MM-DD."""
