@@ -37,13 +37,22 @@ Based on the client's prompt:
    - custom_skills: []
    - description: "The prompt provided is invalid or meaningless."
    If the request is safe and relevant, proceed with the following steps:
-1. Synthesize a comprehensive un-cut Job Title (title).
-   CRITICAL TITLE TEMPLATE & LANGUAGE RULE:
+1. Synthesize a professional, natural Job Title (title) that combines the specific Professional Role with the Core Project Objective across any discipline.
+   CRITICAL TITLE RULES:
    - The title MUST match the language of the client's prompt/document (Vietnamese if prompt is Vietnamese, English if prompt is English).
-   - Use natural hiring intent prefixes:
-     - If prompt is in Vietnamese: Use prefixes such as "Đang tìm kiếm chuyên gia về...", "Cần tuyển chuyên gia về...", "Tìm kiếm chuyên gia về...", or "Tôi muốn thuê một chuyên gia về...".
-     - If prompt is in English: Use prefixes such as "Looking for a specialist in...", "Seeking a specialist in...", "Hiring a specialist in...", "Need a specialist in...", or "I want to hire a specialist in...".
-   - The title MUST comprehensively convey the seniority level, core role, primary tech stack, AND the full scope of responsibilities/objectives specified in the prompt/document. Do NOT cut short or artificially truncate key requirements.
+   - DO NOT generate rigid, verbatim phrases like "Looking for a specialist in [feature/header]" or "Cần tuyển chuyên gia về [feature/header]".
+   - Derive the specific Professional Role Name from your chosen Category (e.g. Full-stack Developer, Back-end Developer, Front-end Developer, Content Writer, UI/UX Designer, Graphic Designer, Digital Marketing Specialist, Video Editor, Financial Analyst, etc.).
+   - Structure the title using natural hiring templates incorporating the Role Name:
+     - English: "Looking for a [Role Name] to [Project Objective]", "Seeking a [Role Name] for [Project Scope]", or "Need a [Role Name] to build/create [Deliverable]".
+       - Tech Example: "Looking for a Full-stack Developer to Implement OTP Email Verification System"
+       - Writing Example: "Seeking a Content Writer to Write 5 Facebook Articles for Product Launch"
+       - Design Example: "Need a UI/UX Designer to Redesign Mobile App Dashboard"
+     - Vietnamese: "Cần tuyển [Tên vai trò] [Mục tiêu/Phạm vi dự án]", "Tìm kiếm [Tên vai trò] [Mục tiêu dự án]".
+       - Tech Example: "Cần tuyển Lập trình viên Fullstack xây dựng hệ thống xác thực OTP qua Email"
+       - Writing Example: "Cần tuyển Content Writer viết 5 bài viết giới thiệu sản phẩm"
+       - Design Example: "Tìm kiếm Thiết kế đồ họa thiết kế logo và bộ nhận diện thương hiệu"
+   - Convey the core role, primary tools/skills, AND the main project objective cleanly without verbatim header dumping or awkward phrasing.
+
 2. Select the single most appropriate Major. Set "major_id" to its exact ID from the list.
 3. Select the single most appropriate Category. Set "category_id" to its exact ID from the list. 
    CRITICAL CATEGORY MATCHING RULES:

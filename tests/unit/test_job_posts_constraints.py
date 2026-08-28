@@ -356,6 +356,31 @@ class TestTaxonomySkillsFallback:
         )
         assert matched_id == "cat_2"
 
+    def test_sanitize_title_role_multidisciplinary(self):
+        from app.services.job_posts.job_details_generator import JobDetailsGeneratorService
+
+        # 1. Tech discipline
+        res_tech = JobDetailsGeneratorService.sanitize_title_role(
+            "Looking for a specialist in Email Verification System Development",
+            "Full-stack Developer"
+        )
+        assert res_tech == "Looking for a Full-stack Developer for Email Verification System Development"
+
+        # 2. Writing discipline
+        res_write = JobDetailsGeneratorService.sanitize_title_role(
+            "Looking for a specialist in 5 Facebook Articles for Product Introduction",
+            "Content Writer"
+        )
+        assert res_write == "Looking for a Content Writer for 5 Facebook Articles for Product Introduction"
+
+        # 3. Vietnamese Design discipline
+        res_vi = JobDetailsGeneratorService.sanitize_title_role(
+            "Cần tuyển chuyên gia về Thiết kế bộ nhận diện thương hiệu",
+            "Thiết kế đồ họa"
+        )
+        assert res_vi == "Cần tuyển Thiết kế đồ họa Thiết kế bộ nhận diện thương hiệu"
+
+
 
 
 

@@ -149,7 +149,39 @@ class JobDetailsGeneratorService(JobPostBaseService):
                     )
                     response_data.category_id = best_cat_id
 
+        # Sanitize rigid 'specialist in' title patterns across all professions to align role with category
+        cat_name = next((c["name"] for c in valid_cats if c["category_id"] == response_data.category_id), "")
+        if cat_name and response_data.title:
+            response_data.title = self.sanitize_title_role(response_data.title, cat_name)
+
         return response_data
+
+    @staticmethod
+    def sanitize_title_role(title: str, category_name: str) -> str:
+        """Sanitize rigid 'specialist in' title patterns across all professions into natural role-aligned titles."""
+        if not title or not category_name:
+            return title
+
+        import re
+
+        # English regex: "Looking for a specialist in [Topic]" -> "Looking for a [Category Name] for [Topic]"
+        en_pattern = r"^(Looking|Seeking|Hiring|Need|I want to hire)\s+for\s+a\s+specialist\s+in\s+(.+)$"
+        match_en = re.match(en_pattern, title, re.IGNORECASE)
+        if match_en:
+            prefix = match_en.group(1).capitalize()
+            topic = match_en.group(2).strip()
+            return f"{prefix} for a {category_name} for {topic}"
+
+        # Vietnamese regex: "Cần tuyển chuyên gia về [Topic]" -> "Cần tuyển [Category Name] [Topic]"
+        vi_pattern = r"^(Cần tuyển|Đang tìm kiếm|Tìm kiếm|Tôi muốn thuê)\s+chuyên gia\s+về\s+(.+)$"
+        match_vi = re.match(vi_pattern, title, re.IGNORECASE)
+        if match_vi:
+            prefix = match_vi.group(1)
+            topic = match_vi.group(2).strip()
+            return f"{prefix} {category_name} {topic}"
+
+        return title
+
 
     @staticmethod
     def match_best_category(prompt_text: str, title: str, valid_cats: List[Dict[str, str]]) -> str:
