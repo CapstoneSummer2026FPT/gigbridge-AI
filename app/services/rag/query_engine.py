@@ -366,4 +366,16 @@ You must respond ONLY with a JSON object matching this schema:
                     seen_skills.add(s_id)
                     available_skills.append({"skill_id": s_id, "name": name})
 
+        # Fallback / Supplement: If vector search returns few skills, supplement from cached taxonomy
+        if len(available_skills) < 15 and taxonomy.get("skills"):
+            for s in taxonomy["skills"]:
+                s_id = s.get("skill_id", "")
+                name = s.get("name", "")
+                if s_id and s_id not in seen_skills:
+                    seen_skills.add(s_id)
+                    available_skills.append({"skill_id": s_id, "name": name})
+                    if len(available_skills) >= 30:
+                        break
+
         return allowed_majors, allowed_categories, available_skills
+

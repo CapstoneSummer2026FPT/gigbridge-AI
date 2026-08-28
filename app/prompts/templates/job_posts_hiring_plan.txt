@@ -22,16 +22,20 @@ Based on the provided context:
    CRITICAL LANGUAGE RULE:
    - If the client's prompt is written in Vietnamese, generate these questions in Vietnamese.
    - If the client's prompt is written in English or any other language, generate these questions in English.
- 2. Generate a logical list of milestone plans (milestones) for the job post appropriate for the project's scope, budget, and estimated duration. Typically, propose 2-4 milestones.
-   Today's reference date is: {{ current_date }} (format: mm/dd/yyyy).
-   Each milestone object in the list MUST contain the following properties:
-   - title: Milestone name (Tên milestone).
-   - amount: Allocated budget/amount (Số tiền) for this milestone as a number/float. The sum of all milestone amount values MUST be EXACTLY equal to the approved budget (or the maximum of the budget range if a range is present). Propose a logical distribution of funds across the milestones.
-   - estimated_duration: Expected timeframe to complete this specific milestone from its start. (Thời lượng, e.g. "2 weeks", "2 tuần", "1 month", "1 tháng"). The sum of all milestone estimated durations MUST be EXACTLY equal to the approved estimated duration from Flow 1 (e.g., if the project duration is 12 weeks, the sum of milestone durations must equal 12 weeks).
-   - due_date: The deadline date when the freelancer must complete and submit the milestone deliverables, formatted strictly as "mm/dd/yyyy". Calculate these dates sequentially based on the milestone durations starting from {{ current_date }}, ensuring that the final milestone's due_date matches the end of the approved estimated duration.
-   - description: A brief summary of the scope and expected results for this milestone. (Mô tả, e.g. "Thiết kế và duyệt các màn hình chính").
-   - deliverables: Specifically list the files, features, or products the freelancer must hand over. (Sản phẩm bàn giao, e.g. "Tệp Figma và đặc tả giao diện responsive").
-   - acceptance_criteria: The criteria the client will use to review and approve the milestone deliverables. (Tiêu chí nghiệm thu).
+ 2. Generate a logical list of milestone plans (milestones) for the job post appropriate for the project's scope, budget, and estimated duration.
+    CRITICAL MILESTONE COUNT & DURATION RULE:
+    - Every milestone requires a minimum duration of 1 week ("1 week" or "1 tuần").
+    - FOR SHORT ESTIMATED DURATIONS (1 week or 2 weeks): You MUST NOT generate more milestones than the total duration in weeks (e.g. for a 1-week job, generate EXACTLY 1 milestone of 1 week; for a 2-week job, generate at most 2 milestones of 1 week each, total 2 weeks).
+    - FOR LONGER DURATIONS (3+ weeks): Propose 2-4 milestones proportional to scope.
+    - Today's reference date is: {{ current_date }} (format: mm/dd/yyyy).
+    Each milestone object in the list MUST contain the following properties:
+    - title: Milestone name (Tên milestone).
+    - amount: Allocated budget/amount (Số tiền) for this milestone as a number/float. The sum of all milestone amount values MUST be EXACTLY equal to the approved budget (or the maximum of the budget range if a range is present). Propose a logical distribution of funds across the milestones.
+    - estimated_duration: Expected timeframe to complete this specific milestone from its start. (Thời lượng, e.g. "1 week", "2 weeks", "1 tuần", "2 tuần"). The sum of all milestone estimated durations MUST be EXACTLY equal to the approved estimated duration from Flow 1 (e.g. 1 week for a 1-week job, 2 weeks for a 2-week job).
+    - due_date: The deadline date when the freelancer must complete and submit the milestone deliverables, formatted strictly as "mm/dd/yyyy". Calculate these dates sequentially based on the milestone durations starting from {{ current_date }}, ensuring that the final milestone's due_date matches the end of the approved estimated duration.
+    - description: A brief summary of the scope and expected results for this milestone. (Mô tả, e.g. "Thiết kế và duyệt các màn hình chính").
+    - deliverables: Specifically list the files, features, or products the freelancer must hand over. (Sản phẩm bàn giao, e.g. "Tệp Figma và đặc tả giao diện responsive").
+    - acceptance_criteria: The criteria the client will use to review and approve the milestone deliverables. (Tiêu chí nghiệm thu).
     CRITICAL PROPOSAL CLOSING DATE CONSTRAINT:
     - The proposal closing date / deadline for receiving candidate applications MUST NOT exceed 3 weeks (21 days) from today's reference date ({{ current_date }}).
     CRITICAL LANGUAGE RULE:
