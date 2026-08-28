@@ -242,3 +242,98 @@ def test_milestone_arithmetic_clamping():
     res_unclamped = DeterministicCalculator.calculate(llm_eval, baseline, proposal_unclamped)
     assert res_unclamped.is_milestone_clamped is False
     assert res_unclamped.milestone_total == 900.0
+
+
+def test_sanitize_screening_qa():
+    """Verify that CandidateJudgingService._sanitize_screening_qa enforces 1:1 Q&A matching."""
+    from app.services.proposals.candidate_judging_service import CandidateJudgingService
+
+    service = CandidateJudgingService()
+
+    tech = TechnicalSolutionQualitativeEval(
+        requirement_alignment=make_subscore(80.0),
+        technical_correctness=make_subscore(80.0),
+        architecture_quality=make_subscore(80.0),
+        implementation_feasibility=make_subscore(80.0),
+        edge_cases_security=make_subscore(80.0),
+    )
+
+    # Simulated LLM hallucinating 3 Q&A evaluations when candidate only answered 1
+    hallucinated_qas = [
+        QuestionAnswerQualitativeEval(
+            question_index=1,
+            question_text="Hallucinated Q1",
+            candidate_answer="Hallucinated A1",
+            answer_correctness=make_subscore(80.0),
+            technical_reasoning=make_subscore(80.0),
+            relevance=make_subscore(80.0),
+            depth=make_subscore(80.0),
+            practical_examples=make_subscore(80.0),
+        ),
+        QuestionAnswerQualitativeEval(
+            question_index=2,
+            question_text="Fake Q2",
+            candidate_answer="Fake A2",
+            answer_correctness=make_subscore(70.0),
+            technical_reasoning=make_subscore(70.0),
+            relevance=make_subscore(70.0),
+            depth=make_subscore(70.0),
+            practical_examples=make_subscore(70.0),
+        ),
+        QuestionAnswerQualitativeEval(
+            question_index=3,
+            question_text="Fake Q3",
+            candidate_answer="Fake A3",
+            answer_correctness=make_subscore(60.0),
+            technical_reasoning=make_subscore(60.0),
+            relevance=make_subscore(60.0),
+            depth=make_subscore(60.0),
+            practical_examples=make_subscore(60.0),
+        ),
+    ]
+
+    llm_eval = LLMQualitativeEvaluation(
+        technical_solution=tech,
+        screening_qa=hallucinated_qas,
+        requirement_fulfillment=[],
+        pricing_realism=make_subscore(80.0),
+        timeline_feasibility=make_subscore(80.0),
+        milestone_structure=make_subscore(80.0),
+        project_specificity=make_subscore(80.0),
+        substance_density=make_subscore(80.0),
+        probing_questions=[],
+    )
+
+    # Proposal with ONLY 1 screening question
+    proposal_single_qa = ProposalOfferDto(
+        proposal_id="p_single",
+        freelancer_id="f_single",
+        proposed_budget=1000.0,
+        vetting_qa_answers=[
+            QuestionAnswerPairInput(
+                question_index=1,
+                question_text="Real Question 1?",
+                candidate_answer="Real Answer 1",
+            )
+        ],
+    )
+
+    sanitized_eval = service._sanitize_screening_qa(llm_eval, proposal_single_qa)
+
+    # Must be trimmed to exactly 1 item
+    assert len(sanitized_eval.screening_qa) == 1
+    assert sanitized_eval.screening_qa[0].question_index == 1
+    assert sanitized_eval.screening_qa[0].question_text == "Real Question 1?"
+    assert sanitized_eval.screening_qa[0].candidate_answer == "Real Answer 1"
+
+    # Test proposal with 0 screening questions
+    proposal_zero_qa = ProposalOfferDto(
+        proposal_id="p_zero",
+        freelancer_id="f_zero",
+        proposed_budget=1000.0,
+        vetting_qa_answers=[],
+    )
+
+    sanitized_zero = service._sanitize_screening_qa(llm_eval, proposal_zero_qa)
+    assert len(sanitized_zero.screening_qa) == 0
+

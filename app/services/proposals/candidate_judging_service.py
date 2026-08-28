@@ -64,6 +64,8 @@ class CandidateJudgingService:
             "   c) RELEVANCE (relevance, 15% weight): Directness in answering the exact question asked without off-topic tangents.\n"
             "   d) TECHNICAL DEPTH (depth, 10% weight): Specificity of technical mechanics, exact API/framework references vs. generic high-level statements.\n"
             "   e) PRACTICAL EXAMPLES (practical_examples, 10% weight): Inclusion of concrete code patterns, past experience details, or realistic scenario handling.\n"
+            "   - STRICT Q&A COUNT CONSTRAINT: Output EXACTLY ONE item in `screening_qa` array for each question explicitly provided in 'Vetting Screening Q&A Responses'.\n"
+            "   - DO NOT fabricate, invent, generate, or hallucinate any extra screening questions or fake candidate answers. If 1 question is provided, output EXACTLY 1 item in `screening_qa`. If 0 questions are provided, output an empty `screening_qa` array `[]`.\n"
             "   - ANTI-VERBOSITY RULE: NEVER reward answer length or word count. Concise 1-3 sentence answers containing exact technical facts score HIGHER than wordy 500-word fluff essays.\n"
             "   - Apply a verbosity penalty (score < 40) for padded fluff or generic filler phrases ('As a passionate developer...').\n"
             "3. PILLAR 3 - PRICING REALISM & TIMELINE FEASIBILITY (20%):\n"
@@ -131,6 +133,9 @@ class CandidateJudgingService:
             logger.exception(f"LLM qualitative generation failed for proposal {proposal.proposal_id}: {exc}")
             llm_eval = self._create_fallback_evaluation(proposal)
 
+        # Enforce strict 1:1 matching of screening_qa evaluation items to proposal.vetting_qa_answers
+        llm_eval = self._sanitize_screening_qa(llm_eval, proposal)
+
         # Execute deterministic calculation
         deterministic = DeterministicCalculator.calculate(llm_eval, baseline, proposal)
 
@@ -193,6 +198,40 @@ class CandidateJudgingService:
                     logger.warning(f"Failed substring JSON extraction: {exc}")
 
             raise ValueError("Could not parse LLM output as LLMQualitativeEvaluation JSON")
+
+    def _sanitize_screening_qa(
+        self, llm_eval: LLMQualitativeEvaluation, proposal: ProposalOfferDto
+    ) -> LLMQualitativeEvaluation:
+        """Enforce strict 1:1 matching of screening_qa evaluation items to proposal.vetting_qa_answers."""
+        input_qa_list = proposal.vetting_qa_answers or []
+        if not input_qa_list:
+            llm_eval.screening_qa = []
+            return llm_eval
+
+        sanitized_qa = []
+        for idx, input_qa in enumerate(input_qa_list, start=1):
+            target_q_idx = input_qa.question_index if input_qa.question_index is not None else idx
+
+            # Find matching item in LLM screening_qa output by question_index
+            matching_eval = None
+            for eval_item in llm_eval.screening_qa:
+                if eval_item.question_index == target_q_idx:
+                    matching_eval = eval_item
+                    break
+
+            # Fallback to positional order if index match fails
+            if not matching_eval and (idx - 1) < len(llm_eval.screening_qa):
+                matching_eval = llm_eval.screening_qa[idx - 1]
+
+            if matching_eval:
+                # Copy exact ground-truth question text, candidate answer, and index
+                matching_eval.question_index = target_q_idx
+                matching_eval.question_text = input_qa.question_text
+                matching_eval.candidate_answer = input_qa.candidate_answer
+                sanitized_qa.append(matching_eval)
+
+        llm_eval.screening_qa = sanitized_qa
+        return llm_eval
 
     def _create_fallback_evaluation(
         self, proposal: ProposalOfferDto

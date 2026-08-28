@@ -263,13 +263,14 @@ class JobPostBaseService:
                 # Merge amount
                 if hasattr(last_kept, "amount") and hasattr(excess, "amount"):
                     last_kept.amount = round(float(last_kept.amount or 0) + float(excess.amount or 0), 2)
-                # Merge text fields safely
-                for attr in ("description", "deliverables", "acceptance_criteria"):
+                # Merge text fields safely (title, description, deliverables, acceptance_criteria)
+                for attr in ("title", "description", "deliverables", "acceptance_criteria"):
                     val_kept = getattr(last_kept, attr, "") or ""
                     val_excess = getattr(excess, attr, "") or ""
-                    if val_excess:
+                    if val_excess and val_excess not in val_kept:
                         combined = f"{val_kept} | {val_excess}" if val_kept else val_excess
                         setattr(last_kept, attr, combined)
+
 
             # Truncate excess milestones in-place
             del milestones[keep_count:]
