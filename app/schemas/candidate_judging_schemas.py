@@ -43,6 +43,12 @@ class QuestionAnswerQualitativeEval(BaseModel):
     relevance: SubcriteriaScoreWithEvidence
     depth: SubcriteriaScoreWithEvidence
     practical_examples: SubcriteriaScoreWithEvidence
+    is_ai_generated: bool = Field(default=False, description="True if answer exhibits high-confidence AI generator markers or copy-paste formatting")
+    ai_detection_reason: Optional[str] = Field(None, description="Specific AI generator markers or human authenticity traits identified")
+    qualitative_feedback: str = Field(
+        ...,
+        description="Comprehensive 2-4 sentence technical evaluation and authenticity assessment of candidate response",
+    )
 
 
 class RequirementFulfillmentItem(BaseModel):

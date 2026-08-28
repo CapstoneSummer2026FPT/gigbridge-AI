@@ -47,6 +47,9 @@ def test_mathematical_tq_rounding():
         relevance=make_subscore(100.0),
         depth=make_subscore(80.0),
         practical_examples=make_subscore(85.0),
+        is_ai_generated=False,
+        ai_detection_reason=None,
+        qualitative_feedback="Strong technical answer demonstrating solid Redis knowledge.",
     )
 
     reqs = [
@@ -269,6 +272,9 @@ def test_sanitize_screening_qa():
             relevance=make_subscore(80.0),
             depth=make_subscore(80.0),
             practical_examples=make_subscore(80.0),
+            is_ai_generated=False,
+            ai_detection_reason=None,
+            qualitative_feedback="Eval 1",
         ),
         QuestionAnswerQualitativeEval(
             question_index=2,
@@ -279,6 +285,9 @@ def test_sanitize_screening_qa():
             relevance=make_subscore(70.0),
             depth=make_subscore(70.0),
             practical_examples=make_subscore(70.0),
+            is_ai_generated=False,
+            ai_detection_reason=None,
+            qualitative_feedback="Eval 2",
         ),
         QuestionAnswerQualitativeEval(
             question_index=3,
@@ -289,6 +298,9 @@ def test_sanitize_screening_qa():
             relevance=make_subscore(60.0),
             depth=make_subscore(60.0),
             practical_examples=make_subscore(60.0),
+            is_ai_generated=False,
+            ai_detection_reason=None,
+            qualitative_feedback="Eval 3",
         ),
     ]
 

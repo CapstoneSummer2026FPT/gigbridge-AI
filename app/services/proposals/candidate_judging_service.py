@@ -66,6 +66,11 @@ class CandidateJudgingService:
             "   e) PRACTICAL EXAMPLES (practical_examples, 10% weight): Inclusion of concrete code patterns, past experience details, or realistic scenario handling.\n"
             "   - STRICT Q&A COUNT CONSTRAINT: Output EXACTLY ONE item in `screening_qa` array for each question explicitly provided in 'Vetting Screening Q&A Responses'.\n"
             "   - DO NOT fabricate, invent, generate, or hallucinate any extra screening questions or fake candidate answers. If 1 question is provided, output EXACTLY 1 item in `screening_qa`. If 0 questions are provided, output an empty `screening_qa` array `[]`.\n"
+            "   - AI-GENERATED ANSWER & AUTHENTICITY DETECTION GUARDRAIL:\n"
+            "     * Actively detect whether candidate answer exhibits stereotypical AI generator signatures (e.g. ChatGPT intro phrases like 'The process usually works like this:', uniform numbered lists with bold lead-ins, textbook definitions lacking personal engineering experience, or generic ungrounded fluff).\n"
+            "     * If AI generator patterns are detected, set `is_ai_generated: true` and specify `ai_detection_reason` (e.g. 'Contains overt ChatGPT introductory filler and generic textbook list format without concrete project implementation details').\n"
+            "     * Heavy copy-pasted AI textbook answers MUST be penalized on `depth` and `practical_examples` sub-criteria (scores < 60).\n"
+            "     * `qualitative_feedback`: MUST provide a detailed 2-4 sentence technical evaluation and authenticity analysis highlighting technical strengths/flaws, specific code/architecture references, and AI generation findings.\n"
             "   - ANTI-VERBOSITY RULE: NEVER reward answer length or word count. Concise 1-3 sentence answers containing exact technical facts score HIGHER than wordy 500-word fluff essays.\n"
             "   - Apply a verbosity penalty (score < 40) for padded fluff or generic filler phrases ('As a passionate developer...').\n"
             "3. PILLAR 3 - PRICING REALISM & TIMELINE FEASIBILITY (20%):\n"
@@ -268,6 +273,9 @@ class CandidateJudgingService:
                     relevance=default_subscore,
                     depth=default_subscore,
                     practical_examples=default_subscore,
+                    is_ai_generated=False,
+                    ai_detection_reason="Fallback standard technical evaluation.",
+                    qualitative_feedback="Technical quality assessment based on candidate response.",
                 )
             )
 
