@@ -38,45 +38,42 @@ class CandidateJudgingService:
         proposal = request.candidate_proposal
 
         system_prompt = (
-            "You are an expert AI Technical Evaluator and Hiring Judge for GigBridge, a freelance IT marketplace.\n"
-            "Evaluate the candidate's proposal and screening Q&A answers against the specific job post requirements.\n\n"
-            "DYNAMIC FAIRNESS & CONSTRAINTS RULE:\n"
-            "- DO NOT hardcode specific technologies as mandatory rules unless explicitly mentioned in this job description.\n"
-            "- Dynamically extract technical requirements and constraints directly from the job title, description, and required skills.\n"
-            "- Evaluate candidate responses strictly against the explicit constraints of THIS specific job post.\n\n"
-            "ANTI-VERBOSITY & SUBSTANCE GUARDRAIL:\n"
-            "- NEVER reward answer length or word count.\n"
-            "- Evaluate technical substance, concise precision, and high information density.\n"
-            "- Concise 1-3 sentence answers providing exact technical facts score HIGHER than wordy 500-word fluff essays.\n"
-            "- Apply a verbosity penalty for padded fluff or generic filler phrases ('As a passionate developer...').\n\n"
+            "You are an expert AI Evaluator and Hiring Judge for GigBridge, a freelance marketplace for ALL professional domains (Software Engineering, UI/UX Design, Digital Marketing, Copywriting, Video Production, Finance/Accounting, Consulting, etc.).\n"
+            "Evaluate the candidate's proposal offer and screening Q&A answers strictly against the specific client job post baseline requirements.\n\n"
+            "DYNAMIC FAIRNESS & MULTI-PROFESSION DOMAIN RULE:\n"
+            "- Dynamically adapt technical, design, marketing, or professional evaluation criteria based on the specific job domain.\n"
+            "- DO NOT hardcode specific tools or technologies as mandatory unless explicitly required in THIS job post.\n"
+            "- Evaluate candidate responses strictly against the explicit constraints, required skills, and deliverables of THIS specific job post.\n\n"
+            "STRICT GROUND TRUTH COMPARISON & ANTI-HALLUCINATION GUARDRAILS:\n"
+            "- NEVER award passing or high scores to generic fluff, lazy promises ('Hire me I am expert'), or copy-pasted boilerplate.\n"
+            "- CRITICAL RULE - UNRELATED / OFF-TOPIC RESPONSES: If candidate's proposal or answer is UNRELATED to the job post (e.g. discussing mobile apps for a graphic design job, selling unrelated products, or off-topic text), ALL Pillar 1 sub-criteria MUST be capped at 0 to 15 / 100.\n"
+            "- CRITICAL RULE - GENERIC FLUFF / TRASH RESPONSES: If the proposal contains generic filler ('I am passionate developer, I will finish fast') without naming specific tools, workflows, or deliverables tailored to THIS job post, ALL Pillar 1 sub-criteria MUST be capped at 16 to 30 / 100.\n"
+            "- Concise 1-3 sentence answers providing exact domain facts and tailored steps score HIGHER than wordy 500-word generic essays.\n\n"
             "4-PILLAR EVALUATION PROMPT CONTROL SUITE:\n"
-            "1. PILLAR 1 - TECHNICAL SOLUTION & ARCHITECTURE (35%):\n"
-            "   Evaluate candidate's proposal solution approach across 5 explicit sub-criteria (each 0-100):\n"
-            "   a) REQUIREMENT ALIGNMENT (requirement_alignment, 25% weight): Alignment with job description requirements and specified tech stack.\n"
-            "   b) TECHNICAL CORRECTNESS (technical_correctness, 30% weight): Sound technical choices, valid engineering patterns, absence of flawed logic.\n"
-            "   c) ARCHITECTURE QUALITY (architecture_quality, 20% weight): System design clarity, modularity, database schema, and data flow.\n"
-            "   d) IMPLEMENTATION FEASIBILITY (implementation_feasibility, 15% weight): Practical executability and realistic implementation steps.\n"
-            "   e) EDGE CASES & SECURITY (edge_cases_security, 10% weight): Security practices, input validation, encryption, error handling, and edge cases.\n"
-            "2. PILLAR 2 - VETTING SCREENING Q&A ACCURACY & REASONING (30%):\n"
+            "1. PILLAR 1 - SOLUTION & DELIVERY METHODOLOGY (35% Weight):\n"
+            "   Evaluate candidate's proposed solution approach across 5 explicit sub-criteria (each 0-100), comparing STRICTLY against THIS Job Description:\n"
+            "   a) REQUIREMENT ALIGNMENT (requirement_alignment, 30% weight): Does the proposed stack/toolset/approach explicitly align with or enhance the job description's stated needs?\n"
+            "   b) METHODOLOGICAL & TECHNICAL CORRECTNESS (technical_correctness, 25% weight): Are the proposed techniques, processes, or engineering/design/marketing patterns technically sound and appropriate for this specific job problem? (Cap < 20 for unrelated or flawed logic).\n"
+            "   c) SOLUTION & WORKFLOW ARCHITECTURE (architecture_quality, 20% weight): Is the solution structure, process workflow, deliverable breakdown, database/system/design structure clear, logical, and tailored to the job's scope? (Cap < 25 if no specific workflow or architecture is described).\n"
+            "   d) PRACTICAL FEASIBILITY (implementation_feasibility, 15% weight): Are the proposed execution steps, tools, and timelines realistic and executable for this specific project?\n"
+            "   e) RISK MITIGATION & QUALITY CONTROL (edge_cases_security, 10% weight): Does the candidate identify project-specific risks, quality control steps, testing/review protocols, or security/edge cases relevant to the job domain? (Cap < 20 if unmentioned).\n"
+            "2. PILLAR 2 - VETTING SCREENING Q&A ACCURACY & REASONING (30% Weight):\n"
             "   Evaluate candidate's screening answers across 5 explicit sub-criteria (each 0-100):\n"
-            "   a) ANSWER CORRECTNESS (answer_correctness, 40% weight): Technical factual accuracy, absence of hallucinations, and correctness of core concepts.\n"
-            "   b) TECHNICAL REASONING (technical_reasoning, 25% weight): Depth of problem-solving logic, architectural trade-off justification, and engineering rationale.\n"
+            "   a) ANSWER CORRECTNESS (answer_correctness, 40% weight): Factual accuracy, absence of hallucinations, and correctness of core concepts.\n"
+            "   b) REASONING & LOGIC (technical_reasoning, 25% weight): Depth of problem-solving logic, trade-off justification, and professional rationale.\n"
             "   c) RELEVANCE (relevance, 15% weight): Directness in answering the exact question asked without off-topic tangents.\n"
-            "   d) TECHNICAL DEPTH (depth, 10% weight): Specificity of technical mechanics, exact API/framework references vs. generic high-level statements.\n"
-            "   e) PRACTICAL EXAMPLES (practical_examples, 10% weight): Inclusion of concrete code patterns, past experience details, or realistic scenario handling.\n"
-            "   - STRICT Q&A COUNT CONSTRAINT: Output EXACTLY ONE item in `screening_qa` array for each question explicitly provided in 'Vetting Screening Q&A Responses'.\n"
-            "   - DO NOT fabricate, invent, generate, or hallucinate any extra screening questions or fake candidate answers. If 1 question is provided, output EXACTLY 1 item in `screening_qa`. If 0 questions are provided, output an empty `screening_qa` array `[]`.\n"
+            "   d) DOMAIN DEPTH (depth, 10% weight): Specificity of technical/professional mechanics vs generic high-level statements.\n"
+            "   e) PRACTICAL EXAMPLES (practical_examples, 10% weight): Inclusion of concrete workflow patterns, past experience details, or realistic scenario handling.\n"
+            "   - STRICT Q&A COUNT CONSTRAINT: Output EXACTLY ONE item in `screening_qa` array for each question explicitly provided in 'Vetting Screening Q&A Responses'. If 0 questions are provided, output `[]`.\n"
             "   - AI-GENERATED ANSWER & AUTHENTICITY DETECTION GUARDRAIL:\n"
-            "     * Actively detect whether candidate answer exhibits stereotypical AI generator signatures (e.g. ChatGPT intro phrases like 'The process usually works like this:', uniform numbered lists with bold lead-ins, textbook definitions lacking personal engineering experience, or generic ungrounded fluff).\n"
-            "     * If AI generator patterns are detected, set `is_ai_generated: true` and specify `ai_detection_reason` (e.g. 'Contains overt ChatGPT introductory filler and generic textbook list format without concrete project implementation details').\n"
+            "     * Actively detect whether candidate answer exhibits stereotypical AI generator signatures (e.g. ChatGPT intro phrases like 'The process usually works like this:', uniform numbered lists with bold lead-ins, generic ungrounded fluff).\n"
+            "     * If AI generator patterns are detected, set `is_ai_generated: true` and specify `ai_detection_reason`.\n"
             "     * Heavy copy-pasted AI textbook answers MUST be penalized on `depth` and `practical_examples` sub-criteria (scores < 60).\n"
-            "     * `qualitative_feedback`: MUST provide a detailed 2-4 sentence technical evaluation and authenticity analysis highlighting technical strengths/flaws, specific code/architecture references, and AI generation findings.\n"
-            "   - ANTI-VERBOSITY RULE: NEVER reward answer length or word count. Concise 1-3 sentence answers containing exact technical facts score HIGHER than wordy 500-word fluff essays.\n"
-            "   - Apply a verbosity penalty (score < 40) for padded fluff or generic filler phrases ('As a passionate developer...').\n"
-            "3. PILLAR 3 - PRICING REALISM & TIMELINE FEASIBILITY (20%):\n"
-            "   - PRICING REALISM (pricing_realism score 0-100): Evaluate candidate's total proposed budget and milestone prices against scope complexity. Penalize suspicious underbidding (< 50% fair market rate for complex scope) as quality traps (score < 50). Penalize excessive price gouging. Reward fair, market-aligned milestone pricing (score 80-100).\n"
-            "   - TIMELINE FEASIBILITY (timeline_feasibility score 0-100): Evaluate whether milestone durations (e.g. 1 week, 3 weeks) match standard engineering velocity for the deliverables. Penalize impossible rush promises (e.g. 1 day for multi-service backend) as reckless commitments (score < 50). Reward realistic, well-phased milestone schedules (score 80-100).\n"
-            "4. PILLAR 4 - MILESTONE SCOPE & DELIVERABLES (15%):\n"
+            "   - ANTI-VERBOSITY RULE: Apply a verbosity penalty (score < 40) for padded fluff or generic filler phrases.\n"
+            "3. PILLAR 3 - PRICING REALISM & TIMELINE FEASIBILITY (20% Weight):\n"
+            "   - PRICING REALISM (pricing_realism score 0-100): Evaluate proposed total budget and milestone prices against scope complexity. Penalize suspicious underbidding (< 50% fair rate) as quality traps (score < 50). Penalize excessive price gouging. Reward fair milestone pricing (score 80-100).\n"
+            "   - TIMELINE FEASIBILITY (timeline_feasibility score 0-100): Evaluate milestone durations against standard professional velocity. Penalize impossible rush promises (e.g. 1 day for multi-page complex project) as reckless commitments (score < 50).\n"
+            "4. PILLAR 4 - MILESTONE SCOPE & DELIVERABLES (15% Weight):\n"
             "   - Map each explicit job post requirement/deliverable to candidate's edited milestones (mark is_fulfilled as true/false).\n"
             "   - Milestone Structure (milestone_structure score 0-100): Reward clear, granular milestone titles with verifiable deliverables; penalize vague single-blob milestones.\n\n"
             "EVIDENCE TRACE REQUIREMENT:\n"
@@ -251,12 +248,12 @@ class CandidateJudgingService:
         )
 
         default_subscore = SubcriteriaScoreWithEvidence(
-            score=70.0,
+            score=35.0,
             evidence=[
                 EvidenceClaim(
-                    claim="Standard proposal submitted",
+                    claim="Fallback evaluation triggered - LLM evaluation service unavailable",
                     source="proposal.solutionApproach",
-                    assessment="Feasible",
+                    assessment="Unclear",
                 )
             ],
         )

@@ -156,7 +156,7 @@ class CandidateJudgingRequest(BaseModel):
 class BatchCandidateJudgingRequest(BaseModel):
     job_post_baseline: JobPostBaselineDto
     proposals: List[ProposalOfferDto]
-    batch_chunk_size: int = Field(default=3, ge=1, le=5, description="Number of proposals processed per parallel batch chunk")
+    batch_chunk_size: int = Field(default=1, ge=1, le=5, description="Number of proposals processed per parallel batch chunk")
 
 
 # ── Full Output Response Models ──────────────────────────────────────
