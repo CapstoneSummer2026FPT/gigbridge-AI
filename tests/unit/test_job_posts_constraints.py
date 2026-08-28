@@ -305,3 +305,41 @@ class TestValidateClientPrompt:
             JobPostBaseService.validate_client_prompt(p)
 
 
+# ---------------------------------------------------------------------------
+# Taxonomy & Skill Fallback
+# ---------------------------------------------------------------------------
+
+class TestTaxonomySkillsFallback:
+    def test_get_full_taxonomy_caches_skills(self):
+        from app.services.job_posts.job_post_base import get_full_taxonomy
+        taxonomy = get_full_taxonomy()
+        assert "skills" in taxonomy
+        assert len(taxonomy["skills"]) > 0
+        assert "skill_id" in taxonomy["skills"][0]
+        assert "name" in taxonomy["skills"][0]
+
+    def test_extract_taxonomy_from_chunks_skill_fallback(self):
+        from app.services.rag.query_engine import QueryEngineService
+        # Mock RAGBaseService init requirements
+        qe = QueryEngineService.__new__(QueryEngineService)
+        majors, categories, available_skills = qe._extract_taxonomy_from_chunks([])
+        assert len(available_skills) >= 15
+        assert any("skill_id" in s and "name" in s for s in available_skills)
+
+    def test_match_best_category_fullstack(self):
+        from app.services.job_posts.job_details_generator import JobDetailsGeneratorService
+        valid_cats = [
+            {"category_id": "cat_1", "name": "Cloud Engineer"},
+            {"category_id": "cat_2", "name": "Full-stack Developer"},
+            {"category_id": "cat_3", "name": "Front-end Developer"},
+        ]
+        matched_id = JobDetailsGeneratorService.match_best_category(
+            "Looking for a Fullstack Developer to Create an Admin Dashboard in 1 Week",
+            "Looking for a Fullstack Developer to Create an Admin Dashboard in 1 Week",
+            valid_cats
+        )
+        assert matched_id == "cat_2"
+
+
+
+

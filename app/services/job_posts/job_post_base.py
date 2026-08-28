@@ -37,11 +37,11 @@ UNIQUELY_VIETNAMESE_WORDS = {
     "truc", "truyen", "vietnam", "viec", "dung", "giup", "tro", "viet"
 }
 
-_TAXONOMY_CACHE: Dict[str, Any] = {"majors": [], "categories": [], "categories_by_major": {}}
+_TAXONOMY_CACHE: Dict[str, Any] = {"majors": [], "categories": [], "categories_by_major": {}, "skills": []}
 
 
 def get_full_taxonomy() -> Dict[str, Any]:
-    """Load and cache all majors and categories from categories_skills.jsonl."""
+    """Load and cache all majors, categories, and skills from categories_skills.jsonl."""
     if _TAXONOMY_CACHE["majors"]:
         return _TAXONOMY_CACHE
 
@@ -72,11 +72,14 @@ def get_full_taxonomy() -> Dict[str, Any]:
                             if m_id not in _TAXONOMY_CACHE["categories_by_major"]:
                                 _TAXONOMY_CACHE["categories_by_major"][m_id] = []
                             _TAXONOMY_CACHE["categories_by_major"][m_id].append({"category_id": item["category_id"], "name": item["name"]})
+                        elif t == "skill":
+                            _TAXONOMY_CACHE["skills"].append({"skill_id": item["skill_id"], "name": item["name"]})
                 break
             except Exception as e:
                 logger.warning(f"Failed to read taxonomy file {p}: {e}")
 
     return _TAXONOMY_CACHE
+
 
 
 class JobPostBaseService:

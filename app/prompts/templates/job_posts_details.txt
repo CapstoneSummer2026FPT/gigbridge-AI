@@ -46,10 +46,23 @@ Based on the client's prompt:
    - The title MUST comprehensively convey the seniority level, core role, primary tech stack, AND the full scope of responsibilities/objectives specified in the prompt/document. Do NOT cut short or artificially truncate key requirements.
 2. Select the single most appropriate Major. Set "major_id" to its exact ID from the list.
 3. Select the single most appropriate Category. Set "category_id" to its exact ID from the list. 
-   CRITICAL CONSTRAINT: The chosen Category MUST belong to the chosen Major (i.e. category.major_id == chosen major_id).
-4. Identify matching System Skills from the "Available System Skills" list. Set "system_skill_ids" to a list containing their exact IDs.
-5. Identify all key skills, frameworks, and technologies required for the project (e.g., specialized AI/RAG tools, libraries, or concepts mentioned or implied by the prompt). If any of these required skills are NOT present in the "Available System Skills" list, you MUST list them as custom skill strings in "custom_skills". Do not duplicate system skills here. Custom skill names can be in English or Vietnamese matching the prompt context.
-6. CRITICAL CONSTRAINT: The total combined number of skills (system_skill_ids + custom_skills) MUST NOT exceed 10. You MUST prioritize and list these skills in order of relevance (from most critical/relevant to least critical).
+   CRITICAL CATEGORY MATCHING RULES:
+   - The chosen Category MUST belong to the chosen Major (i.e. category.major_id == chosen major_id).
+   - Pay close attention to key role terms in the prompt/title:
+     - If prompt or role mentions "Fullstack", "Full-stack", or "Full Stack", you MUST select Category "Full-stack Developer" (ID: c1d44981-9ceb-4802-9da2-ad361b0dcc09).
+     - If prompt or role mentions "Frontend", "Front-end", "Web App", or "React/Vue/Angular/HTML/CSS", select Category "Front-end Developer" (ID: f5554e51-5a17-499a-a408-fb3686707561) or "Full-stack Developer".
+     - If prompt or role mentions "Backend", "Back-end", "Node/Python/Java/C#", or "API", select Category "Back-end Developer" (ID: e1155da0-9396-4643-b07e-61ca421981e2).
+     - Do NOT select infrastructure categories (e.g. "Cloud Engineer") for web application developer roles unless Cloud/DevOps infrastructure is the primary responsibility.
+
+4. CRITICAL MANDATORY SKILL EXTRACTION & INFERENCE RULE:
+   - For BOTH short prompts and attached documents, you MUST identify, extract, and infer all primary technologies, programming languages, frameworks, libraries, tools, and domain competencies required or implied by the job requirements.
+   - If the prompt describes a role or project type (e.g. "React developer", "Flutter app", "Data analyst", "Design landing page"), you MUST infer and include the standard, implicit tech stack and skills for that role (e.g. for React developer: React.js, JavaScript, HTML5, CSS3, REST API).
+   - Match as many relevant skills as possible against the "Available System Skills" list and put their exact IDs into "system_skill_ids".
+5. Identify all key skills, frameworks, and technologies required or implied for the project. If any of these required technologies or concepts are NOT present in the "Available System Skills" list, you MUST list them as custom skill strings in "custom_skills" (e.g. "Stripe API", "Zustand", "TailwindCSS", "PostgreSQL"). Do not duplicate system skills here. Custom skill names can be in English or Vietnamese matching the prompt context.
+6. CRITICAL SKILL QUANTITY & PRIORITY CONSTRAINT:
+   - The total combined count of skills (system_skill_ids + custom_skills) MUST be between 3 and 10 skills. You MUST NOT return an empty skills list for any valid job post prompt.
+   - Prioritize and list these skills in order of relevance (from most critical/relevant to least critical), capping the total combined count at 10.
+
 7. Generate the detailed Job Description in plain text format (description).
    CRITICAL ADAPTIVE CONTENT & FIDELITY RULE:
    - IF AN ATTACHED DOCUMENT OR DETAILED SPECIFICATION IS PRESENT (e.g. contains "--- ATTACHED SPECIFICATION DOCUMENT ---" or prompt length >= 300 characters):
