@@ -240,7 +240,7 @@ class JobPostBaseService:
 
     @classmethod
     def clamp_milestone_durations(cls, milestones: list, approved_weeks: float) -> None:
-        """Scale milestone estimated_duration strings in-place so total equals approved_weeks."""
+        """Scale milestone estimated_duration strings in-place so total equals approved_weeks, merging excess milestones if needed."""
         if not milestones or approved_weeks <= 0:
             return
 
@@ -251,7 +251,32 @@ class JobPostBaseService:
         if total_weeks <= approved_weeks:
             return
 
-        target_weeks = max(len(milestones), round(approved_weeks))
+        target_weeks = max(1, round(approved_weeks))
+
+        # If we have more milestones than target weeks (minimum 1 week per milestone),
+        # merge excess trailing milestones into the last allowed milestone.
+        if len(milestones) > target_weeks:
+            keep_count = target_weeks
+            last_kept = milestones[keep_count - 1]
+
+            for excess in milestones[keep_count:]:
+                # Merge amount
+                if hasattr(last_kept, "amount") and hasattr(excess, "amount"):
+                    last_kept.amount = round(float(last_kept.amount or 0) + float(excess.amount or 0), 2)
+                # Merge text fields safely
+                for attr in ("description", "deliverables", "acceptance_criteria"):
+                    val_kept = getattr(last_kept, attr, "") or ""
+                    val_excess = getattr(excess, attr, "") or ""
+                    if val_excess:
+                        combined = f"{val_kept} | {val_excess}" if val_kept else val_excess
+                        setattr(last_kept, attr, combined)
+
+            # Truncate excess milestones in-place
+            del milestones[keep_count:]
+            individual_weeks = [
+                max(1.0, cls.parse_duration_to_weeks(getattr(m, "estimated_duration", ""))) for m in milestones
+            ]
+            total_weeks = sum(individual_weeks)
 
         if total_weeks <= 0:
             per = max(1, target_weeks // len(milestones))
@@ -282,6 +307,8 @@ class JobPostBaseService:
 
         for m, w in zip(milestones, scaled_weeks):
             m.estimated_duration = cls.format_weeks_to_duration(w)
+
+
 
     @classmethod
     def recalculate_due_dates(cls, milestones: list, start: date) -> None:

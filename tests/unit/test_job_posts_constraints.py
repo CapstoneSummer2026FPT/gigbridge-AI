@@ -192,6 +192,22 @@ class TestClampMilestoneDurations:
         assert ms[0].estimated_duration == "2 weeks"
         assert ms[1].estimated_duration == "2 weeks"
 
+    def test_merges_excess_milestones_for_short_two_week_job(self):
+        ms = make_milestones((100, "1 week"), (100, "1 week"), (100, "1 week"))
+        _clamp_milestone_durations(ms, 2)
+        assert len(ms) == 2
+        total = sum(parse_duration_to_weeks(m.estimated_duration) for m in ms)
+        assert total == 2.0
+        assert ms[1].amount == 200
+
+    def test_merges_excess_milestones_for_short_one_week_job(self):
+        ms = make_milestones((100, "1 week"), (100, "1 week"), (100, "1 week"))
+        _clamp_milestone_durations(ms, 1)
+        assert len(ms) == 1
+        assert parse_duration_to_weeks(ms[0].estimated_duration) == 1.0
+        assert ms[0].amount == 300
+
+
 
 # ---------------------------------------------------------------------------
 # _recalculate_due_dates
