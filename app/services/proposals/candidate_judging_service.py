@@ -78,6 +78,13 @@ class CandidateJudgingService:
             "   - REQUIREMENT SCOPE COMPLETENESS (40% weight): Map each explicit job post requirement/deliverable to candidate's edited milestones (mark is_fulfilled as true/false).\n"
             "   - MILESTONE STRUCTURE & GRANULARITY (30% weight): Reward clear, granular milestone titles with verifiable deliverables; penalize vague single-blob milestones (milestone_structure score 0-100).\n"
             "   - TIMELINE FEASIBILITY & DURATION REALISM (30% weight): Evaluate proposed milestone durations against standard professional velocity (timeline_feasibility score 0-100). Penalize impossible rush promises (e.g. 1 day for multi-page complex project) as reckless commitments (score < 50).\n\n"
+            "PILLAR COMMENT EXPLANATIONS REQUIREMENT:\n"
+            "- DYNAMIC LANGUAGE MATCHING: If the job post baseline or candidate proposal is written in Vietnamese, output ALL `pillar_comments` in clear, professional VIETNAMESE. Otherwise, output in ENGLISH.\n"
+            "- PER-SUBCRITERIA BREAKDOWN REQUIREMENT: For EACH of the 4 pillars in `pillar_comments`, provide a structured breakdown explaining WHY the candidate received that score for EACH individual sub-criterion:\n"
+            "  * technical_solution: Explain 1) Requirement Alignment (25%), 2) Problem Analysis (25%), 3) Solution Architecture (25%), 4) Deliverables (15%), and 5) Scope Boundaries (10%).\n"
+            "  * screening_qa: Explain 1) Correctness (40%), 2) Technical Reasoning (25%), 3) Relevance (15%), 4) Depth (10%), and 5) Practical Examples (10%). If 0 screening questions were answered, explicitly state that 0 questions were answered.\n"
+            "  * financial_value: Explain 1) Pricing Realism (50%) and 2) Budget Savings (50%). If proposed price equals client budget cap, explicitly state that candidate offer remains unchanged from the baseline budget, providing 0% cost savings.\n"
+            "  * milestone_scope: Explain 1) Scope Completeness % (40%), 2) Milestone Structure Granularity (30%), and 3) Timeline Duration Feasibility (30%).\n\n"
             "EVIDENCE TRACE REQUIREMENT:\n"
             "- For EVERY subcriteria score (0-100), extract concrete evidence claims from the proposal/answers.\n"
             "- Include exact claim text, source field location (e.g. 'proposal.solutionApproach', 'answer_1'), and assessment ('Correct', 'Incorrect', 'Partial', 'Feasible', 'Unclear').\n\n"
@@ -247,6 +254,7 @@ class CandidateJudgingService:
             TechnicalSolutionQualitativeEval,
             QuestionAnswerQualitativeEval,
             RequirementFulfillmentItem,
+            PillarComments,
         )
 
         default_subscore = SubcriteriaScoreWithEvidence(
@@ -301,6 +309,12 @@ class CandidateJudgingService:
             project_specificity=default_subscore,
             substance_density=default_subscore,
             probing_questions=["Could you elaborate on your proposed architecture details?"],
+            pillar_comments=PillarComments(
+                technical_solution="• Requirement Alignment (25%): Basic alignment with core job requirements.\n• Problem Analysis (25%): Superficial problem breakdown requiring further technical clarification.\n• Technical Solution (25%): High-level workflow proposed without detailed tool/architecture specs.\n• Deliverables (15%): Deliverable descriptions are brief and standard.\n• Scope Boundaries (10%): Project assumptions and out-of-scope items were unmentioned.",
+                screening_qa="• Correctness (40%): Standard baseline accuracy.\n• Reasoning (25%): Technical logic requires interview verification.\n• Relevance (15%): Direct response provided.\n• Depth (10%): High-level overview.\n• Practical Examples (10%): No concrete scenario examples provided." if proposal.vetting_qa_answers else "• Q&A Status: Candidate did not complete any screening questions (0/100).",
+                financial_value="• Pricing Realism (50%): Proposed pricing aligns with baseline market expectations (+50%).\n• Cost Savings (50%): Candidate offer remains unchanged from maximum client budget cap, providing 0% cost savings (+0%).",
+                milestone_scope="• Scope Coverage (40%): Fulfills core job deliverables.\n• Milestone Structure (30%): Structured across standard milestone phases.\n• Timeline Feasibility (30%): Estimated duration aligns with baseline velocity.",
+            ),
         )
 
 

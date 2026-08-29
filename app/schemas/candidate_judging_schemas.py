@@ -58,6 +58,25 @@ class RequirementFulfillmentItem(BaseModel):
     note: Optional[str] = Field(None, description="Short justification note")
 
 
+class PillarComments(BaseModel):
+    technical_solution: str = Field(
+        ...,
+        description="Concise 1-2 sentence AI comment explaining the Solution & Delivery Methodology score, highlighting strengths or gaps."
+    )
+    screening_qa: str = Field(
+        ...,
+        description="Concise 1-2 sentence AI comment explaining Screening Q&A performance, factual accuracy, and depth (or noting missing Q&A)."
+    )
+    financial_value: str = Field(
+        ...,
+        description="Concise 1-2 sentence AI comment explaining Financial & Pricing Value relative to client budget and market rates."
+    )
+    milestone_scope: str = Field(
+        ...,
+        description="Concise 1-2 sentence AI comment explaining Milestone Scope coverage and timeline duration feasibility."
+    )
+
+
 class LLMQualitativeEvaluation(BaseModel):
     technical_solution: TechnicalSolutionQualitativeEval
     screening_qa: List[QuestionAnswerQualitativeEval] = Field(default_factory=list)
@@ -70,6 +89,10 @@ class LLMQualitativeEvaluation(BaseModel):
     probing_questions: List[str] = Field(
         default_factory=list, description="2-3 key questions for client to ask candidate during interview/negotiation"
     )
+    pillar_comments: Optional[PillarComments] = Field(
+        None, description="Concise 1-2 sentence AI comment explanations for each of the 4 evaluation pillars"
+    )
+
 
 
 # ── Deterministic Calculations Models ───────────────────────────────
