@@ -73,11 +73,11 @@ class DeterministicCalculator:
         else:
             scope_completeness_percent = 100.0
 
-        # 4. Pillar 1: Technical Solution Score (35% weight)
+        # 4. Pillar 1: Solution & Delivery Methodology Score (35% total weight)
         tech = llm_eval.technical_solution
         p1 = (
-            0.25 * tech.requirement_alignment.score
-            + 0.30 * tech.technical_correctness.score
+            0.30 * tech.requirement_alignment.score
+            + 0.25 * tech.technical_correctness.score
             + 0.20 * tech.architecture_quality.score
             + 0.15 * tech.implementation_feasibility.score
             + 0.10 * tech.edge_cases_security.score
