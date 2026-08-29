@@ -45,14 +45,18 @@ class DeterministicCalculator:
         proposed_budget = proposal.proposed_budget
         is_milestone_clamped = abs(milestone_total - proposed_budget) < 0.01
 
-        # 2. Budget Savings Ratio Calculation
+        # 2. Budget Savings & Compliance Score Calculation
         budget_max = baseline.budget_max or 0.0
         if budget_max > 0.0 and proposed_budget <= budget_max:
             savings_ratio = max(0.0, (budget_max - proposed_budget) / budget_max)
+            savings_ratio_percent = round(savings_ratio * 100.0, 2)
+            v_sav = min(100.0, 70.0 + savings_ratio_percent)
         else:
             savings_ratio = 0.0
-        savings_ratio_percent = round(savings_ratio * 100.0, 2)
-        v_sav = min(100.0, savings_ratio_percent)
+            savings_ratio_percent = 0.0
+            over_percent = round(((proposed_budget - budget_max) / budget_max) * 100.0, 2) if budget_max > 0.0 else 0.0
+            v_sav = max(0.0, 70.0 - over_percent)
+
 
         # 2b. Timeline Variance & Time Savings Ratio Calculation
         b_weeks = DeterministicCalculator._parse_duration_to_weeks(baseline.estimated_duration)
