@@ -74,11 +74,13 @@ class DeterministicCalculator:
             scope_completeness_percent = 100.0
 
         # 4. Pillar 1: Solution & Delivery Methodology Score (35% total weight)
+        # Evaluates 6 core proposal sections (excl. milestone plan):
+        # 1. Intro & Overview (25%), 2. Problem Analysis (25%), 3. Solution & Technical Approach (25%), 4. Deliverables (15%), 5 & 6. Assumptions & Out-of-Scope (10%)
         tech = llm_eval.technical_solution
         p1 = (
-            0.30 * tech.requirement_alignment.score
+            0.25 * tech.requirement_alignment.score
             + 0.25 * tech.technical_correctness.score
-            + 0.20 * tech.architecture_quality.score
+            + 0.25 * tech.architecture_quality.score
             + 0.15 * tech.implementation_feasibility.score
             + 0.10 * tech.edge_cases_security.score
         )
@@ -102,14 +104,15 @@ class DeterministicCalculator:
             # Default to technical solution score if no screening questions present
             p2 = p1
 
-        # 6. Pillar 3: Financial & Timeline Value Score (20% weight)
+        # 6. Pillar 3: Financial & Pricing Value Score (20% weight - 100% Pure Financial)
         v_price = llm_eval.pricing_realism.score
-        v_time = llm_eval.timeline_feasibility.score
-        p3 = round(0.30 * v_sav + 0.20 * v_time_sav + 0.30 * v_price + 0.20 * v_time, 2)
+        p3 = round(0.50 * v_sav + 0.50 * v_price, 2)
 
-        # 7. Pillar 4: Milestone Scope & Deliverables Score (15% weight)
+        # 7. Pillar 4: Milestone Scope, Deliverables & Timeline Feasibility Score (15% weight)
+        v_time = llm_eval.timeline_feasibility.score
+        v_timeline_realism = round(0.50 * v_time_sav + 0.50 * v_time, 2)
         m_struct = llm_eval.milestone_structure.score
-        p4 = round(0.60 * scope_completeness_percent + 0.40 * m_struct, 2)
+        p4 = round(0.40 * scope_completeness_percent + 0.30 * m_struct + 0.30 * v_timeline_realism, 2)
 
         # 8. Detailed Metric: Authenticity & Fluff Control Score (Demoted from top pillars to detailed analysis)
         a_spec = llm_eval.project_specificity.score

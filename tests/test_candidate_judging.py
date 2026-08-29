@@ -28,7 +28,7 @@ def make_subscore(score: float) -> SubcriteriaScoreWithEvidence:
 
 def test_mathematical_tq_rounding():
     """Verify that weighted TQ calculation rounds to exact expected value (87.14)."""
-    # Pillar 1 subscores: 0.30(90) + 0.25(85) + 0.20(80) + 0.15(85) + 0.10(75) = 84.50
+    # Pillar 1 subscores: 0.25(90) + 0.25(85) + 0.25(80) + 0.15(85) + 0.10(75) = 84.00
     tech = TechnicalSolutionQualitativeEval(
         requirement_alignment=make_subscore(90.0),
         technical_correctness=make_subscore(85.0),
@@ -91,17 +91,17 @@ def test_mathematical_tq_rounding():
     result = DeterministicCalculator.calculate(llm_eval, baseline, proposal)
 
     # Check Pillar Scores
-    assert result.pillar_scores.technical_solution == 84.50
+    assert result.pillar_scores.technical_solution == 84.00
     assert result.pillar_scores.screening_qa == 92.0
-    # Pillar 3: 0.30(28.0) + 0.20(100.0) + 0.30(90.0) + 0.20(85.0) = 8.4 + 20.0 + 27.0 + 17.0 = 72.4
-    assert result.pillar_scores.financial_value == 72.4
-    # Pillar 4: 0.60(100.0) + 0.40(90.0) = 96.0
-    assert result.pillar_scores.milestone_scope == 96.0
+    # Pillar 3: 0.50(28.0) + 0.50(90.0) = 14.0 + 45.0 = 59.0
+    assert result.pillar_scores.financial_value == 59.0
+    # Pillar 4: 0.40(100.0) + 0.30(90.0) + 0.30(92.5) = 40.0 + 27.0 + 27.75 = 94.75
+    assert result.pillar_scores.milestone_scope == 94.75
     # Pillar 5: 0.60(95.0) + 0.40(90.0) = 93.0
     assert result.pillar_scores.authenticity_fluff == 93.0
 
-    # TQ = 0.35(84.50) + 0.30(92.0) + 0.20(72.4) + 0.15(96.0) = 29.575 + 27.6 + 14.48 + 14.4 = 86.06
-    assert result.overall_technical_quality_tq == 86.06
+    # TQ = 0.35(84.00) + 0.30(92.0) + 0.20(59.0) + 0.15(94.75) = 29.4 + 27.6 + 11.8 + 14.2125 = 83.01
+    assert result.overall_technical_quality_tq == 83.01
     assert result.quality_interpretation_band == "Strong"
 
 
@@ -127,7 +127,7 @@ def test_vs_capping_and_badge_classification():
         probing_questions=[],
     )
 
-    # Test Case 1: TQ = 88.70, savings_ratio = 0.20 -> VS = 88.70 * 1.10 = 97.57
+    # Test Case 1: TQ = 85.5, savings_ratio = 0.20 -> VS = 85.5 * 1.10 = 94.05
     baseline_1 = JobPostBaselineDto(
         job_id="j1", job_title="Job 1", job_description="Desc", budget_max=1000.0
     )
@@ -136,8 +136,8 @@ def test_vs_capping_and_badge_classification():
     )
     res_1 = DeterministicCalculator.calculate(llm_eval, baseline_1, proposal_1)
     assert res_1.savings_ratio == 0.20
-    assert res_1.overall_technical_quality_tq == 88.70
-    assert res_1.final_value_score_vs == 97.57
+    assert res_1.overall_technical_quality_tq == 85.50
+    assert res_1.final_value_score_vs == 94.05
     assert res_1.verdict_badge == "top_value"
 
     # Test Case 2: TQ = 90.0, savings_ratio = 0.50 -> VS = min(100.0, 90.0 * 1.25 = 112.5) -> 100.0
