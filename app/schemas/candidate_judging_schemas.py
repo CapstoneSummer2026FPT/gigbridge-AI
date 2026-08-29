@@ -55,6 +55,9 @@ class RequirementFulfillmentItem(BaseModel):
     requirement: str = Field(..., description="The required feature/deliverable extracted from JobPost")
     is_fulfilled: bool = Field(..., description="True if candidate's proposed milestones/solution cover this requirement")
     matched_milestone: Optional[str] = Field(None, description="Title of the matching freelancer milestone if fulfilled")
+    evidence_quote: Optional[str] = Field(
+        None, description="Exact sentence quote or phrase from proposal solution approach, cover letter, or milestone proving coverage or identifying gap"
+    )
     note: Optional[str] = Field(None, description="Short justification note")
 
 

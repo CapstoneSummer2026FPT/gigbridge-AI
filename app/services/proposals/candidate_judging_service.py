@@ -94,6 +94,7 @@ class CandidateJudgingService:
             "     * STRICT ANTI-HALLUCINATION RULE: DO NOT extract developer background qualifications, years of experience, or general skill requirements (e.g., 'Proven experience with FastAPI and Python') into `requirement_fulfillment`.\n"
             "     * Evaluate SEMANTIC fulfillment across BOTH the candidate's solution approach AND edited milestones combined.\n"
             "     * Mark `is_fulfilled: true` if the candidate's offer semantically covers the feature deliverable.\n"
+            "     * VERIFIABLE EVIDENCE PROOF REQUIREMENT: For EVERY item in `requirement_fulfillment`, populate `evidence_quote` with the exact sentence quote or phrase from the candidate's solution approach, cover letter, or milestone description proving coverage. If unfulfilled (`is_fulfilled: false`), specify the exact gap quote or reason.\n"
             "     * DO NOT penalize or mark deliverables as unfulfilled merely because milestone titles are renamed, edited, or restructured by the freelancer.\n"
             "   - MILESTONE STRUCTURE & GRANULARITY (30% weight): Reward clear, granular milestone titles with verifiable deliverables; penalize vague single-blob milestones (milestone_structure score 0-100).\n"
             "   - TIMELINE FEASIBILITY & DURATION REALISM (30% weight): Evaluate proposed milestone durations against standard professional velocity (timeline_feasibility score 0-100). Penalize impossible rush promises (e.g. 1 day for multi-page complex project) as reckless commitments (score < 50).\n\n"
@@ -332,6 +333,7 @@ class CandidateJudgingService:
                     requirement="Core deliverables",
                     is_fulfilled=True,
                     matched_milestone="Edited Milestones",
+                    evidence_quote="Candidate proposed detailed milestones covering core project deliverables.",
                     note="Assumed fulfilled in fallback",
                 )
             ],

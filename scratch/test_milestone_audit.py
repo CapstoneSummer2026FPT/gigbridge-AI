@@ -65,9 +65,27 @@ eval_output = LLMQualitativeEvaluation(
         MilestoneAuditItem(order_index=4, milestone_title="Final Review and Documentation", status="Preserved", change_summary="Unchanged", is_scope_covered=True),
     ],
     requirement_fulfillment=[
-        RequirementFulfillmentItem(requirement="Develop FastAPI app handling cold starts", is_fulfilled=True, matched_milestone="Initial Setup and Configuration"),
-        RequirementFulfillmentItem(requirement="Implement ingestion checking chroma_db & flag needs_ingestion", is_fulfilled=True, matched_milestone="Implement Ingestion Process & ChromaDB Flagging"),
-        RequirementFulfillmentItem(requirement="Ensure database is rebuilt dynamically during ingestion", is_fulfilled=True, matched_milestone="Testing and Optimization"),
+        RequirementFulfillmentItem(
+            requirement="Develop and implement marketing automation strategies to drive traffic",
+            is_fulfilled=True,
+            matched_milestone="Milestone 1: Marketing Automation Setup",
+            evidence_quote="We will configure automated lead nurture workflows in HubSpot and set up email triggers to drive traffic.",
+            note="Directly covered in Milestone 1 deliverables."
+        ),
+        RequirementFulfillmentItem(
+            requirement="Optimize SEO and content marketing efforts",
+            is_fulfilled=True,
+            matched_milestone="Milestone 2: SEO Optimization",
+            evidence_quote="Perform technical SEO audits, keyword research, and optimize content structure.",
+            note="Covered in Milestone 2."
+        ),
+        RequirementFulfillmentItem(
+            requirement="Collaborate with the content team to create compelling marketing materials",
+            is_fulfilled=False,
+            matched_milestone=None,
+            evidence_quote="No content creation, copywriting, or team collaboration workflow mentioned in proposal or milestones.",
+            note="Candidate proposal focuses strictly on technical automation setup, omitting content creation."
+        ),
     ],
     pricing_realism=sub_score,
     timeline_feasibility=sub_score,
