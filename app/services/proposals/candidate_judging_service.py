@@ -167,6 +167,9 @@ class CandidateJudgingService:
         # Enforce strict 1:1 matching of screening_qa evaluation items to proposal.vetting_qa_answers
         llm_eval = self._sanitize_screening_qa(llm_eval, proposal)
 
+        # Enforce complete milestone delta audit (Preserved, Edited, Added, Deleted)
+        llm_eval = self._sanitize_milestone_audit(llm_eval, baseline, proposal)
+
         # Execute deterministic calculation
         deterministic = DeterministicCalculator.calculate(llm_eval, baseline, proposal)
 
@@ -262,6 +265,105 @@ class CandidateJudgingService:
                 sanitized_qa.append(matching_eval)
 
         llm_eval.screening_qa = sanitized_qa
+        return llm_eval
+
+    def _sanitize_milestone_audit(
+        self,
+        llm_eval: LLMQualitativeEvaluation,
+        baseline: JobPostBaselineDto,
+        proposal: ProposalOfferDto,
+    ) -> LLMQualitativeEvaluation:
+        """Enforce complete milestone delta audit across all 4 statuses: Preserved, Edited, Added, Deleted."""
+        from app.schemas.candidate_judging_schemas import MilestoneAuditItem
+
+        orig_milestones = baseline.original_milestones or []
+        edited_milestones = proposal.edited_milestones or []
+
+        existing_audits = llm_eval.milestone_audit or []
+        audit_by_title = {
+            a.milestone_title.strip().lower(): a for a in existing_audits if a.milestone_title
+        }
+
+        sanitized_audits: List[MilestoneAuditItem] = []
+
+        # 1. Process candidate proposed milestones first
+        for idx, ms in enumerate(edited_milestones, start=1):
+            ms_title_lower = ms.title.strip().lower() if ms.title else ""
+
+            # Find matching original baseline milestone by title
+            matched_orig = next(
+                (o for o in orig_milestones if o.title and (o.title.strip().lower() == ms_title_lower or ms_title_lower in o.title.strip().lower() or o.title.strip().lower() in ms_title_lower)),
+                None
+            )
+
+            existing_item = audit_by_title.get(ms_title_lower)
+            if not existing_item:
+                existing_item = next((a for a in existing_audits if a.order_index == idx), None)
+
+            if matched_orig:
+                is_price_changed = abs((matched_orig.amount or 0.0) - (ms.amount or 0.0)) > 0.01
+                is_dur_changed = (matched_orig.estimated_duration or "").strip() != (ms.estimated_duration or "").strip()
+                is_title_changed = (matched_orig.title or "").strip().lower() != (ms.title or "").strip().lower()
+                is_modified = is_price_changed or is_dur_changed or is_title_changed
+
+                if existing_item and existing_item.status in ("Preserved", "Edited"):
+                    status = existing_item.status
+                    change_summary = existing_item.change_summary
+                else:
+                    status = "Edited" if is_modified else "Preserved"
+                    change_summary = "Freelancer adjusted milestone details/budget/duration" if is_modified else "Baseline milestone preserved"
+
+                sanitized_audits.append(
+                    MilestoneAuditItem(
+                        order_index=ms.order_index if ms.order_index else idx,
+                        milestone_title=ms.title,
+                        status=status,
+                        change_summary=change_summary,
+                        is_scope_covered=True,
+                    )
+                )
+            else:
+                sanitized_audits.append(
+                    MilestoneAuditItem(
+                        order_index=ms.order_index if ms.order_index else idx,
+                        milestone_title=ms.title,
+                        status="Added",
+                        change_summary=existing_item.change_summary if existing_item else "Freelancer proposed custom new milestone phase",
+                        is_scope_covered=True,
+                    )
+                )
+
+        # 2. Identify missing original baseline milestones (Deleted)
+        for orig_idx, orig_ms in enumerate(orig_milestones, start=1):
+            orig_title_lower = orig_ms.title.strip().lower() if orig_ms.title else ""
+            matched_candidate = next(
+                (m for m in edited_milestones if m.title and (m.title.strip().lower() == orig_title_lower or orig_title_lower in m.title.strip().lower() or m.title.strip().lower() in orig_title_lower)),
+                None
+            )
+
+            if not matched_candidate:
+                existing_del = next(
+                    (a for a in existing_audits if a.milestone_title and a.milestone_title.strip().lower() == orig_title_lower and a.status == "Deleted"),
+                    None
+                )
+
+                change_summary = (
+                    existing_del.change_summary
+                    if existing_del and existing_del.change_summary
+                    else f"Baseline milestone '{orig_ms.title}' omitted by freelancer"
+                )
+
+                sanitized_audits.append(
+                    MilestoneAuditItem(
+                        order_index=orig_ms.order_index if orig_ms.order_index else (len(edited_milestones) + orig_idx),
+                        milestone_title=orig_ms.title,
+                        status="Deleted",
+                        change_summary=change_summary,
+                        is_scope_covered=False,
+                    )
+                )
+
+        llm_eval.milestone_audit = sanitized_audits
         return llm_eval
 
     def _create_fallback_evaluation(
