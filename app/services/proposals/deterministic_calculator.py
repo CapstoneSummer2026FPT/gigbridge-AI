@@ -45,14 +45,18 @@ class DeterministicCalculator:
         proposed_budget = proposal.proposed_budget
         is_milestone_clamped = abs(milestone_total - proposed_budget) < 0.01
 
-        # 2. Budget Savings Ratio Calculation
+        # 2. Budget Savings & Compliance Score Calculation
         budget_max = baseline.budget_max or 0.0
         if budget_max > 0.0 and proposed_budget <= budget_max:
             savings_ratio = max(0.0, (budget_max - proposed_budget) / budget_max)
+            savings_ratio_percent = round(savings_ratio * 100.0, 2)
+            v_sav = min(100.0, 70.0 + savings_ratio_percent)
         else:
             savings_ratio = 0.0
-        savings_ratio_percent = round(savings_ratio * 100.0, 2)
-        v_sav = min(100.0, savings_ratio_percent)
+            savings_ratio_percent = 0.0
+            over_percent = round(((proposed_budget - budget_max) / budget_max) * 100.0, 2) if budget_max > 0.0 else 0.0
+            v_sav = max(0.0, 70.0 - over_percent)
+
 
         # 2b. Timeline Variance & Time Savings Ratio Calculation
         b_weeks = DeterministicCalculator._parse_duration_to_weeks(baseline.estimated_duration)
@@ -70,6 +74,9 @@ class DeterministicCalculator:
         if requirements and len(requirements) > 0:
             fulfilled_count = sum(1 for req in requirements if req.is_fulfilled)
             scope_completeness_percent = round((fulfilled_count / len(requirements)) * 100.0, 2)
+        elif llm_eval.milestone_audit and len(llm_eval.milestone_audit) > 0:
+            covered_ms = sum(1 for m in llm_eval.milestone_audit if m.is_scope_covered or m.status in ("Preserved", "Edited", "Added"))
+            scope_completeness_percent = round((covered_ms / len(llm_eval.milestone_audit)) * 100.0, 2)
         else:
             scope_completeness_percent = 100.0
 
@@ -136,21 +143,13 @@ class DeterministicCalculator:
         else:
             interpretation_band = "High Risk / Poor Quality"
 
-        # 12. Verdict Badge Classification
-        if tq < 60.0 or scope_completeness_percent < 70.0:
+        # 12. Verdict Badge Classification (3-Category Model: high_risk, top_value, qualified_match)
+        if tq < 60.0 or scope_completeness_percent < 50.0:
             badge = "high_risk"
-        elif tq >= 80.0 and vs >= 88.0 and (budget_max == 0.0 or proposed_budget <= budget_max):
+        elif tq >= 75.0 or (tq >= 60.0 and savings_ratio > 0.0):
             badge = "top_value"
-        elif tq >= 90.0 and budget_max > 0.0 and proposed_budget > budget_max:
-            badge = "top_technical"
-        elif 60.0 <= tq < 80.0 and savings_ratio >= 0.20:
-            badge = "budget_saver"
-        elif vs >= 85.0:
-            badge = "top_value"
-        elif savings_ratio >= 0.15:
-            badge = "budget_saver"
         else:
-            badge = "high_risk" if tq < 65.0 else "top_technical"
+            badge = "qualified_match"
 
         pillar_scores = PillarScores(
             technical_solution=p1,

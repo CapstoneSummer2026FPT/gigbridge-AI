@@ -55,12 +55,49 @@ class RequirementFulfillmentItem(BaseModel):
     requirement: str = Field(..., description="The required feature/deliverable extracted from JobPost")
     is_fulfilled: bool = Field(..., description="True if candidate's proposed milestones/solution cover this requirement")
     matched_milestone: Optional[str] = Field(None, description="Title of the matching freelancer milestone if fulfilled")
+    evidence_quote: Optional[str] = Field(
+        None, description="Exact sentence quote or phrase from proposal solution approach, cover letter, or milestone proving coverage or identifying gap"
+    )
     note: Optional[str] = Field(None, description="Short justification note")
+
+
+class MilestoneAuditItem(BaseModel):
+    order_index: int = Field(..., description="1-indexed milestone order position")
+    milestone_title: str = Field(..., description="Title of the candidate milestone or original baseline milestone")
+    status: Literal["Preserved", "Edited", "Added", "Deleted"] = Field(
+        ..., description="Audit status of the milestone relative to client baseline (Preserved, Edited, Added, Deleted)"
+    )
+    change_summary: Optional[str] = Field(
+        None, description="Explanation of changes (e.g. 'Duration reduced', 'Scope edited', 'Newly added phase', 'Omitted baseline step')"
+    )
+    is_scope_covered: bool = Field(
+        default=True, description="True if this milestone delivers valid project scope"
+    )
+
+
+class PillarComments(BaseModel):
+    technical_solution: str = Field(
+        ...,
+        description="Concise 1-2 sentence AI comment explaining the Solution & Delivery Methodology score, highlighting strengths or gaps."
+    )
+    screening_qa: str = Field(
+        ...,
+        description="Concise 1-2 sentence AI comment explaining Screening Q&A performance, factual accuracy, and depth (or noting missing Q&A)."
+    )
+    financial_value: str = Field(
+        ...,
+        description="Concise 1-2 sentence AI comment explaining Financial & Pricing Value relative to client budget and market rates."
+    )
+    milestone_scope: str = Field(
+        ...,
+        description="Concise 1-2 sentence AI comment explaining Milestone Scope coverage and timeline duration feasibility."
+    )
 
 
 class LLMQualitativeEvaluation(BaseModel):
     technical_solution: TechnicalSolutionQualitativeEval
     screening_qa: List[QuestionAnswerQualitativeEval] = Field(default_factory=list)
+    milestone_audit: List[MilestoneAuditItem] = Field(default_factory=list)
     requirement_fulfillment: List[RequirementFulfillmentItem] = Field(default_factory=list)
     pricing_realism: SubcriteriaScoreWithEvidence
     timeline_feasibility: SubcriteriaScoreWithEvidence
@@ -70,6 +107,10 @@ class LLMQualitativeEvaluation(BaseModel):
     probing_questions: List[str] = Field(
         default_factory=list, description="2-3 key questions for client to ask candidate during interview/negotiation"
     )
+    pillar_comments: Optional[PillarComments] = Field(
+        None, description="Concise 1-2 sentence AI comment explanations for each of the 4 evaluation pillars"
+    )
+
 
 
 # ── Deterministic Calculations Models ───────────────────────────────
@@ -94,7 +135,7 @@ class DeterministicCalculations(BaseModel):
     overall_technical_quality_tq: float = Field(..., ge=0.0, le=100.0, description="Overall Technical Quality (0.0 to 100.0)")
     quality_interpretation_band: Literal["Exceptional", "Strong", "Acceptable", "High Risk / Poor Quality"]
     final_value_score_vs: float = Field(..., ge=0.0, le=100.0, description="Capped Value Score (0.0 to 100.0)")
-    verdict_badge: Literal["top_value", "top_technical", "budget_saver", "high_risk"]
+    verdict_badge: Literal["top_value", "qualified_match", "high_risk", "top_technical", "budget_saver"]
 
 
 # ── Input Request Models ─────────────────────────────────────────────

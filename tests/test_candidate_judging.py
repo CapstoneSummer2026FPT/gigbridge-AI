@@ -93,16 +93,16 @@ def test_mathematical_tq_rounding():
     # Check Pillar Scores
     assert result.pillar_scores.technical_solution == 84.00
     assert result.pillar_scores.screening_qa == 92.0
-    # Pillar 3: 0.50(28.0) + 0.50(90.0) = 14.0 + 45.0 = 59.0
-    assert result.pillar_scores.financial_value == 59.0
+    # Pillar 3: 0.50(98.0) + 0.50(90.0) = 49.0 + 45.0 = 94.0
+    assert result.pillar_scores.financial_value == 94.0
     # Pillar 4: 0.40(100.0) + 0.30(90.0) + 0.30(92.5) = 40.0 + 27.0 + 27.75 = 94.75
     assert result.pillar_scores.milestone_scope == 94.75
     # Pillar 5: 0.60(95.0) + 0.40(90.0) = 93.0
     assert result.pillar_scores.authenticity_fluff == 93.0
 
-    # TQ = 0.35(84.00) + 0.30(92.0) + 0.20(59.0) + 0.15(94.75) = 29.4 + 27.6 + 11.8 + 14.2125 = 83.01
-    assert result.overall_technical_quality_tq == 83.01
-    assert result.quality_interpretation_band == "Strong"
+    # TQ = 0.35(84.00) + 0.30(92.0) + 0.20(94.0) + 0.15(94.75) = 29.4 + 27.6 + 18.8 + 14.2125 = 90.01
+    assert result.overall_technical_quality_tq == 90.01
+    assert result.quality_interpretation_band == "Exceptional"
 
 
 def test_vs_capping_and_badge_classification():
@@ -127,7 +127,7 @@ def test_vs_capping_and_badge_classification():
         probing_questions=[],
     )
 
-    # Test Case 1: TQ = 85.5, savings_ratio = 0.20 -> VS = 85.5 * 1.10 = 94.05
+    # Test Case 1: TQ = 92.5, savings_ratio = 0.20 -> VS = min(100, 92.5 * 1.10 = 101.75) -> 100.0
     baseline_1 = JobPostBaselineDto(
         job_id="j1", job_title="Job 1", job_description="Desc", budget_max=1000.0
     )
@@ -136,9 +136,10 @@ def test_vs_capping_and_badge_classification():
     )
     res_1 = DeterministicCalculator.calculate(llm_eval, baseline_1, proposal_1)
     assert res_1.savings_ratio == 0.20
-    assert res_1.overall_technical_quality_tq == 85.50
-    assert res_1.final_value_score_vs == 94.05
+    assert res_1.overall_technical_quality_tq == 92.50
+    assert res_1.final_value_score_vs == 100.0
     assert res_1.verdict_badge == "top_value"
+
 
     # Test Case 2: TQ = 90.0, savings_ratio = 0.50 -> VS = min(100.0, 90.0 * 1.25 = 112.5) -> 100.0
     baseline_2 = JobPostBaselineDto(

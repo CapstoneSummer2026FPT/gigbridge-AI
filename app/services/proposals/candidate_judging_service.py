@@ -71,13 +71,40 @@ class CandidateJudgingService:
             "     * Actively detect whether candidate answer exhibits stereotypical AI generator signatures (e.g. ChatGPT intro phrases like 'The process usually works like this:', uniform numbered lists with bold lead-ins, generic ungrounded fluff).\n"
             "     * If AI generator patterns are detected, set `is_ai_generated: true` and specify `ai_detection_reason`.\n"
             "     * Heavy copy-pasted AI textbook answers MUST be penalized on `depth` and `practical_examples` sub-criteria (scores < 60).\n"
+            "   - FACTUAL & EXPERIENCE QUESTION SCORING GUARDRAIL:\n"
+            "     * Actively detect whether a screening question is a factual, experience, or numerical qualification question (e.g. asking for years of experience, rate, availability, or certifications like 'How many years of experience do you have for this role?').\n"
+            "     * For factual/experience questions, compare stated candidate answer directly against job description requirements.\n"
+            "     * If stated metrics meet or exceed job requirements (e.g. candidate states '3 years' or '5 years' when job requires 3+ years), DO NOT penalize for lacking multi-paragraph code essays or trade-off reasoning.\n"
+            "     * For valid factual answers meeting job criteria, assign 100/100 across answer_correctness, technical_reasoning, relevance, depth, and practical_examples (yielding 100/100 overall question score).\n"
+            "     * If stated experience falls below job requirements (e.g. 1 year vs 3 required), scale score down proportionally (e.g. score < 40).\n"
             "   - ANTI-VERBOSITY RULE: Apply a verbosity penalty (score < 40) for padded fluff or generic filler phrases.\n"
             "3. PILLAR 3 - FINANCIAL & PRICING VALUE (20% Weight - Pure Financial):\n"
             "   - PRICING REALISM ONLY (pricing_realism score 0-100): Evaluate proposed total budget and milestone prices against scope complexity. Penalize suspicious underbidding (< 50% fair market rate) as quality traps (score < 50). Penalize excessive price gouging. Reward fair, market-aligned milestone pricing (score 80-100). DO NOT evaluate project duration or timeline in Pillar 3.\n"
             "4. PILLAR 4 - MILESTONE SCOPE, DELIVERABLES & TIMELINE FEASIBILITY (15% Weight):\n"
-            "   - REQUIREMENT SCOPE COMPLETENESS (40% weight): Map each explicit job post requirement/deliverable to candidate's edited milestones (mark is_fulfilled as true/false).\n"
+            "   - MILESTONE DELTA AUDIT (milestone_audit array):\n"
+            "     * Compare client baseline milestones against freelancer's edited milestones.\n"
+            "     * For EACH candidate milestone (and any deleted baseline milestone), classify `status` as EXACTLY ONE OF:\n"
+            "       - 'Preserved': Milestone is unchanged or fully preserves baseline scope.\n"
+            "       - 'Edited': Freelancer customized title, budget, duration, or scope details while delivering valid scope.\n"
+            "       - 'Added': Freelancer introduced a new custom milestone phase.\n"
+            "       - 'Deleted': Baseline milestone was removed/omitted by freelancer.\n"
+            "     * Provide a concise `change_summary` explaining the delta (e.g. 'Freelancer edited description to specify chroma_db checks').\n"
+            "   - REQUIREMENT SCOPE FULFILLMENT (requirement_fulfillment array):\n"
+            "     * Extract ONLY concrete, functional project deliverables & feature requirements from the job post.\n"
+            "     * STRICT ANTI-HALLUCINATION RULE: DO NOT extract developer background qualifications, years of experience, or general skill requirements (e.g., 'Proven experience with FastAPI and Python') into `requirement_fulfillment`.\n"
+            "     * Evaluate SEMANTIC fulfillment across BOTH the candidate's solution approach AND edited milestones combined.\n"
+            "     * Mark `is_fulfilled: true` if the candidate's offer semantically covers the feature deliverable.\n"
+            "     * VERIFIABLE EVIDENCE PROOF REQUIREMENT: For EVERY item in `requirement_fulfillment`, populate `evidence_quote` with the exact sentence quote or phrase from the candidate's solution approach, cover letter, or milestone description proving coverage. If unfulfilled (`is_fulfilled: false`), specify the exact gap quote or reason.\n"
+            "     * DO NOT penalize or mark deliverables as unfulfilled merely because milestone titles are renamed, edited, or restructured by the freelancer.\n"
             "   - MILESTONE STRUCTURE & GRANULARITY (30% weight): Reward clear, granular milestone titles with verifiable deliverables; penalize vague single-blob milestones (milestone_structure score 0-100).\n"
             "   - TIMELINE FEASIBILITY & DURATION REALISM (30% weight): Evaluate proposed milestone durations against standard professional velocity (timeline_feasibility score 0-100). Penalize impossible rush promises (e.g. 1 day for multi-page complex project) as reckless commitments (score < 50).\n\n"
+            "PILLAR COMMENT EXPLANATIONS REQUIREMENT:\n"
+            "- DYNAMIC LANGUAGE MATCHING: If the job post baseline or candidate proposal is written in Vietnamese, output ALL `pillar_comments` in clear, professional VIETNAMESE. Otherwise, output in ENGLISH.\n"
+            "- PER-SUBCRITERIA BREAKDOWN REQUIREMENT: For EACH of the 4 pillars in `pillar_comments`, provide a structured breakdown explaining WHY the candidate received that score for EACH individual sub-criterion:\n"
+            "  * technical_solution: Explain 1) Requirement Alignment (25%), 2) Problem Analysis (25%), 3) Solution Architecture (25%), 4) Deliverables (15%), and 5) Scope Boundaries (10%).\n"
+            "  * screening_qa: Explain 1) Correctness (40%), 2) Technical Reasoning (25%), 3) Relevance (15%), 4) Depth (10%), and 5) Practical Examples (10%). If 0 screening questions were answered, explicitly state that 0 questions were answered.\n"
+            "  * financial_value: Explain 1) Pricing Realism (50%) and 2) Budget Savings (50%). If proposed price equals client budget cap, explicitly state that candidate offer remains unchanged from the baseline budget, providing 0% cost savings.\n"
+            "  * milestone_scope: Explain 1) Scope Completeness % (40%), 2) Milestone Structure Granularity (30%), and 3) Timeline Duration Feasibility (30%).\n\n"
             "EVIDENCE TRACE REQUIREMENT:\n"
             "- For EVERY subcriteria score (0-100), extract concrete evidence claims from the proposal/answers.\n"
             "- Include exact claim text, source field location (e.g. 'proposal.solutionApproach', 'answer_1'), and assessment ('Correct', 'Incorrect', 'Partial', 'Feasible', 'Unclear').\n\n"
@@ -139,6 +166,9 @@ class CandidateJudgingService:
 
         # Enforce strict 1:1 matching of screening_qa evaluation items to proposal.vetting_qa_answers
         llm_eval = self._sanitize_screening_qa(llm_eval, proposal)
+
+        # Enforce complete milestone delta audit (Preserved, Edited, Added, Deleted)
+        llm_eval = self._sanitize_milestone_audit(llm_eval, baseline, proposal)
 
         # Execute deterministic calculation
         deterministic = DeterministicCalculator.calculate(llm_eval, baseline, proposal)
@@ -237,6 +267,105 @@ class CandidateJudgingService:
         llm_eval.screening_qa = sanitized_qa
         return llm_eval
 
+    def _sanitize_milestone_audit(
+        self,
+        llm_eval: LLMQualitativeEvaluation,
+        baseline: JobPostBaselineDto,
+        proposal: ProposalOfferDto,
+    ) -> LLMQualitativeEvaluation:
+        """Enforce complete milestone delta audit across all 4 statuses: Preserved, Edited, Added, Deleted."""
+        from app.schemas.candidate_judging_schemas import MilestoneAuditItem
+
+        orig_milestones = baseline.original_milestones or []
+        edited_milestones = proposal.edited_milestones or []
+
+        existing_audits = llm_eval.milestone_audit or []
+        audit_by_title = {
+            a.milestone_title.strip().lower(): a for a in existing_audits if a.milestone_title
+        }
+
+        sanitized_audits: List[MilestoneAuditItem] = []
+
+        # 1. Process candidate proposed milestones first
+        for idx, ms in enumerate(edited_milestones, start=1):
+            ms_title_lower = ms.title.strip().lower() if ms.title else ""
+
+            # Find matching original baseline milestone by title
+            matched_orig = next(
+                (o for o in orig_milestones if o.title and (o.title.strip().lower() == ms_title_lower or ms_title_lower in o.title.strip().lower() or o.title.strip().lower() in ms_title_lower)),
+                None
+            )
+
+            existing_item = audit_by_title.get(ms_title_lower)
+            if not existing_item:
+                existing_item = next((a for a in existing_audits if a.order_index == idx), None)
+
+            if matched_orig:
+                is_price_changed = abs((matched_orig.amount or 0.0) - (ms.amount or 0.0)) > 0.01
+                is_dur_changed = (matched_orig.estimated_duration or "").strip() != (ms.estimated_duration or "").strip()
+                is_title_changed = (matched_orig.title or "").strip().lower() != (ms.title or "").strip().lower()
+                is_modified = is_price_changed or is_dur_changed or is_title_changed
+
+                if existing_item and existing_item.status in ("Preserved", "Edited"):
+                    status = existing_item.status
+                    change_summary = existing_item.change_summary
+                else:
+                    status = "Edited" if is_modified else "Preserved"
+                    change_summary = "Freelancer adjusted milestone details/budget/duration" if is_modified else "Baseline milestone preserved"
+
+                sanitized_audits.append(
+                    MilestoneAuditItem(
+                        order_index=ms.order_index if ms.order_index else idx,
+                        milestone_title=ms.title,
+                        status=status,
+                        change_summary=change_summary,
+                        is_scope_covered=True,
+                    )
+                )
+            else:
+                sanitized_audits.append(
+                    MilestoneAuditItem(
+                        order_index=ms.order_index if ms.order_index else idx,
+                        milestone_title=ms.title,
+                        status="Added",
+                        change_summary=existing_item.change_summary if existing_item else "Freelancer proposed custom new milestone phase",
+                        is_scope_covered=True,
+                    )
+                )
+
+        # 2. Identify missing original baseline milestones (Deleted)
+        for orig_idx, orig_ms in enumerate(orig_milestones, start=1):
+            orig_title_lower = orig_ms.title.strip().lower() if orig_ms.title else ""
+            matched_candidate = next(
+                (m for m in edited_milestones if m.title and (m.title.strip().lower() == orig_title_lower or orig_title_lower in m.title.strip().lower() or m.title.strip().lower() in orig_title_lower)),
+                None
+            )
+
+            if not matched_candidate:
+                existing_del = next(
+                    (a for a in existing_audits if a.milestone_title and a.milestone_title.strip().lower() == orig_title_lower and a.status == "Deleted"),
+                    None
+                )
+
+                change_summary = (
+                    existing_del.change_summary
+                    if existing_del and existing_del.change_summary
+                    else f"Baseline milestone '{orig_ms.title}' omitted by freelancer"
+                )
+
+                sanitized_audits.append(
+                    MilestoneAuditItem(
+                        order_index=orig_ms.order_index if orig_ms.order_index else (len(edited_milestones) + orig_idx),
+                        milestone_title=orig_ms.title,
+                        status="Deleted",
+                        change_summary=change_summary,
+                        is_scope_covered=False,
+                    )
+                )
+
+        llm_eval.milestone_audit = sanitized_audits
+        return llm_eval
+
     def _create_fallback_evaluation(
         self, proposal: ProposalOfferDto
     ) -> LLMQualitativeEvaluation:
@@ -247,6 +376,8 @@ class CandidateJudgingService:
             TechnicalSolutionQualitativeEval,
             QuestionAnswerQualitativeEval,
             RequirementFulfillmentItem,
+            MilestoneAuditItem,
+            PillarComments,
         )
 
         default_subscore = SubcriteriaScoreWithEvidence(
@@ -278,6 +409,17 @@ class CandidateJudgingService:
                 )
             )
 
+        ms_audits = [
+            MilestoneAuditItem(
+                order_index=ms.order_index,
+                milestone_title=ms.title,
+                status="Edited",
+                change_summary="Freelancer proposed milestone",
+                is_scope_covered=True,
+            )
+            for ms in proposal.edited_milestones
+        ] if proposal.edited_milestones else []
+
         return LLMQualitativeEvaluation(
             technical_solution=TechnicalSolutionQualitativeEval(
                 requirement_alignment=default_subscore,
@@ -287,11 +429,13 @@ class CandidateJudgingService:
                 edge_cases_security=default_subscore,
             ),
             screening_qa=qa_evals,
+            milestone_audit=ms_audits,
             requirement_fulfillment=[
                 RequirementFulfillmentItem(
                     requirement="Core deliverables",
                     is_fulfilled=True,
                     matched_milestone="Edited Milestones",
+                    evidence_quote="Candidate proposed detailed milestones covering core project deliverables.",
                     note="Assumed fulfilled in fallback",
                 )
             ],
@@ -301,6 +445,12 @@ class CandidateJudgingService:
             project_specificity=default_subscore,
             substance_density=default_subscore,
             probing_questions=["Could you elaborate on your proposed architecture details?"],
+            pillar_comments=PillarComments(
+                technical_solution="• Requirement Alignment (25%): Basic alignment with core job requirements.\n• Problem Analysis (25%): Superficial problem breakdown requiring further technical clarification.\n• Technical Solution (25%): High-level workflow proposed without detailed tool/architecture specs.\n• Deliverables (15%): Deliverable descriptions are brief and standard.\n• Scope Boundaries (10%): Project assumptions and out-of-scope items were unmentioned.",
+                screening_qa="• Correctness (40%): Standard baseline accuracy.\n• Reasoning (25%): Technical logic requires interview verification.\n• Relevance (15%): Direct response provided.\n• Depth (10%): High-level overview.\n• Practical Examples (10%): No concrete scenario examples provided." if proposal.vetting_qa_answers else "• Q&A Status: Candidate did not complete any screening questions (0/100).",
+                financial_value="• Pricing Realism (50%): Proposed pricing aligns with baseline market expectations (+50%).\n• Cost Savings (50%): Candidate offer remains unchanged from maximum client budget cap, providing 0% cost savings (+0%).",
+                milestone_scope="• Scope Coverage (40%): Fulfills core job deliverables.\n• Milestone Structure (30%): Structured across standard milestone phases.\n• Timeline Feasibility (30%): Estimated duration aligns with baseline velocity.",
+            ),
         )
 
 
