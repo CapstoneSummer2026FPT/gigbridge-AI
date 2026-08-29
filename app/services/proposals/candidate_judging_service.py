@@ -66,6 +66,10 @@ class CandidateJudgingService:
             "   c) RELEVANCE (relevance, 15% weight): Directness in answering the exact question asked without off-topic tangents.\n"
             "   d) DOMAIN DEPTH (depth, 10% weight): Specificity of technical/professional mechanics vs generic high-level statements.\n"
             "   e) PRACTICAL EXAMPLES (practical_examples, 10% weight): Inclusion of concrete workflow patterns, past experience details, or realistic scenario handling.\n"
+            "   - STRICT TECHNICAL DEPTH & REASONING GUARDRAIL FOR GENERIC ANSWERS:\n"
+            "     * High-level, surface-level, or generic textbook responses (e.g. 'understanding target audience, brand guidelines, consistent & scalable system') without naming specific tools, design tokens, architecture specs, step-by-step technical implementation, or trade-offs MUST BE STRICTLY PENALIZED.\n"
+            "     * For generic/high-level answers lacking concrete technical tools/artifacts: CAP `technical_reasoning` AT 40-55 / 100 max, CAP `depth` AT 30-50 / 100 max, and CAP `practical_examples` AT 30-50 / 100 max.\n"
+            "     * DO NOT award scores > 75 for `technical_reasoning` or `depth` unless the candidate names specific domain tools/artifacts (e.g. Figma design systems, tokens, CSS/component frameworks, specific API tools, database schemas) and provides practical trade-off logic.\n"
             "   - STRICT Q&A COUNT CONSTRAINT: Output EXACTLY ONE item in `screening_qa` array for each question explicitly provided in 'Vetting Screening Q&A Responses'. If 0 questions are provided, output `[]`.\n"
             "   - AI-GENERATED ANSWER & AUTHENTICITY DETECTION GUARDRAIL:\n"
             "     * Actively detect whether candidate answer exhibits stereotypical AI generator signatures (e.g. ChatGPT intro phrases like 'The process usually works like this:', uniform numbered lists with bold lead-ins, generic ungrounded fluff).\n"
@@ -244,12 +248,12 @@ class CandidateJudgingService:
 
         sanitized_qa = []
         for idx, input_qa in enumerate(input_qa_list, start=1):
-            target_q_idx = input_qa.question_index if input_qa.question_index is not None else idx
+            input_idx = input_qa.question_index if input_qa.question_index is not None else idx
 
-            # Find matching item in LLM screening_qa output by question_index
+            # Find matching item in LLM screening_qa output by input index or position
             matching_eval = None
             for eval_item in llm_eval.screening_qa:
-                if eval_item.question_index == target_q_idx:
+                if eval_item.question_index == input_idx:
                     matching_eval = eval_item
                     break
 
@@ -258,8 +262,8 @@ class CandidateJudgingService:
                 matching_eval = llm_eval.screening_qa[idx - 1]
 
             if matching_eval:
-                # Copy exact ground-truth question text, candidate answer, and index
-                matching_eval.question_index = target_q_idx
+                # Copy exact ground-truth question text, candidate answer, and sequential 1-based index (idx)
+                matching_eval.question_index = idx
                 matching_eval.question_text = input_qa.question_text
                 matching_eval.candidate_answer = input_qa.candidate_answer
                 sanitized_qa.append(matching_eval)
