@@ -139,21 +139,13 @@ class DeterministicCalculator:
         else:
             interpretation_band = "High Risk / Poor Quality"
 
-        # 12. Verdict Badge Classification
+        # 12. Verdict Badge Classification (3-Category Model: high_risk, top_value, qualified_match)
         if tq < 60.0 or scope_completeness_percent < 50.0:
             badge = "high_risk"
-        elif tq >= 80.0 and vs >= 88.0 and (budget_max == 0.0 or proposed_budget <= budget_max):
+        elif tq >= 75.0 or (tq >= 60.0 and savings_ratio > 0.0):
             badge = "top_value"
-        elif tq >= 90.0 and budget_max > 0.0 and proposed_budget > budget_max:
-            badge = "top_technical"
-        elif 60.0 <= tq < 80.0 and savings_ratio >= 0.20:
-            badge = "budget_saver"
-        elif vs >= 85.0:
-            badge = "top_value"
-        elif savings_ratio >= 0.15:
-            badge = "budget_saver"
         else:
-            badge = "high_risk" if tq < 65.0 else "top_technical"
+            badge = "qualified_match"
 
         pillar_scores = PillarScores(
             technical_solution=p1,

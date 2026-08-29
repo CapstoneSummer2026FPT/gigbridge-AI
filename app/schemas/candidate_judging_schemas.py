@@ -135,7 +135,7 @@ class DeterministicCalculations(BaseModel):
     overall_technical_quality_tq: float = Field(..., ge=0.0, le=100.0, description="Overall Technical Quality (0.0 to 100.0)")
     quality_interpretation_band: Literal["Exceptional", "Strong", "Acceptable", "High Risk / Poor Quality"]
     final_value_score_vs: float = Field(..., ge=0.0, le=100.0, description="Capped Value Score (0.0 to 100.0)")
-    verdict_badge: Literal["top_value", "top_technical", "budget_saver", "high_risk"]
+    verdict_badge: Literal["top_value", "qualified_match", "high_risk", "top_technical", "budget_saver"]
 
 
 # ── Input Request Models ─────────────────────────────────────────────
