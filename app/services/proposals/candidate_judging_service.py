@@ -81,7 +81,20 @@ class CandidateJudgingService:
             "3. PILLAR 3 - FINANCIAL & PRICING VALUE (20% Weight - Pure Financial):\n"
             "   - PRICING REALISM ONLY (pricing_realism score 0-100): Evaluate proposed total budget and milestone prices against scope complexity. Penalize suspicious underbidding (< 50% fair market rate) as quality traps (score < 50). Penalize excessive price gouging. Reward fair, market-aligned milestone pricing (score 80-100). DO NOT evaluate project duration or timeline in Pillar 3.\n"
             "4. PILLAR 4 - MILESTONE SCOPE, DELIVERABLES & TIMELINE FEASIBILITY (15% Weight):\n"
-            "   - REQUIREMENT SCOPE COMPLETENESS (40% weight): Map each explicit job post requirement/deliverable to candidate's edited milestones (mark is_fulfilled as true/false).\n"
+            "   - MILESTONE DELTA AUDIT (milestone_audit array):\n"
+            "     * Compare client baseline milestones against freelancer's edited milestones.\n"
+            "     * For EACH candidate milestone (and any deleted baseline milestone), classify `status` as EXACTLY ONE OF:\n"
+            "       - 'Preserved': Milestone is unchanged or fully preserves baseline scope.\n"
+            "       - 'Edited': Freelancer customized title, budget, duration, or scope details while delivering valid scope.\n"
+            "       - 'Added': Freelancer introduced a new custom milestone phase.\n"
+            "       - 'Deleted': Baseline milestone was removed/omitted by freelancer.\n"
+            "     * Provide a concise `change_summary` explaining the delta (e.g. 'Freelancer edited description to specify chroma_db checks').\n"
+            "   - REQUIREMENT SCOPE FULFILLMENT (requirement_fulfillment array):\n"
+            "     * Extract ONLY concrete, functional project deliverables & feature requirements from the job post.\n"
+            "     * STRICT ANTI-HALLUCINATION RULE: DO NOT extract developer background qualifications, years of experience, or general skill requirements (e.g., 'Proven experience with FastAPI and Python') into `requirement_fulfillment`.\n"
+            "     * Evaluate SEMANTIC fulfillment across BOTH the candidate's solution approach AND edited milestones combined.\n"
+            "     * Mark `is_fulfilled: true` if the candidate's offer semantically covers the feature deliverable.\n"
+            "     * DO NOT penalize or mark deliverables as unfulfilled merely because milestone titles are renamed, edited, or restructured by the freelancer.\n"
             "   - MILESTONE STRUCTURE & GRANULARITY (30% weight): Reward clear, granular milestone titles with verifiable deliverables; penalize vague single-blob milestones (milestone_structure score 0-100).\n"
             "   - TIMELINE FEASIBILITY & DURATION REALISM (30% weight): Evaluate proposed milestone durations against standard professional velocity (timeline_feasibility score 0-100). Penalize impossible rush promises (e.g. 1 day for multi-page complex project) as reckless commitments (score < 50).\n\n"
             "PILLAR COMMENT EXPLANATIONS REQUIREMENT:\n"
@@ -260,6 +273,7 @@ class CandidateJudgingService:
             TechnicalSolutionQualitativeEval,
             QuestionAnswerQualitativeEval,
             RequirementFulfillmentItem,
+            MilestoneAuditItem,
             PillarComments,
         )
 
@@ -292,6 +306,17 @@ class CandidateJudgingService:
                 )
             )
 
+        ms_audits = [
+            MilestoneAuditItem(
+                order_index=ms.order_index,
+                milestone_title=ms.title,
+                status="Edited",
+                change_summary="Freelancer proposed milestone",
+                is_scope_covered=True,
+            )
+            for ms in proposal.edited_milestones
+        ] if proposal.edited_milestones else []
+
         return LLMQualitativeEvaluation(
             technical_solution=TechnicalSolutionQualitativeEval(
                 requirement_alignment=default_subscore,
@@ -301,6 +326,7 @@ class CandidateJudgingService:
                 edge_cases_security=default_subscore,
             ),
             screening_qa=qa_evals,
+            milestone_audit=ms_audits,
             requirement_fulfillment=[
                 RequirementFulfillmentItem(
                     requirement="Core deliverables",

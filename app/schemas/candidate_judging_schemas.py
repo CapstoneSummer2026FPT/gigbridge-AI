@@ -58,6 +58,20 @@ class RequirementFulfillmentItem(BaseModel):
     note: Optional[str] = Field(None, description="Short justification note")
 
 
+class MilestoneAuditItem(BaseModel):
+    order_index: int = Field(..., description="1-indexed milestone order position")
+    milestone_title: str = Field(..., description="Title of the candidate milestone or original baseline milestone")
+    status: Literal["Preserved", "Edited", "Added", "Deleted"] = Field(
+        ..., description="Audit status of the milestone relative to client baseline (Preserved, Edited, Added, Deleted)"
+    )
+    change_summary: Optional[str] = Field(
+        None, description="Explanation of changes (e.g. 'Duration reduced', 'Scope edited', 'Newly added phase', 'Omitted baseline step')"
+    )
+    is_scope_covered: bool = Field(
+        default=True, description="True if this milestone delivers valid project scope"
+    )
+
+
 class PillarComments(BaseModel):
     technical_solution: str = Field(
         ...,
@@ -80,6 +94,7 @@ class PillarComments(BaseModel):
 class LLMQualitativeEvaluation(BaseModel):
     technical_solution: TechnicalSolutionQualitativeEval
     screening_qa: List[QuestionAnswerQualitativeEval] = Field(default_factory=list)
+    milestone_audit: List[MilestoneAuditItem] = Field(default_factory=list)
     requirement_fulfillment: List[RequirementFulfillmentItem] = Field(default_factory=list)
     pricing_realism: SubcriteriaScoreWithEvidence
     timeline_feasibility: SubcriteriaScoreWithEvidence
