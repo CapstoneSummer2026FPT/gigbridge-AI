@@ -74,11 +74,13 @@ class DeterministicCalculator:
             scope_completeness_percent = 100.0
 
         # 4. Pillar 1: Solution & Delivery Methodology Score (35% total weight)
+        # Evaluates 6 core proposal sections (excl. milestone plan):
+        # 1. Intro & Overview (25%), 2. Problem Analysis (25%), 3. Solution & Technical Approach (25%), 4. Deliverables (15%), 5 & 6. Assumptions & Out-of-Scope (10%)
         tech = llm_eval.technical_solution
         p1 = (
-            0.30 * tech.requirement_alignment.score
+            0.25 * tech.requirement_alignment.score
             + 0.25 * tech.technical_correctness.score
-            + 0.20 * tech.architecture_quality.score
+            + 0.25 * tech.architecture_quality.score
             + 0.15 * tech.implementation_feasibility.score
             + 0.10 * tech.edge_cases_security.score
         )
