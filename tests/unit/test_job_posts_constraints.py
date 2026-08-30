@@ -192,6 +192,22 @@ class TestClampMilestoneDurations:
         assert ms[0].estimated_duration == "2 weeks"
         assert ms[1].estimated_duration == "2 weeks"
 
+    def test_merges_excess_milestones_for_short_two_week_job(self):
+        ms = make_milestones((100, "1 week"), (100, "1 week"), (100, "1 week"))
+        _clamp_milestone_durations(ms, 2)
+        assert len(ms) == 2
+        total = sum(parse_duration_to_weeks(m.estimated_duration) for m in ms)
+        assert total == 2.0
+        assert ms[1].amount == 200
+
+    def test_merges_excess_milestones_for_short_one_week_job(self):
+        ms = make_milestones((100, "1 week"), (100, "1 week"), (100, "1 week"))
+        _clamp_milestone_durations(ms, 1)
+        assert len(ms) == 1
+        assert parse_duration_to_weeks(ms[0].estimated_duration) == 1.0
+        assert ms[0].amount == 300
+
+
 
 # ---------------------------------------------------------------------------
 # _recalculate_due_dates
@@ -280,4 +296,91 @@ class TestStripBudgetAndTimelineSections:
         assert "NGÂN SÁCH" not in cleaned
         assert "15.000.000 VNĐ" not in cleaned
         assert "YÊU CẦU CÔNG VIỆC" in cleaned
+
+
+# ---------------------------------------------------------------------------
+# validate_client_prompt
+# ---------------------------------------------------------------------------
+
+class TestValidateClientPrompt:
+    def test_nonsense_prompts_raise_400(self):
+        nonsense_list = ["hihi", "hi", "hello", "asdf", "12345", "test", "  hihi  ", "xin chao"]
+        for p in nonsense_list:
+            with pytest.raises(Exception) as exc_info:
+                JobPostBaseService.validate_client_prompt(p)
+            assert exc_info.value.status_code == 400
+            assert "invalid_prompt" in exc_info.value.errors
+
+    def test_valid_prompts_pass(self):
+        valid_list = [
+            "Need a React developer to build an e-commerce dashboard",
+            "Cần tuyển chuyên gia về Node.js và PostgreSQL",
+            "Looking for a Python backend engineer for AI integration"
+        ]
+        for p in valid_list:
+            JobPostBaseService.validate_client_prompt(p)
+
+
+# ---------------------------------------------------------------------------
+# Taxonomy & Skill Fallback
+# ---------------------------------------------------------------------------
+
+class TestTaxonomySkillsFallback:
+    def test_get_full_taxonomy_caches_skills(self):
+        from app.services.job_posts.job_post_base import get_full_taxonomy
+        taxonomy = get_full_taxonomy()
+        assert "skills" in taxonomy
+        assert len(taxonomy["skills"]) > 0
+        assert "skill_id" in taxonomy["skills"][0]
+        assert "name" in taxonomy["skills"][0]
+
+    def test_extract_taxonomy_from_chunks_skill_fallback(self):
+        from app.services.rag.query_engine import QueryEngineService
+        # Mock RAGBaseService init requirements
+        qe = QueryEngineService.__new__(QueryEngineService)
+        majors, categories, available_skills = qe._extract_taxonomy_from_chunks([])
+        assert len(available_skills) >= 15
+        assert any("skill_id" in s and "name" in s for s in available_skills)
+
+    def test_match_best_category_fullstack(self):
+        from app.services.job_posts.job_details_generator import JobDetailsGeneratorService
+        valid_cats = [
+            {"category_id": "cat_1", "name": "Cloud Engineer"},
+            {"category_id": "cat_2", "name": "Full-stack Developer"},
+            {"category_id": "cat_3", "name": "Front-end Developer"},
+        ]
+        matched_id = JobDetailsGeneratorService.match_best_category(
+            "Looking for a Fullstack Developer to Create an Admin Dashboard in 1 Week",
+            "Looking for a Fullstack Developer to Create an Admin Dashboard in 1 Week",
+            valid_cats
+        )
+        assert matched_id == "cat_2"
+
+    def test_sanitize_title_role_multidisciplinary(self):
+        from app.services.job_posts.job_details_generator import JobDetailsGeneratorService
+
+        # 1. Tech discipline
+        res_tech = JobDetailsGeneratorService.sanitize_title_role(
+            "Looking for a specialist in Email Verification System Development",
+            "Full-stack Developer"
+        )
+        assert res_tech == "Looking for a Full-stack Developer for Email Verification System Development"
+
+        # 2. Writing discipline
+        res_write = JobDetailsGeneratorService.sanitize_title_role(
+            "Looking for a specialist in 5 Facebook Articles for Product Introduction",
+            "Content Writer"
+        )
+        assert res_write == "Looking for a Content Writer for 5 Facebook Articles for Product Introduction"
+
+        # 3. Vietnamese Design discipline
+        res_vi = JobDetailsGeneratorService.sanitize_title_role(
+            "Cần tuyển chuyên gia về Thiết kế bộ nhận diện thương hiệu",
+            "Thiết kế đồ họa"
+        )
+        assert res_vi == "Cần tuyển Thiết kế đồ họa Thiết kế bộ nhận diện thương hiệu"
+
+
+
+
 

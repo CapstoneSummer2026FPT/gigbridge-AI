@@ -5,6 +5,7 @@ READING FLOW: app/schemas/job_posts.py -> app/services/job_posts/job_post_base.p
 """
 
 import logging
+from typing import Dict, List
 from app.schemas.job_posts import (
     JobPostDetailsGenerationResponse,
     JobPostGenerationRequest,
@@ -12,6 +13,7 @@ from app.schemas.job_posts import (
 from app.schemas.rag import AnswerConfig, RetrievalGroup
 from app.core.exceptions import AIServerException
 from app.services.job_posts.job_post_base import JobPostBaseService
+
 
 logger = logging.getLogger("ai_server.job_details_generator")
 
@@ -34,6 +36,7 @@ class JobDetailsGeneratorService(JobPostBaseService):
         7. Return JobPostDetailsGenerationResponse.
         """
         logger.info("Generating job details using RAG pipeline")
+        self.validate_client_prompt(request.client_prompt)
         target_lang = "Vietnamese" if self.is_vietnamese(request.client_prompt) else "English"
 
         system_prompt = (
@@ -51,6 +54,7 @@ class JobDetailsGeneratorService(JobPostBaseService):
             "SAFETY POLICY:\n"
             "- You MUST NOT generate job posts for illegal, harmful, or dangerous jobs.\n"
             "- If the client's prompt requests any such illegal activity, you MUST return title='POLICY_VIOLATION'.\n"
+            "- If the prompt is meaningless, off-topic, gibberish, or greetings-only (e.g. 'hihi', 'hello', 'asdf'), you MUST return title='INVALID_PROMPT'.\n"
             "LANGUAGE CONSTRAINTS:\n"
             f"- You MUST generate both the 'title' and 'description' fields strictly in {target_lang}.\n"
             "- Custom skills can be in English or Vietnamese matching the prompt context."
@@ -88,6 +92,14 @@ class JobDetailsGeneratorService(JobPostBaseService):
                 errors=["policy_violation"]
             )
 
+        if response_data.title == "INVALID_PROMPT":
+            logger.warning(f"Invalid or meaningless prompt detected by LLM: {request.client_prompt}")
+            raise AIServerException(
+                message="The prompt provided is invalid or meaningless. Please describe your project requirements in detail.",
+                status_code=400,
+                errors=["invalid_prompt"]
+            )
+
         total_system = len(response_data.system_skill_ids)
         if total_system > 10:
             response_data.system_skill_ids = response_data.system_skill_ids[:10]
@@ -95,20 +107,127 @@ class JobDetailsGeneratorService(JobPostBaseService):
         elif total_system + len(response_data.custom_skills) > 10:
             response_data.custom_skills = response_data.custom_skills[:(10 - total_system)]
 
+        # Fallback safeguard: If both system_skill_ids and custom_skills are empty, auto-populate skills from taxonomy
+        if not response_data.system_skill_ids and not response_data.custom_skills:
+            from app.services.job_posts.job_post_base import get_full_taxonomy
+            taxonomy = get_full_taxonomy()
+            all_taxonomy_skills = taxonomy.get("skills", [])
+            if all_taxonomy_skills:
+                # Take top 5 skills as fallback
+                response_data.system_skill_ids = [s["skill_id"] for s in all_taxonomy_skills[:5]]
+                logger.info(f"Auto-populated {len(response_data.system_skill_ids)} fallback skill IDs for prompt: {request.client_prompt}")
+
         if response_data.description:
             response_data.description = self.strip_budget_and_timeline_sections(response_data.description)
 
-        # Post-validation: Ensure category_id is valid and belongs to major_id
+        # Post-validation: Ensure category_id is valid, belongs to major_id, and matches prompt intent
         from app.services.job_posts.job_post_base import get_full_taxonomy
         taxonomy = get_full_taxonomy()
         valid_cats = taxonomy["categories_by_major"].get(response_data.major_id, [])
         valid_cat_ids = {c["category_id"] for c in valid_cats}
 
-        if valid_cats and response_data.category_id not in valid_cat_ids:
-            logger.warning(
-                f"Model returned category_id {response_data.category_id} not belonging to major_id {response_data.major_id}. "
-                f"Autocorrecting category_id to {valid_cats[0]['category_id']} ({valid_cats[0]['name']})."
-            )
-            response_data.category_id = valid_cats[0]["category_id"]
+        if valid_cats:
+            best_cat_id = self.match_best_category(request.client_prompt, response_data.title, valid_cats)
+            current_cat_name = next((c["name"] for c in valid_cats if c["category_id"] == response_data.category_id), "")
+
+            # If category_id does not belong to major, or if there is an explicit role mismatch (e.g. prompt is Fullstack/Frontend/Backend but category was set to Cloud Engineer)
+            is_mismatched = False
+            combined = f"{response_data.title} {request.client_prompt}".lower()
+            if any(kw in combined for kw in ["fullstack", "full-stack", "full stack"]) and current_cat_name != "Full-stack Developer":
+                is_mismatched = True
+            elif any(kw in combined for kw in ["frontend", "front-end", "front end"]) and current_cat_name not in ["Front-end Developer", "Full-stack Developer", "Web Designer"]:
+                is_mismatched = True
+            elif any(kw in combined for kw in ["backend", "back-end", "back end"]) and current_cat_name not in ["Back-end Developer", "Full-stack Developer"]:
+                is_mismatched = True
+
+            if response_data.category_id not in valid_cat_ids or is_mismatched:
+                if best_cat_id:
+                    target_name = next((c["name"] for c in valid_cats if c["category_id"] == best_cat_id), best_cat_id)
+                    logger.warning(
+                        f"Autocorrecting category_id from '{current_cat_name}' ({response_data.category_id}) "
+                        f"to smart match '{target_name}' ({best_cat_id}) for title '{response_data.title}'."
+                    )
+                    response_data.category_id = best_cat_id
+
+        # Sanitize rigid 'specialist in' title patterns across all professions to align role with category
+        cat_name = next((c["name"] for c in valid_cats if c["category_id"] == response_data.category_id), "")
+        if cat_name and response_data.title:
+            response_data.title = self.sanitize_title_role(response_data.title, cat_name)
 
         return response_data
+
+    @staticmethod
+    def sanitize_title_role(title: str, category_name: str) -> str:
+        """Sanitize rigid 'specialist in' title patterns across all professions into natural role-aligned titles."""
+        if not title or not category_name:
+            return title
+
+        import re
+
+        # English regex: "Looking for a specialist in [Topic]" -> "Looking for a [Category Name] for [Topic]"
+        en_pattern = r"^(Looking|Seeking|Hiring|Need|I want to hire)\s+for\s+a\s+specialist\s+in\s+(.+)$"
+        match_en = re.match(en_pattern, title, re.IGNORECASE)
+        if match_en:
+            prefix = match_en.group(1).capitalize()
+            topic = match_en.group(2).strip()
+            return f"{prefix} for a {category_name} for {topic}"
+
+        # Vietnamese regex: "Cần tuyển chuyên gia về [Topic]" -> "Cần tuyển [Category Name] [Topic]"
+        vi_pattern = r"^(Cần tuyển|Đang tìm kiếm|Tìm kiếm|Tôi muốn thuê)\s+chuyên gia\s+về\s+(.+)$"
+        match_vi = re.match(vi_pattern, title, re.IGNORECASE)
+        if match_vi:
+            prefix = match_vi.group(1)
+            topic = match_vi.group(2).strip()
+            return f"{prefix} {category_name} {topic}"
+
+        return title
+
+
+    @staticmethod
+    def match_best_category(prompt_text: str, title: str, valid_cats: List[Dict[str, str]]) -> str:
+        """Find the best matching category_id from valid_cats based on prompt and title keywords."""
+        if not valid_cats:
+            return ""
+
+        import re
+        combined_text = f"{title} {prompt_text}".lower()
+
+        # Priority direct keyword mappings
+        keyword_mappings = [
+            (["fullstack", "full-stack", "full stack"], "Full-stack Developer"),
+            (["frontend", "front-end", "front end", "react", "vue", "angular"], "Front-end Developer"),
+            (["backend", "back-end", "back end", "node", "django", "laravel", "express", "spring"], "Back-end Developer"),
+            (["mobile", "flutter", "react native", "android", "ios", "swift", "kotlin"], "Mobile App Developer"),
+            (["ui/ux", "ui designer", "ux designer"], "UI/UX Designer"),
+            (["data analyst", "analytics"], "Data Analyst"),
+            (["data engineer"], "Data Engineer"),
+            (["data scientist"], "Data Scientist"),
+            (["ai", "machine learning", "llm", "prompt engineer"], "AI Automation Specialist"),
+            (["devops", "ci/cd", "kubernetes", "docker"], "DevOps Engineer"),
+            (["qa", "tester", "testing"], "QA Automation Engineer"),
+            (["cloud", "aws", "azure", "gcp"], "Cloud Engineer"),
+            (["wordpress"], "WordPress Developer"),
+            (["shopify"], "Shopify Developer"),
+        ]
+
+        for keywords, target_name in keyword_mappings:
+            if any(kw in combined_text for kw in keywords):
+                for cat in valid_cats:
+                    if cat["name"].lower() == target_name.lower():
+                        return cat["category_id"]
+
+        # Word overlap scoring fallback
+        best_cat_id = valid_cats[0]["category_id"]
+        max_score = -1
+        words = set(re.findall(r"\b\w+\b", combined_text))
+
+        for cat in valid_cats:
+            cat_words = set(re.findall(r"\b\w+\b", cat["name"].lower()))
+            overlap = len(words & cat_words)
+            if overlap > max_score:
+                max_score = overlap
+                best_cat_id = cat["category_id"]
+
+        return best_cat_id
+
+

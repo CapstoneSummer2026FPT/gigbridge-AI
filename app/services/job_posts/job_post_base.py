@@ -37,11 +37,11 @@ UNIQUELY_VIETNAMESE_WORDS = {
     "truc", "truyen", "vietnam", "viec", "dung", "giup", "tro", "viet"
 }
 
-_TAXONOMY_CACHE: Dict[str, Any] = {"majors": [], "categories": [], "categories_by_major": {}}
+_TAXONOMY_CACHE: Dict[str, Any] = {"majors": [], "categories": [], "categories_by_major": {}, "skills": []}
 
 
 def get_full_taxonomy() -> Dict[str, Any]:
-    """Load and cache all majors and categories from categories_skills.jsonl."""
+    """Load and cache all majors, categories, and skills from categories_skills.jsonl."""
     if _TAXONOMY_CACHE["majors"]:
         return _TAXONOMY_CACHE
 
@@ -72,11 +72,14 @@ def get_full_taxonomy() -> Dict[str, Any]:
                             if m_id not in _TAXONOMY_CACHE["categories_by_major"]:
                                 _TAXONOMY_CACHE["categories_by_major"][m_id] = []
                             _TAXONOMY_CACHE["categories_by_major"][m_id].append({"category_id": item["category_id"], "name": item["name"]})
+                        elif t == "skill":
+                            _TAXONOMY_CACHE["skills"].append({"skill_id": item["skill_id"], "name": item["name"]})
                 break
             except Exception as e:
                 logger.warning(f"Failed to read taxonomy file {p}: {e}")
 
     return _TAXONOMY_CACHE
+
 
 
 class JobPostBaseService:
@@ -114,6 +117,52 @@ class JobPostBaseService:
             return True
 
         return False
+
+    NONSENSE_PROMPT_PATTERNS = {
+        "hi", "hihi", "hihihi", "hello", "hey", "chao", "chào", "xin chao", "xin chào",
+        "alo", "test", "testing", "asdf", "asdfg", "asdfghjkl", "qwerty", "123", "1234",
+        "12345", "123456", "abc", "abcd", "abcxyz", "xxx", "zzz", "aaa", "bbb", "ccc",
+        "haha", "hahaha", "hehe", "hehehe", "kkk", "kkkk"
+    }
+
+    @classmethod
+    def validate_client_prompt(cls, prompt: str) -> None:
+        """Validate client prompt for minimum length and meaningless/nonsense content before calling LLM."""
+        from app.core.exceptions import AIServerException
+
+        if not prompt or not prompt.strip():
+            raise AIServerException(
+                message="The prompt provided is invalid or meaningless. Please describe your project requirements in detail.",
+                status_code=400,
+                errors=["invalid_prompt"]
+            )
+
+        clean_prompt = prompt.strip().lower()
+        words = re.findall(r"\b\w+\b", clean_prompt)
+
+        if not words:
+            raise AIServerException(
+                message="The prompt provided is invalid or meaningless. Please describe your project requirements in detail.",
+                status_code=400,
+                errors=["invalid_prompt"]
+            )
+
+        full_text_condensed = "".join(words)
+        if len(prompt.strip()) < 8 or len(words) < 2:
+            if clean_prompt in cls.NONSENSE_PROMPT_PATTERNS or full_text_condensed in cls.NONSENSE_PROMPT_PATTERNS or len(full_text_condensed) < 5:
+                raise AIServerException(
+                    message="The prompt provided is invalid or meaningless. Please describe your project requirements in detail.",
+                    status_code=400,
+                    errors=["invalid_prompt"]
+                )
+
+        if clean_prompt in cls.NONSENSE_PROMPT_PATTERNS or full_text_condensed in cls.NONSENSE_PROMPT_PATTERNS:
+            raise AIServerException(
+                message="The prompt provided is invalid or meaningless. Please describe your project requirements in detail.",
+                status_code=400,
+                errors=["invalid_prompt"]
+            )
+
 
     @staticmethod
     def convert_date_to_iso(date_str: str) -> str:
@@ -191,7 +240,7 @@ class JobPostBaseService:
 
     @classmethod
     def clamp_milestone_durations(cls, milestones: list, approved_weeks: float) -> None:
-        """Scale milestone estimated_duration strings in-place so total equals approved_weeks."""
+        """Scale milestone estimated_duration strings in-place so total equals approved_weeks, merging excess milestones if needed."""
         if not milestones or approved_weeks <= 0:
             return
 
@@ -202,7 +251,33 @@ class JobPostBaseService:
         if total_weeks <= approved_weeks:
             return
 
-        target_weeks = max(len(milestones), round(approved_weeks))
+        target_weeks = max(1, round(approved_weeks))
+
+        # If we have more milestones than target weeks (minimum 1 week per milestone),
+        # merge excess trailing milestones into the last allowed milestone.
+        if len(milestones) > target_weeks:
+            keep_count = target_weeks
+            last_kept = milestones[keep_count - 1]
+
+            for excess in milestones[keep_count:]:
+                # Merge amount
+                if hasattr(last_kept, "amount") and hasattr(excess, "amount"):
+                    last_kept.amount = round(float(last_kept.amount or 0) + float(excess.amount or 0), 2)
+                # Merge text fields safely (title, description, deliverables, acceptance_criteria)
+                for attr in ("title", "description", "deliverables", "acceptance_criteria"):
+                    val_kept = getattr(last_kept, attr, "") or ""
+                    val_excess = getattr(excess, attr, "") or ""
+                    if val_excess and val_excess not in val_kept:
+                        combined = f"{val_kept} | {val_excess}" if val_kept else val_excess
+                        setattr(last_kept, attr, combined)
+
+
+            # Truncate excess milestones in-place
+            del milestones[keep_count:]
+            individual_weeks = [
+                max(1.0, cls.parse_duration_to_weeks(getattr(m, "estimated_duration", ""))) for m in milestones
+            ]
+            total_weeks = sum(individual_weeks)
 
         if total_weeks <= 0:
             per = max(1, target_weeks // len(milestones))
@@ -233,6 +308,8 @@ class JobPostBaseService:
 
         for m, w in zip(milestones, scaled_weeks):
             m.estimated_duration = cls.format_weeks_to_duration(w)
+
+
 
     @classmethod
     def recalculate_due_dates(cls, milestones: list, start: date) -> None:

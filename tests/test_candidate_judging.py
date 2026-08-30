@@ -28,7 +28,7 @@ def make_subscore(score: float) -> SubcriteriaScoreWithEvidence:
 
 def test_mathematical_tq_rounding():
     """Verify that weighted TQ calculation rounds to exact expected value (87.14)."""
-    # Pillar 1 subscores: 0.25(90) + 0.30(85) + 0.20(80) + 0.15(85) + 0.10(75) = 84.25
+    # Pillar 1 subscores: 0.25(90) + 0.25(85) + 0.25(80) + 0.15(85) + 0.10(75) = 84.00
     tech = TechnicalSolutionQualitativeEval(
         requirement_alignment=make_subscore(90.0),
         technical_correctness=make_subscore(85.0),
@@ -47,6 +47,9 @@ def test_mathematical_tq_rounding():
         relevance=make_subscore(100.0),
         depth=make_subscore(80.0),
         practical_examples=make_subscore(85.0),
+        is_ai_generated=False,
+        ai_detection_reason=None,
+        qualitative_feedback="Strong technical answer demonstrating solid Redis knowledge.",
     )
 
     reqs = [
@@ -88,18 +91,18 @@ def test_mathematical_tq_rounding():
     result = DeterministicCalculator.calculate(llm_eval, baseline, proposal)
 
     # Check Pillar Scores
-    assert result.pillar_scores.technical_solution == 84.25
+    assert result.pillar_scores.technical_solution == 84.00
     assert result.pillar_scores.screening_qa == 92.0
-    # Pillar 3: 0.50(28.0) + 0.30(90.0) + 0.20(85.0) = 14.0 + 27.0 + 17.0 = 58.0
-    assert result.pillar_scores.financial_value == 58.0
-    # Pillar 4: 0.60(100.0) + 0.40(90.0) = 96.0
-    assert result.pillar_scores.milestone_scope == 96.0
+    # Pillar 3: 0.50(98.0) + 0.50(90.0) = 49.0 + 45.0 = 94.0
+    assert result.pillar_scores.financial_value == 94.0
+    # Pillar 4: 0.40(100.0) + 0.30(90.0) + 0.30(92.5) = 40.0 + 27.0 + 27.75 = 94.75
+    assert result.pillar_scores.milestone_scope == 94.75
     # Pillar 5: 0.60(95.0) + 0.40(90.0) = 93.0
     assert result.pillar_scores.authenticity_fluff == 93.0
 
-    # TQ = 0.35(84.25) + 0.30(92.0) + 0.20(58.0) + 0.15(96.0) = 29.4875 + 27.6 + 11.6 + 14.4 = 83.09
-    assert result.overall_technical_quality_tq == 83.09
-    assert result.quality_interpretation_band == "Strong"
+    # TQ = 0.35(84.00) + 0.30(92.0) + 0.20(94.0) + 0.15(94.75) = 29.4 + 27.6 + 18.8 + 14.2125 = 90.01
+    assert result.overall_technical_quality_tq == 90.01
+    assert result.quality_interpretation_band == "Exceptional"
 
 
 def test_vs_capping_and_badge_classification():
@@ -124,7 +127,7 @@ def test_vs_capping_and_badge_classification():
         probing_questions=[],
     )
 
-    # Test Case 1: TQ = 85.5, savings_ratio = 0.20 -> VS = 85.5 * 1.10 = 94.05
+    # Test Case 1: TQ = 92.5, savings_ratio = 0.20 -> VS = min(100, 92.5 * 1.10 = 101.75) -> 100.0
     baseline_1 = JobPostBaselineDto(
         job_id="j1", job_title="Job 1", job_description="Desc", budget_max=1000.0
     )
@@ -133,9 +136,10 @@ def test_vs_capping_and_badge_classification():
     )
     res_1 = DeterministicCalculator.calculate(llm_eval, baseline_1, proposal_1)
     assert res_1.savings_ratio == 0.20
-    assert res_1.overall_technical_quality_tq == 85.5
-    assert res_1.final_value_score_vs == 94.05
+    assert res_1.overall_technical_quality_tq == 92.50
+    assert res_1.final_value_score_vs == 100.0
     assert res_1.verdict_badge == "top_value"
+
 
     # Test Case 2: TQ = 90.0, savings_ratio = 0.50 -> VS = min(100.0, 90.0 * 1.25 = 112.5) -> 100.0
     baseline_2 = JobPostBaselineDto(
@@ -242,3 +246,107 @@ def test_milestone_arithmetic_clamping():
     res_unclamped = DeterministicCalculator.calculate(llm_eval, baseline, proposal_unclamped)
     assert res_unclamped.is_milestone_clamped is False
     assert res_unclamped.milestone_total == 900.0
+
+
+def test_sanitize_screening_qa():
+    """Verify that CandidateJudgingService._sanitize_screening_qa enforces 1:1 Q&A matching."""
+    from app.services.proposals.candidate_judging_service import CandidateJudgingService
+
+    service = CandidateJudgingService()
+
+    tech = TechnicalSolutionQualitativeEval(
+        requirement_alignment=make_subscore(80.0),
+        technical_correctness=make_subscore(80.0),
+        architecture_quality=make_subscore(80.0),
+        implementation_feasibility=make_subscore(80.0),
+        edge_cases_security=make_subscore(80.0),
+    )
+
+    # Simulated LLM hallucinating 3 Q&A evaluations when candidate only answered 1
+    hallucinated_qas = [
+        QuestionAnswerQualitativeEval(
+            question_index=1,
+            question_text="Hallucinated Q1",
+            candidate_answer="Hallucinated A1",
+            answer_correctness=make_subscore(80.0),
+            technical_reasoning=make_subscore(80.0),
+            relevance=make_subscore(80.0),
+            depth=make_subscore(80.0),
+            practical_examples=make_subscore(80.0),
+            is_ai_generated=False,
+            ai_detection_reason=None,
+            qualitative_feedback="Eval 1",
+        ),
+        QuestionAnswerQualitativeEval(
+            question_index=2,
+            question_text="Fake Q2",
+            candidate_answer="Fake A2",
+            answer_correctness=make_subscore(70.0),
+            technical_reasoning=make_subscore(70.0),
+            relevance=make_subscore(70.0),
+            depth=make_subscore(70.0),
+            practical_examples=make_subscore(70.0),
+            is_ai_generated=False,
+            ai_detection_reason=None,
+            qualitative_feedback="Eval 2",
+        ),
+        QuestionAnswerQualitativeEval(
+            question_index=3,
+            question_text="Fake Q3",
+            candidate_answer="Fake A3",
+            answer_correctness=make_subscore(60.0),
+            technical_reasoning=make_subscore(60.0),
+            relevance=make_subscore(60.0),
+            depth=make_subscore(60.0),
+            practical_examples=make_subscore(60.0),
+            is_ai_generated=False,
+            ai_detection_reason=None,
+            qualitative_feedback="Eval 3",
+        ),
+    ]
+
+    llm_eval = LLMQualitativeEvaluation(
+        technical_solution=tech,
+        screening_qa=hallucinated_qas,
+        requirement_fulfillment=[],
+        pricing_realism=make_subscore(80.0),
+        timeline_feasibility=make_subscore(80.0),
+        milestone_structure=make_subscore(80.0),
+        project_specificity=make_subscore(80.0),
+        substance_density=make_subscore(80.0),
+        probing_questions=[],
+    )
+
+    # Proposal with ONLY 1 screening question
+    proposal_single_qa = ProposalOfferDto(
+        proposal_id="p_single",
+        freelancer_id="f_single",
+        proposed_budget=1000.0,
+        vetting_qa_answers=[
+            QuestionAnswerPairInput(
+                question_index=1,
+                question_text="Real Question 1?",
+                candidate_answer="Real Answer 1",
+            )
+        ],
+    )
+
+    sanitized_eval = service._sanitize_screening_qa(llm_eval, proposal_single_qa)
+
+    # Must be trimmed to exactly 1 item
+    assert len(sanitized_eval.screening_qa) == 1
+    assert sanitized_eval.screening_qa[0].question_index == 1
+    assert sanitized_eval.screening_qa[0].question_text == "Real Question 1?"
+    assert sanitized_eval.screening_qa[0].candidate_answer == "Real Answer 1"
+
+    # Test proposal with 0 screening questions
+    proposal_zero_qa = ProposalOfferDto(
+        proposal_id="p_zero",
+        freelancer_id="f_zero",
+        proposed_budget=1000.0,
+        vetting_qa_answers=[],
+    )
+
+    sanitized_zero = service._sanitize_screening_qa(llm_eval, proposal_zero_qa)
+    assert len(sanitized_zero.screening_qa) == 0
+

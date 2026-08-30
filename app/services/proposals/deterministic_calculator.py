@@ -45,14 +45,18 @@ class DeterministicCalculator:
         proposed_budget = proposal.proposed_budget
         is_milestone_clamped = abs(milestone_total - proposed_budget) < 0.01
 
-        # 2. Budget Savings Ratio Calculation
+        # 2. Budget Savings & Compliance Score Calculation
         budget_max = baseline.budget_max or 0.0
         if budget_max > 0.0 and proposed_budget <= budget_max:
             savings_ratio = max(0.0, (budget_max - proposed_budget) / budget_max)
+            savings_ratio_percent = round(savings_ratio * 100.0, 2)
+            v_sav = min(100.0, 70.0 + savings_ratio_percent)
         else:
             savings_ratio = 0.0
-        savings_ratio_percent = round(savings_ratio * 100.0, 2)
-        v_sav = min(100.0, savings_ratio_percent)
+            savings_ratio_percent = 0.0
+            over_percent = round(((proposed_budget - budget_max) / budget_max) * 100.0, 2) if budget_max > 0.0 else 0.0
+            v_sav = max(0.0, 70.0 - over_percent)
+
 
         # 2b. Timeline Variance & Time Savings Ratio Calculation
         b_weeks = DeterministicCalculator._parse_duration_to_weeks(baseline.estimated_duration)
@@ -70,15 +74,20 @@ class DeterministicCalculator:
         if requirements and len(requirements) > 0:
             fulfilled_count = sum(1 for req in requirements if req.is_fulfilled)
             scope_completeness_percent = round((fulfilled_count / len(requirements)) * 100.0, 2)
+        elif llm_eval.milestone_audit and len(llm_eval.milestone_audit) > 0:
+            covered_ms = sum(1 for m in llm_eval.milestone_audit if m.is_scope_covered or m.status in ("Preserved", "Edited", "Added"))
+            scope_completeness_percent = round((covered_ms / len(llm_eval.milestone_audit)) * 100.0, 2)
         else:
             scope_completeness_percent = 100.0
 
-        # 4. Pillar 1: Technical Solution Score (35% weight)
+        # 4. Pillar 1: Solution & Delivery Methodology Score (35% total weight)
+        # Evaluates 6 core proposal sections (excl. milestone plan):
+        # 1. Intro & Overview (25%), 2. Problem Analysis (25%), 3. Solution & Technical Approach (25%), 4. Deliverables (15%), 5 & 6. Assumptions & Out-of-Scope (10%)
         tech = llm_eval.technical_solution
         p1 = (
             0.25 * tech.requirement_alignment.score
-            + 0.30 * tech.technical_correctness.score
-            + 0.20 * tech.architecture_quality.score
+            + 0.25 * tech.technical_correctness.score
+            + 0.25 * tech.architecture_quality.score
             + 0.15 * tech.implementation_feasibility.score
             + 0.10 * tech.edge_cases_security.score
         )
@@ -102,14 +111,15 @@ class DeterministicCalculator:
             # Default to technical solution score if no screening questions present
             p2 = p1
 
-        # 6. Pillar 3: Financial & Timeline Value Score (20% weight)
+        # 6. Pillar 3: Financial & Pricing Value Score (20% weight - 100% Pure Financial)
         v_price = llm_eval.pricing_realism.score
-        v_time = llm_eval.timeline_feasibility.score
-        p3 = round(0.30 * v_sav + 0.20 * v_time_sav + 0.30 * v_price + 0.20 * v_time, 2)
+        p3 = round(0.50 * v_sav + 0.50 * v_price, 2)
 
-        # 7. Pillar 4: Milestone Scope & Deliverables Score (15% weight)
+        # 7. Pillar 4: Milestone Scope, Deliverables & Timeline Feasibility Score (15% weight)
+        v_time = llm_eval.timeline_feasibility.score
+        v_timeline_realism = round(0.50 * v_time_sav + 0.50 * v_time, 2)
         m_struct = llm_eval.milestone_structure.score
-        p4 = round(0.60 * scope_completeness_percent + 0.40 * m_struct, 2)
+        p4 = round(0.40 * scope_completeness_percent + 0.30 * m_struct + 0.30 * v_timeline_realism, 2)
 
         # 8. Detailed Metric: Authenticity & Fluff Control Score (Demoted from top pillars to detailed analysis)
         a_spec = llm_eval.project_specificity.score
@@ -133,21 +143,13 @@ class DeterministicCalculator:
         else:
             interpretation_band = "High Risk / Poor Quality"
 
-        # 12. Verdict Badge Classification
-        if tq < 60.0 or scope_completeness_percent < 70.0:
+        # 12. Verdict Badge Classification (3-Category Model: high_risk, top_value, qualified_match)
+        if tq < 60.0 or scope_completeness_percent < 50.0:
             badge = "high_risk"
-        elif tq >= 80.0 and vs >= 88.0 and (budget_max == 0.0 or proposed_budget <= budget_max):
+        elif tq >= 75.0 or (tq >= 60.0 and savings_ratio > 0.0):
             badge = "top_value"
-        elif tq >= 90.0 and budget_max > 0.0 and proposed_budget > budget_max:
-            badge = "top_technical"
-        elif 60.0 <= tq < 80.0 and savings_ratio >= 0.20:
-            badge = "budget_saver"
-        elif vs >= 85.0:
-            badge = "top_value"
-        elif savings_ratio >= 0.15:
-            badge = "budget_saver"
         else:
-            badge = "high_risk" if tq < 65.0 else "top_technical"
+            badge = "qualified_match"
 
         pillar_scores = PillarScores(
             technical_solution=p1,
