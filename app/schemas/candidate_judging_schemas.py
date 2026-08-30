@@ -105,7 +105,10 @@ class LLMQualitativeEvaluation(BaseModel):
     project_specificity: SubcriteriaScoreWithEvidence
     substance_density: SubcriteriaScoreWithEvidence
     probing_questions: List[str] = Field(
-        default_factory=list, description="2-3 key questions for client to ask candidate during interview/negotiation"
+        default_factory=list, description="2-3 key questions for client to ask candidate during interview/negotiation, formatted as Problem #1, Problem #2"
+    )
+    answer_quality_summary_comment: Optional[str] = Field(
+        None, description="Single comprehensive qualitative AI summary comment complimenting candidate strengths or detailing specific complaints/gaps"
     )
     pillar_comments: Optional[PillarComments] = Field(
         None, description="Concise 1-2 sentence AI comment explanations for each of the 4 evaluation pillars"
