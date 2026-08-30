@@ -41,14 +41,17 @@ class MatchingService(MatchingBaseService):
     async def rerank_talent(self, request: TalentRerankRequest) -> TalentRerankResponse:
         """Delegate candidate talent reranking for a job post."""
         if settings.ENABLE_MOCK_AI:
+            savings_pattern = [15.0, 8.0, 18.0, 5.0, 12.0, 20.0]
             matches = [
                 TalentRerankMatch(
                     freelancer_id=c.freelancer_id,
-                    embedding_score=92.5,
-                    algorithm_score=95.0,
+                    embedding_score=round(92.5 - idx * 0.4, 1),
+                    algorithm_score=round(95.0 - idx * 0.5, 1),
                     semantic_strengths=["Matched primary skill", "High availability"],
-                    match_reasons=["Verified contract match"]
-                ) for c in request.candidates[:request.top_k]
+                    match_reasons=["Verified contract match"],
+                    saving_percentage=savings_pattern[idx % len(savings_pattern)],
+                    budget_bonus=savings_pattern[idx % len(savings_pattern)],
+                ) for idx, c in enumerate(request.candidates[:request.top_k])
             ]
             return TalentRerankResponse(
                 algorithm_version="2.0-mock",

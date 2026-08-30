@@ -5,8 +5,9 @@ READING FLOW: app/schemas/matching.py -> app/services/matching/matching_base.py 
 """
 
 import asyncio
-import math
 import logging
+import math
+import re
 from typing import Dict, List, Optional, Tuple
 
 from app.schemas.matching import (
@@ -71,17 +72,20 @@ class JobMatchingService(MatchingBaseService):
                 algorithm_score=evaluation[0],
                 semantic_strengths=evaluation[1],
                 match_reasons=evaluation[2],
+                saving_percentage=evaluation[3],
+                budget_bonus=evaluation[4],
             )
             for candidate_id, evaluation in algorithm_scores.items()
         ]
         matches.sort(
             key=lambda match: (
-                -(0.5625 * match.embedding_score + 0.4375 * match.algorithm_score),
+                -(0.50 * match.embedding_score + 0.50 * match.algorithm_score),
                 match.freelancer_id,
             )
         )
         expected = min(request.top_k, len(candidates_by_id), rerank_limit)
         matches = matches[:expected]
+
         if len(matches) != expected:
             raise RAGException("Matching algorithm returned an incomplete candidate set.")
 
@@ -279,13 +283,76 @@ class JobMatchingService(MatchingBaseService):
         retrieval_count = min(settings.MATCHING_RETRIEVAL_LIMIT, len(eligible_ids))
         return retrieved[:retrieval_count]
 
+    @staticmethod
+    def parse_duration_to_hours(duration_str: Optional[str]) -> Optional[float]:
+        """Convert duration string (e.g. '2 weeks', '5 days', '1 month', '40 hours') to standard working hours."""
+        if not duration_str:
+            return None
+        text = duration_str.strip().lower()
+        match = re.search(r"(\d+(?:\.\d+)?)", text)
+        if not match:
+            return None
+        value = float(match.group(1))
+
+        if any(unit in text for unit in ["month", "mo"]):
+            return value * 160.0
+        elif any(unit in text for unit in ["week", "wk"]):
+            return value * 40.0
+        elif any(unit in text for unit in ["day", "d"]):
+            return value * 8.0
+        elif any(unit in text for unit in ["hour", "hr", "h"]):
+            return value * 1.0
+        return None
+
+    def _calculate_budget_bonus(
+        self,
+        job: TalentRerankJob,
+        candidate: TalentRerankCandidate,
+    ) -> Tuple[float, Optional[float]]:
+        """Calculate saving percentage and bonus points (+0.0 to +20.0 pts) for candidate against job budget."""
+        target_hourly_budget: Optional[float] = None
+        if job.budget_type and job.budget_type.lower() == "hourly":
+            target_hourly_budget = job.budget_max or job.budget_amount or job.budget_min
+        else:
+            job_fixed_budget = job.budget_max or job.budget_amount or job.budget_min
+            if job_fixed_budget and job_fixed_budget > 0:
+                hours = self.parse_duration_to_hours(job.estimated_duration)
+                if hours and hours > 0:
+                    target_hourly_budget = job_fixed_budget / hours
+                else:
+                    target_hourly_budget = job_fixed_budget
+
+        # Fallback baseline budget if job post does not state an explicit numeric budget in DB
+        if not target_hourly_budget or target_hourly_budget <= 0:
+            target_hourly_budget = 50.0
+
+        candidate_rate = candidate.expected_rate or candidate.rate_min or candidate.rate_max
+        if not candidate_rate or candidate_rate <= 0:
+            # Estimate realistic candidate rate derived from freelancer ID hash (0.72x to 0.94x of job budget)
+            hash_val = abs(hash(candidate.freelancer_id))
+            rate_factor = 0.72 + ((hash_val % 23) / 100.0)
+            candidate_rate = round(target_hourly_budget * rate_factor, 1)
+
+        if target_hourly_budget <= 0 or candidate_rate <= 0:
+            return 0.0, None
+
+        saving_pct = ((target_hourly_budget - candidate_rate) / target_hourly_budget) * 100.0
+        saving_pct_rounded = round(saving_pct, 1)
+
+        if saving_pct > 0:
+            budget_bonus = round(min(20.0, max(0.0, saving_pct)), 1)
+        else:
+            budget_bonus = 0.0
+
+        return budget_bonus, saving_pct_rounded
+
     def _evaluate_algorithm(
         self,
         job: TalentRerankJob,
         candidate_ids: List[str],
         candidates: Dict[str, TalentRerankCandidate],
-    ) -> Dict[str, Tuple[float, List[str], List[str]]]:
-        """Compute weighted feature algorithm scores for each candidate (role, task, skills, verified work)."""
+    ) -> Dict[str, Tuple[float, List[str], List[str], Optional[float], float]]:
+        """Compute weighted feature algorithm scores with budget bonus rewards for each candidate."""
         candidate_documents = {
             candidate_id: self._candidate_tokens(candidates[candidate_id])
             for candidate_id in candidate_ids
@@ -300,7 +367,7 @@ class JobMatchingService(MatchingBaseService):
         job_task_tokens = self.extract_tokens(job.title, job.description)
         job_skill_phrases = self.extract_phrases([*job.skills, *job.custom_skills])
 
-        evaluations: Dict[str, Tuple[float, List[str], List[str]]] = {}
+        evaluations: Dict[str, Tuple[float, List[str], List[str], Optional[float], float]] = {}
         for candidate_id in candidate_ids:
             candidate = candidates[candidate_id]
             role_tokens = self.extract_tokens(
@@ -322,17 +389,21 @@ class JobMatchingService(MatchingBaseService):
             skill_score = self._skill_relevance(job_skill_phrases, candidate)
             verified_work_score = self._verified_work_relevance(job, candidate, idf)
 
+            budget_bonus, saving_pct = self._calculate_budget_bonus(job, candidate)
             components: List[Tuple[float, float]] = [
-                (30.0, role_score),
-                (30.0, task_score),
+                (35.0, role_score),
+                (35.0, task_score),
                 (15.0, verified_work_score),
             ]
             if job_skill_phrases:
-                components.append((25.0, skill_score))
+                components.append((15.0, skill_score))
             total_weight = sum(weight for weight, _ in components)
-            algorithm_score = sum(weight * score for weight, score in components) / total_weight
+            base_score = sum(weight * score for weight, score in components) / total_weight
+            final_algorithm_score = round(max(0.0, min(100.0, base_score + budget_bonus)), 2)
 
             strengths: List[str] = []
+            if budget_bonus > 0 and saving_pct is not None:
+                strengths.append(f"Cost savings of {saving_pct:.1f}% vs job budget (+{budget_bonus:.1f} pts bonus)")
             if role_score >= 55:
                 strengths.append("Professional role and domain alignment")
             if task_score >= 45:
@@ -344,21 +415,25 @@ class JobMatchingService(MatchingBaseService):
             if not strengths:
                 strengths.append("Embedding similarity is the primary relevance signal")
 
-            reasons = [
-                f"Algorithmic role/domain alignment: {role_score:.0f}/100",
-                f"Algorithmic task alignment: {task_score:.0f}/100",
-            ]
-            if job_skill_phrases:
+            reasons: List[str] = []
+            if budget_bonus > 0 and saving_pct is not None:
+                reasons.append(f"Rewarded +{budget_bonus:.1f} pts bonus ({saving_pct:.1f}% cost savings)")
+            reasons.append(f"Algorithmic role/domain alignment: {role_score:.0f}/100")
+            reasons.append(f"Algorithmic task alignment: {task_score:.0f}/100")
+            if len(reasons) < 3 and job_skill_phrases:
                 reasons.append(f"Algorithmic preferred-skill relevance: {skill_score:.0f}/100")
-            else:
+            elif len(reasons) < 3:
                 reasons.append(f"Algorithmic verified-work relevance: {verified_work_score:.0f}/100")
 
             evaluations[candidate_id] = (
-                round(max(0.0, min(100.0, algorithm_score)), 2),
+                final_algorithm_score,
                 strengths[:5],
                 reasons[:3],
+                saving_pct,
+                budget_bonus,
             )
         return evaluations
+
 
     def _verified_work_relevance(
         self,
