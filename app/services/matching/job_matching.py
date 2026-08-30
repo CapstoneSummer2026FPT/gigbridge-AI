@@ -309,31 +309,28 @@ class JobMatchingService(MatchingBaseService):
         job: TalentRerankJob,
         candidate: TalentRerankCandidate,
     ) -> Tuple[float, Optional[float]]:
-        """Calculate saving percentage and bonus points (+0.0 to +20.0 pts) for candidate against job budget."""
-        target_hourly_budget: Optional[float] = None
-        if job.budget_type and job.budget_type.lower() == "hourly":
-            target_hourly_budget = job.budget_max or job.budget_amount or job.budget_min
-        else:
-            job_fixed_budget = job.budget_max or job.budget_amount or job.budget_min
-            if job_fixed_budget and job_fixed_budget > 0:
-                hours = self.parse_duration_to_hours(job.estimated_duration)
-                if hours and hours > 0:
-                    target_hourly_budget = job_fixed_budget / hours
-                else:
-                    target_hourly_budget = job_fixed_budget
+        """Calculate saving percentage and bonus points (+0.0 to +20.0 pts) for candidate against job budget.
+        
+        If job budget or candidate expected rate is missing/null, bonus is 0.0 and saving_pct is None.
+        """
+        job_budget = job.budget_max or job.budget_amount or job.budget_min
+        if not job_budget or job_budget <= 0:
+            return 0.0, None
 
-        # Fallback baseline budget if job post does not state an explicit numeric budget in DB
-        if not target_hourly_budget or target_hourly_budget <= 0:
-            target_hourly_budget = 50.0
+        if job.budget_type and job.budget_type.lower() == "hourly":
+            target_hourly_budget = job_budget
+        else:
+            hours = self.parse_duration_to_hours(job.estimated_duration)
+            if hours and hours > 0:
+                target_hourly_budget = job_budget / hours
+            else:
+                target_hourly_budget = job_budget
 
         candidate_rate = candidate.expected_rate or candidate.rate_min or candidate.rate_max
         if not candidate_rate or candidate_rate <= 0:
-            # Estimate realistic candidate rate derived from freelancer ID hash (0.72x to 0.94x of job budget)
-            hash_val = abs(hash(candidate.freelancer_id))
-            rate_factor = 0.72 + ((hash_val % 23) / 100.0)
-            candidate_rate = round(target_hourly_budget * rate_factor, 1)
+            return 0.0, None
 
-        if target_hourly_budget <= 0 or candidate_rate <= 0:
+        if target_hourly_budget <= 0:
             return 0.0, None
 
         saving_pct = ((target_hourly_budget - candidate_rate) / target_hourly_budget) * 100.0
