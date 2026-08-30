@@ -48,6 +48,10 @@ class TalentRerankJob(StrictModel):
     custom_skills: List[str] = Field(default_factory=list, max_length=100)
     location: Optional[str] = Field(default=None, max_length=300)
     estimated_duration: Optional[str] = Field(default=None, max_length=100)
+    budget_amount: Optional[float] = Field(default=None, ge=0)
+    budget_type: Optional[str] = Field(default=None, max_length=50)
+    budget_min: Optional[float] = Field(default=None, ge=0)
+    budget_max: Optional[float] = Field(default=None, ge=0)
 
 
 class TalentRerankVerifiedWork(StrictModel):
@@ -70,6 +74,9 @@ class TalentRerankCandidate(StrictModel):
     categories: List[str] = Field(default_factory=list, max_length=30)
     skills: List[str] = Field(default_factory=list, max_length=100)
     verified_work: List[TalentRerankVerifiedWork] = Field(default_factory=list, max_length=5)
+    expected_rate: Optional[float] = Field(default=None, ge=0)
+    rate_min: Optional[float] = Field(default=None, ge=0)
+    rate_max: Optional[float] = Field(default=None, ge=0)
 
 
 class TalentRerankRequest(StrictModel):
@@ -86,6 +93,10 @@ class TalentRerankMatch(StrictModel):
     algorithm_score: float = Field(..., ge=0, le=100)
     semantic_strengths: List[str] = Field(default_factory=list, max_length=5)
     match_reasons: List[str] = Field(default_factory=list, max_length=3)
+    saving_percentage: Optional[float] = Field(default=None)
+    budget_bonus: float = Field(default=0.0, ge=0, le=20)
+
+
 
 
 class TalentRerankResponse(StrictModel):
