@@ -350,3 +350,58 @@ def test_sanitize_screening_qa():
     sanitized_zero = service._sanitize_screening_qa(llm_eval, proposal_zero_qa)
     assert len(sanitized_zero.screening_qa) == 0
 
+
+def test_zero_alignment_forces_zero_coverage():
+    """Verify that requirement alignment score of 0.0 forces scope_completeness_percent to 0.0."""
+    tech = TechnicalSolutionQualitativeEval(
+        requirement_alignment=make_subscore(0.0),
+        technical_correctness=make_subscore(0.0),
+        architecture_quality=make_subscore(0.0),
+        implementation_feasibility=make_subscore(0.0),
+        edge_cases_security=make_subscore(0.0),
+    )
+
+    reqs = [
+        RequirementFulfillmentItem(requirement="Req 1", is_fulfilled=True),
+        RequirementFulfillmentItem(requirement="Req 2", is_fulfilled=True),
+    ]
+
+    llm_eval = LLMQualitativeEvaluation(
+        technical_solution=tech,
+        screening_qa=[],
+        requirement_fulfillment=reqs,
+        pricing_realism=make_subscore(10.0),
+        timeline_feasibility=make_subscore(10.0),
+        milestone_structure=make_subscore(10.0),
+        project_specificity=make_subscore(0.0),
+        substance_density=make_subscore(0.0),
+        probing_questions=[],
+    )
+
+    baseline = JobPostBaselineDto(
+        job_id="j_fluff", job_title="Fluff Job", job_description="Desc", budget_max=1000.0
+    )
+    proposal = ProposalOfferDto(
+        proposal_id="p_fluff", freelancer_id="f_fluff", proposed_budget=1000.0
+    )
+
+    res = DeterministicCalculator.calculate(llm_eval, baseline, proposal)
+    assert res.pillar_scores.technical_solution == 0.0
+    assert res.scope_completeness_percent == 0.0
+    assert res.verdict_badge == "high_risk"
+
+
+def test_fallback_evaluation_unfulfilled_fulfillment():
+    """Verify fallback evaluation marks fallback requirement as is_fulfilled=False."""
+    from app.services.proposals.candidate_judging_service import CandidateJudgingService
+
+    service = CandidateJudgingService()
+    proposal = ProposalOfferDto(
+        proposal_id="p_fallback", freelancer_id="f_fallback", proposed_budget=1000.0
+    )
+
+    fallback_eval = service._create_fallback_evaluation(proposal)
+    assert len(fallback_eval.requirement_fulfillment) == 1
+    assert fallback_eval.requirement_fulfillment[0].is_fulfilled is False
+
+

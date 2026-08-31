@@ -97,7 +97,8 @@ class CandidateJudgingService:
             "     * Extract ONLY concrete, functional project deliverables & feature requirements from the job post.\n"
             "     * STRICT ANTI-HALLUCINATION RULE: DO NOT extract developer background qualifications, years of experience, or general skill requirements (e.g., 'Proven experience with FastAPI and Python') into `requirement_fulfillment`.\n"
             "     * Evaluate SEMANTIC fulfillment across BOTH the candidate's solution approach AND edited milestones combined.\n"
-            "     * Mark `is_fulfilled: true` if the candidate's offer semantically covers the feature deliverable.\n"
+            "     * Mark `is_fulfilled: true` ONLY if the candidate's offer semantically covers the feature deliverable with valid technical details.\n"
+            "     * STRICT QUALITY & FLUFF GUARDRAIL: DO NOT mark `is_fulfilled: true` if the candidate's response is generic fluff, off-topic, or lacks tailored technical details for that deliverable.\n"
             "     * VERIFIABLE EVIDENCE PROOF REQUIREMENT: For EVERY item in `requirement_fulfillment`, populate `evidence_quote` with the exact sentence quote or phrase from the candidate's solution approach, cover letter, or milestone description proving coverage. If unfulfilled (`is_fulfilled: false`), specify the exact gap quote or reason.\n"
             "     * DO NOT penalize or mark deliverables as unfulfilled merely because milestone titles are renamed, edited, or restructured by the freelancer.\n"
             "   - MILESTONE STRUCTURE & GRANULARITY (30% weight): Reward clear, granular milestone titles with verifiable deliverables; penalize vague single-blob milestones (milestone_structure score 0-100).\n"
@@ -446,10 +447,10 @@ class CandidateJudgingService:
             requirement_fulfillment=[
                 RequirementFulfillmentItem(
                     requirement="Core deliverables",
-                    is_fulfilled=True,
+                    is_fulfilled=False,
                     matched_milestone="Edited Milestones",
-                    evidence_quote="Candidate proposed detailed milestones covering core project deliverables.",
-                    note="Assumed fulfilled in fallback",
+                    evidence_quote="Unverified - Fallback evaluation triggered due to LLM provider error.",
+                    note="Unfulfilled in fallback assessment",
                 )
             ],
             pricing_realism=default_subscore,
