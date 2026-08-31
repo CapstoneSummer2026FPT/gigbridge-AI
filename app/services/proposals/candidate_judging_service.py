@@ -37,6 +37,22 @@ class CandidateJudgingService:
         baseline = request.job_post_baseline
         proposal = request.candidate_proposal
 
+        # Resolve canonical baseline budget_max and estimated_duration from original_milestones if header properties are null/0/empty
+        if (not baseline.budget_max or baseline.budget_max <= 0) and baseline.original_milestones:
+            ms_sum = sum(m.amount for m in baseline.original_milestones if m.amount)
+            if ms_sum > 0:
+                baseline.budget_max = ms_sum
+            elif baseline.budget_min and baseline.budget_min > 0:
+                baseline.budget_max = baseline.budget_min
+        elif (not baseline.budget_max or baseline.budget_max <= 0) and baseline.budget_min and baseline.budget_min > 0:
+            baseline.budget_max = baseline.budget_min
+
+        if not baseline.estimated_duration or baseline.estimated_duration in ("—", "null"):
+            if baseline.original_milestones:
+                durations = [m.estimated_duration for m in baseline.original_milestones if m.estimated_duration and m.estimated_duration not in ("—", "null")]
+                if durations:
+                    baseline.estimated_duration = " + ".join(durations)
+
         system_prompt = (
             "You are an expert AI Evaluator and Hiring Judge for GigBridge, a freelance marketplace for ALL professional domains (Software Engineering, UI/UX Design, Digital Marketing, Copywriting, Video Production, Finance/Accounting, Consulting, etc.).\n"
             "Evaluate the candidate's proposal offer and screening Q&A answers strictly against the specific client job post baseline requirements.\n\n"
@@ -86,18 +102,19 @@ class CandidateJudgingService:
             "   - PRICING REALISM ONLY (pricing_realism score 0-100): Evaluate proposed total budget and milestone prices against scope complexity. Penalize suspicious underbidding (< 50% fair market rate) as quality traps (score < 50). Penalize excessive price gouging. Reward fair, market-aligned milestone pricing (score 80-100). DO NOT evaluate project duration or timeline in Pillar 3.\n"
             "4. PILLAR 4 - MILESTONE SCOPE, DELIVERABLES & TIMELINE FEASIBILITY (15% Weight):\n"
             "   - MILESTONE DELTA AUDIT (milestone_audit array):\n"
-            "     * Compare client baseline milestones against freelancer's edited milestones.\n"
+            "     * Compare client baseline milestones against freelancer's edited milestones across ALL 4 attributes: Title, Budget/Amount, Duration, and Description/Deliverables.\n"
             "     * For EACH candidate milestone (and any deleted baseline milestone), classify `status` as EXACTLY ONE OF:\n"
-            "       - 'Preserved': Milestone is unchanged or fully preserves baseline scope.\n"
-            "       - 'Edited': Freelancer customized title, budget, duration, or scope details while delivering valid scope.\n"
+            "       - 'Preserved': Milestone is completely unchanged (same title, budget, duration, and description).\n"
+            "       - 'Edited': Freelancer customized Title, Budget (Amount), Duration, or Description/Deliverables.\n"
             "       - 'Added': Freelancer introduced a new custom milestone phase.\n"
             "       - 'Deleted': Baseline milestone was removed/omitted by freelancer.\n"
-            "     * Provide a concise `change_summary` explaining the delta (e.g. 'Freelancer edited description to specify chroma_db checks').\n"
+            "     * Provide a precise `change_summary` specifying EXACTLY which of the 4 attributes were modified (e.g. 'Điều chỉnh: Chi phí (1,000 → 1,200 GC), Thời gian (1 tuần → 2 tuần), Mô tả / Sản phẩm bàn giao').\n"
             "   - REQUIREMENT SCOPE FULFILLMENT (requirement_fulfillment array):\n"
             "     * Extract ONLY concrete, functional project deliverables & feature requirements from the job post.\n"
             "     * STRICT ANTI-HALLUCINATION RULE: DO NOT extract developer background qualifications, years of experience, or general skill requirements (e.g., 'Proven experience with FastAPI and Python') into `requirement_fulfillment`.\n"
             "     * Evaluate SEMANTIC fulfillment across BOTH the candidate's solution approach AND edited milestones combined.\n"
-            "     * Mark `is_fulfilled: true` if the candidate's offer semantically covers the feature deliverable.\n"
+            "     * Mark `is_fulfilled: true` ONLY if the candidate's offer semantically covers the feature deliverable with valid technical details.\n"
+            "     * STRICT QUALITY & FLUFF GUARDRAIL: DO NOT mark `is_fulfilled: true` if the candidate's response is generic fluff, off-topic, or lacks tailored technical details for that deliverable.\n"
             "     * VERIFIABLE EVIDENCE PROOF REQUIREMENT: For EVERY item in `requirement_fulfillment`, populate `evidence_quote` with the exact sentence quote or phrase from the candidate's solution approach, cover letter, or milestone description proving coverage. If unfulfilled (`is_fulfilled: false`), specify the exact gap quote or reason.\n"
             "     * DO NOT penalize or mark deliverables as unfulfilled merely because milestone titles are renamed, edited, or restructured by the freelancer.\n"
             "   - MILESTONE STRUCTURE & GRANULARITY (30% weight): Reward clear, granular milestone titles with verifiable deliverables; penalize vague single-blob milestones (milestone_structure score 0-100).\n"
@@ -189,6 +206,8 @@ class CandidateJudgingService:
         return CandidateJudgingResponse(
             proposal_id=proposal.proposal_id,
             job_id=baseline.job_id,
+            job_post_baseline=baseline,
+            proposal_offer=proposal,
             llm_qualitative_evaluation=llm_eval,
             deterministic_calculations=deterministic,
         )
@@ -317,14 +336,32 @@ class CandidateJudgingService:
                 is_price_changed = abs((matched_orig.amount or 0.0) - (ms.amount or 0.0)) > 0.01
                 is_dur_changed = (matched_orig.estimated_duration or "").strip() != (ms.estimated_duration or "").strip()
                 is_title_changed = (matched_orig.title or "").strip().lower() != (ms.title or "").strip().lower()
-                is_modified = is_price_changed or is_dur_changed or is_title_changed
+                
+                orig_desc = (matched_orig.description or matched_orig.deliverables or "").strip()
+                ms_desc = (ms.description or ms.deliverables or "").strip()
+                is_desc_changed = bool(orig_desc or ms_desc) and (orig_desc != ms_desc)
 
-                if existing_item and existing_item.status in ("Preserved", "Edited"):
+                modified_fields = []
+                if is_title_changed:
+                    modified_fields.append(f"Tiêu đề: '{matched_orig.title}' → '{ms.title}'")
+                if is_price_changed:
+                    modified_fields.append(f"Chi phí: {matched_orig.amount:,.0f} → {ms.amount:,.0f} GC")
+                if is_dur_changed:
+                    modified_fields.append(f"Thời gian: '{matched_orig.estimated_duration or 'N/A'}' → '{ms.estimated_duration or 'N/A'}'")
+                if is_desc_changed:
+                    modified_fields.append("Mô tả / sản phẩm bàn giao đã được điều chỉnh")
+
+                is_modified = len(modified_fields) > 0
+
+                if is_modified:
+                    status = "Edited"
+                    change_summary = f"Điều chỉnh: {', '.join(modified_fields)}"
+                elif existing_item and existing_item.status in ("Preserved", "Edited"):
                     status = existing_item.status
-                    change_summary = existing_item.change_summary
+                    change_summary = existing_item.change_summary or "Baseline milestone preserved"
                 else:
-                    status = "Edited" if is_modified else "Preserved"
-                    change_summary = "Freelancer adjusted milestone details/budget/duration" if is_modified else "Baseline milestone preserved"
+                    status = "Preserved"
+                    change_summary = "Baseline milestone preserved"
 
                 sanitized_audits.append(
                     MilestoneAuditItem(
@@ -446,10 +483,10 @@ class CandidateJudgingService:
             requirement_fulfillment=[
                 RequirementFulfillmentItem(
                     requirement="Core deliverables",
-                    is_fulfilled=True,
+                    is_fulfilled=False,
                     matched_milestone="Edited Milestones",
-                    evidence_quote="Candidate proposed detailed milestones covering core project deliverables.",
-                    note="Assumed fulfilled in fallback",
+                    evidence_quote="Unverified - Fallback evaluation triggered due to LLM provider error.",
+                    note="Unfulfilled in fallback assessment",
                 )
             ],
             pricing_realism=default_subscore,
