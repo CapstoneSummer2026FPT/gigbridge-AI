@@ -212,35 +212,96 @@ class JobPostBaseService:
         return 0.0
 
     @classmethod
+    def estimate_milestone_complexity_weights(cls, milestones: list) -> list[float]:
+        """Estimate relative complexity weights for milestones based on initial amounts/durations or scope keywords."""
+        if not milestones:
+            return []
+
+        initial_amounts = [float(getattr(m, "amount", 0.0) or 0.0) for m in milestones]
+        initial_durations = [cls.parse_duration_to_weeks(getattr(m, "estimated_duration", "")) for m in milestones]
+
+        max_amt = max(initial_amounts) if initial_amounts else 0.0
+        min_amt = min(initial_amounts) if initial_amounts else 0.0
+        max_dur = max(initial_durations) if initial_durations else 0.0
+        min_dur = min(initial_durations) if initial_durations else 0.0
+
+        if max_amt > 0 and (max_amt / max(1.0, min_amt)) > 1.25:
+            return initial_amounts
+        if max_dur > 0 and (max_dur / max(0.5, min_dur)) > 1.25:
+            return initial_durations
+
+        weights = []
+        low_keywords = {
+            "setup", "logout", "login", "auth", "outline", "draft", "bug fix", "tweak",
+            "config", "export", "data entry", "basic", "cấu hình", "khởi tạo", "đăng xuất",
+            "đăng nhập", "dàn trang", "sơ thảo", "nhập liệu"
+        }
+        high_keywords = {
+            "architecture", "sharding", "system design", "engine", "ai", "pipeline",
+            "real-time", "high-scale", "infrastructure", "design system", "whitepaper",
+            "strategy", "campaign", "valuation", "kiến trúc", "hệ thống lớn", "chiến lược",
+            "chuẩn hóa", "tối ưu hóa", "định giá", "tổng thể"
+        }
+
+        for m in milestones:
+            text = f"{getattr(m, 'title', '')} {getattr(m, 'description', '')}".lower()
+            if any(k in text for k in low_keywords) and not any(k in text for k in high_keywords):
+                weights.append(1.0)
+            elif any(k in text for k in high_keywords):
+                weights.append(4.0)
+            else:
+                weights.append(2.5)
+
+        return weights
+
+    @staticmethod
+    def _calculate_budget_rounding_step(approved_budget: float) -> float:
+        """Determine an appropriate clean rounding step size based on total budget magnitude."""
+        b = float(approved_budget)
+        if b <= 50:
+            return 1.0
+        elif b <= 200:
+            return 5.0
+        elif b <= 500:
+            return 10.0
+        elif b <= 2000:
+            return 25.0
+        elif b <= 5000:
+            return 50.0
+        elif b <= 20000:
+            return 100.0
+        else:
+            return 500.0
+
+    @classmethod
     def clamp_milestone_budgets(cls, milestones: list, approved_budget: float) -> None:
-        """Scale milestone amounts in-place so they sum to exactly approved_budget."""
+        """Scale milestone amounts in-place so they sum to exactly approved_budget with clean, rounded numbers."""
         if not milestones or approved_budget <= 0:
             return
 
-        approved_budget = round(approved_budget, 2)
-        total = sum(getattr(m, "amount", 0.0) for m in milestones)
-        if total <= 0:
-            per = round(approved_budget / len(milestones), 2)
-            for m in milestones:
-                m.amount = per
-            milestones[-1].amount = round(
-                approved_budget - sum(m.amount for m in milestones[:-1]), 2
-            )
-            return
+        approved_budget = round(float(approved_budget), 2)
+        weights = cls.estimate_milestone_complexity_weights(milestones)
+        total_weight = sum(weights)
 
-        scale = approved_budget / total
-        for m in milestones[:-1]:
-            m.amount = round(m.amount * scale, 2)
+        if total_weight <= 0:
+            total_weight = float(len(milestones))
+            weights = [1.0] * len(milestones)
 
-        milestones[-1].amount = round(
-            approved_budget - sum(m.amount for m in milestones[:-1]), 2
-        )
-        if milestones[-1].amount < 0:
-            milestones[-1].amount = 0.0
+        step = cls._calculate_budget_rounding_step(approved_budget)
+
+        for i in range(len(milestones) - 1):
+            raw_amt = (weights[i] / total_weight) * approved_budget
+            rounded_amt = max(step, round(raw_amt / step) * step)
+            milestones[i].amount = float(rounded_amt)
+
+        remaining = approved_budget - sum(getattr(m, "amount", 0.0) for m in milestones[:-1])
+        if remaining < 0:
+            remaining = 0.0
+        milestones[-1].amount = float(round(remaining, 2))
 
     @classmethod
     def clamp_milestone_durations(cls, milestones: list, approved_weeks: float) -> None:
-        """Scale milestone estimated_duration strings in-place so total equals approved_weeks, merging excess milestones if needed."""
+        """Scale milestone estimated_duration strings in-place so total equals approved_weeks according to complexity ratios, merging excess milestones if needed."""
         if not milestones or approved_weeks <= 0:
             return
 
@@ -248,22 +309,21 @@ class JobPostBaseService:
             max(1.0, cls.parse_duration_to_weeks(getattr(m, "estimated_duration", ""))) for m in milestones
         ]
         total_weeks = sum(individual_weeks)
+        weights = cls.estimate_milestone_complexity_weights(milestones)
+
         if total_weeks <= approved_weeks:
-            return
+            if total_weeks == approved_weeks or max(individual_weeks) > min(individual_weeks) or max(weights) == min(weights):
+                return
 
         target_weeks = max(1, round(approved_weeks))
 
-        # If we have more milestones than target weeks (minimum 1 week per milestone),
-        # merge excess trailing milestones into the last allowed milestone.
         if len(milestones) > target_weeks:
             keep_count = target_weeks
             last_kept = milestones[keep_count - 1]
 
             for excess in milestones[keep_count:]:
-                # Merge amount
                 if hasattr(last_kept, "amount") and hasattr(excess, "amount"):
                     last_kept.amount = round(float(last_kept.amount or 0) + float(excess.amount or 0), 2)
-                # Merge text fields safely (title, description, deliverables, acceptance_criteria)
                 for attr in ("title", "description", "deliverables", "acceptance_criteria"):
                     val_kept = getattr(last_kept, attr, "") or ""
                     val_excess = getattr(excess, attr, "") or ""
@@ -271,25 +331,15 @@ class JobPostBaseService:
                         combined = f"{val_kept} | {val_excess}" if val_kept else val_excess
                         setattr(last_kept, attr, combined)
 
-
-            # Truncate excess milestones in-place
             del milestones[keep_count:]
-            individual_weeks = [
-                max(1.0, cls.parse_duration_to_weeks(getattr(m, "estimated_duration", ""))) for m in milestones
-            ]
-            total_weeks = sum(individual_weeks)
+            weights = cls.estimate_milestone_complexity_weights(milestones)
 
-        if total_weeks <= 0:
-            per = max(1, target_weeks // len(milestones))
-            for m in milestones:
-                m.estimated_duration = cls.format_weeks_to_duration(per)
-            rem = target_weeks - (per * (len(milestones) - 1))
-            milestones[-1].estimated_duration = cls.format_weeks_to_duration(max(1, rem))
-            return
+        weights = cls.estimate_milestone_complexity_weights(milestones)
+        total_weight = sum(weights) or 1.0
 
         scaled_weeks = []
-        for mw in individual_weeks[:-1]:
-            w = max(1, round(mw * target_weeks / total_weeks))
+        for w_i in weights[:-1]:
+            w = max(1, round((w_i / total_weight) * target_weeks))
             scaled_weeks.append(w)
 
         last_w = target_weeks - sum(scaled_weeks)

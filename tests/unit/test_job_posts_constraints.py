@@ -207,6 +207,52 @@ class TestClampMilestoneDurations:
         assert parse_duration_to_weeks(ms[0].estimated_duration) == 1.0
         assert ms[0].amount == 300
 
+    def test_complexity_weighted_durations_logout_vs_architecture(self):
+        # 3 milestones on a 6-week project: Logout (low), API (med), Architecture (high)
+        ms = [
+            SimpleNamespace(amount=100, estimated_duration="1 week", title="Implement Auth Logout", description="Simple logout feature"),
+            SimpleNamespace(amount=200, estimated_duration="1 week", title="User API Endpoints", description="Standard CRUD API"),
+            SimpleNamespace(amount=300, estimated_duration="1 week", title="Core Architecture & Sharding", description="High-scale system architecture design"),
+        ]
+        _clamp_milestone_durations(ms, 6)
+        durations = [parse_duration_to_weeks(m.estimated_duration) for m in ms]
+        assert durations[0] == 1.0  # Logout gets 1 week
+        assert durations[1] == 2.0  # Standard API gets 2 weeks
+        assert durations[2] == 3.0  # High-scale architecture gets 3 weeks
+        assert sum(durations) == 6.0
+
+    def test_clean_rounded_budget_clamping(self):
+        # Total budget = 1000 GC, 3 milestones with equal initial amounts
+        ms = [
+            SimpleNamespace(amount=100, estimated_duration="1 week", title="Environment Setup & Auth Logout", description="Setup and logout"),
+            SimpleNamespace(amount=100, estimated_duration="1 week", title="Web Dashboard UI Components", description="UI page design"),
+            SimpleNamespace(amount=100, estimated_duration="1 week", title="High-Scale Backend Engine Architecture", description="Core engine architecture"),
+        ]
+        _clamp_milestone_budgets(ms, 1000)
+        amounts = [m.amount for m in ms]
+        # Verify amounts sum to 1000 GC
+        assert sum(amounts) == pytest.approx(1000.0)
+        # Verify all amounts are clean integers with no floating decimals like .999
+        for amt in amounts:
+            assert amt.is_integer()
+            assert amt % 25 == 0  # Rounded to step size of 25 GC
+        # High-scale architecture should get the largest share of the budget
+        assert amounts[2] > amounts[0]
+
+    def test_multi_profession_design_complexity_weighting(self):
+        # Design profession: Moodboard (low) vs Brand Design System (high)
+        ms = [
+            SimpleNamespace(amount=50, estimated_duration="1 week", title="Moodboard & Asset Export", description="Initial moodboard"),
+            SimpleNamespace(amount=200, estimated_duration="1 week", title="Design System Tokens & Architecture", description="Master design system guidelines"),
+        ]
+        _clamp_milestone_durations(ms, 4)
+        _clamp_milestone_budgets(ms, 1000)
+        assert parse_duration_to_weeks(ms[0].estimated_duration) == 1.0
+        assert parse_duration_to_weeks(ms[1].estimated_duration) == 3.0
+        assert ms[1].amount > ms[0].amount
+        assert sum(m.amount for m in ms) == 1000.0
+
+
 
 
 # ---------------------------------------------------------------------------
