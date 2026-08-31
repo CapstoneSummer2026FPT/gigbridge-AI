@@ -102,13 +102,13 @@ class CandidateJudgingService:
             "   - PRICING REALISM ONLY (pricing_realism score 0-100): Evaluate proposed total budget and milestone prices against scope complexity. Penalize suspicious underbidding (< 50% fair market rate) as quality traps (score < 50). Penalize excessive price gouging. Reward fair, market-aligned milestone pricing (score 80-100). DO NOT evaluate project duration or timeline in Pillar 3.\n"
             "4. PILLAR 4 - MILESTONE SCOPE, DELIVERABLES & TIMELINE FEASIBILITY (15% Weight):\n"
             "   - MILESTONE DELTA AUDIT (milestone_audit array):\n"
-            "     * Compare client baseline milestones against freelancer's edited milestones.\n"
+            "     * Compare client baseline milestones against freelancer's edited milestones across ALL 4 attributes: Title, Budget/Amount, Duration, and Description/Deliverables.\n"
             "     * For EACH candidate milestone (and any deleted baseline milestone), classify `status` as EXACTLY ONE OF:\n"
-            "       - 'Preserved': Milestone is unchanged or fully preserves baseline scope.\n"
-            "       - 'Edited': Freelancer customized title, budget, duration, or scope details while delivering valid scope.\n"
+            "       - 'Preserved': Milestone is completely unchanged (same title, budget, duration, and description).\n"
+            "       - 'Edited': Freelancer customized Title, Budget (Amount), Duration, or Description/Deliverables.\n"
             "       - 'Added': Freelancer introduced a new custom milestone phase.\n"
             "       - 'Deleted': Baseline milestone was removed/omitted by freelancer.\n"
-            "     * Provide a concise `change_summary` explaining the delta (e.g. 'Freelancer edited description to specify chroma_db checks').\n"
+            "     * Provide a precise `change_summary` specifying EXACTLY which of the 4 attributes were modified (e.g. 'Điều chỉnh: Chi phí (1,000 → 1,200 GC), Thời gian (1 tuần → 2 tuần), Mô tả / Sản phẩm bàn giao').\n"
             "   - REQUIREMENT SCOPE FULFILLMENT (requirement_fulfillment array):\n"
             "     * Extract ONLY concrete, functional project deliverables & feature requirements from the job post.\n"
             "     * STRICT ANTI-HALLUCINATION RULE: DO NOT extract developer background qualifications, years of experience, or general skill requirements (e.g., 'Proven experience with FastAPI and Python') into `requirement_fulfillment`.\n"
@@ -336,14 +336,32 @@ class CandidateJudgingService:
                 is_price_changed = abs((matched_orig.amount or 0.0) - (ms.amount or 0.0)) > 0.01
                 is_dur_changed = (matched_orig.estimated_duration or "").strip() != (ms.estimated_duration or "").strip()
                 is_title_changed = (matched_orig.title or "").strip().lower() != (ms.title or "").strip().lower()
-                is_modified = is_price_changed or is_dur_changed or is_title_changed
+                
+                orig_desc = (matched_orig.description or matched_orig.deliverables or "").strip()
+                ms_desc = (ms.description or ms.deliverables or "").strip()
+                is_desc_changed = bool(orig_desc or ms_desc) and (orig_desc != ms_desc)
 
-                if existing_item and existing_item.status in ("Preserved", "Edited"):
+                modified_fields = []
+                if is_title_changed:
+                    modified_fields.append(f"Tiêu đề: '{matched_orig.title}' → '{ms.title}'")
+                if is_price_changed:
+                    modified_fields.append(f"Chi phí: {matched_orig.amount:,.0f} → {ms.amount:,.0f} GC")
+                if is_dur_changed:
+                    modified_fields.append(f"Thời gian: '{matched_orig.estimated_duration or 'N/A'}' → '{ms.estimated_duration or 'N/A'}'")
+                if is_desc_changed:
+                    modified_fields.append("Mô tả / sản phẩm bàn giao đã được điều chỉnh")
+
+                is_modified = len(modified_fields) > 0
+
+                if is_modified:
+                    status = "Edited"
+                    change_summary = f"Điều chỉnh: {', '.join(modified_fields)}"
+                elif existing_item and existing_item.status in ("Preserved", "Edited"):
                     status = existing_item.status
-                    change_summary = existing_item.change_summary
+                    change_summary = existing_item.change_summary or "Baseline milestone preserved"
                 else:
-                    status = "Edited" if is_modified else "Preserved"
-                    change_summary = "Freelancer adjusted milestone details/budget/duration" if is_modified else "Baseline milestone preserved"
+                    status = "Preserved"
+                    change_summary = "Baseline milestone preserved"
 
                 sanitized_audits.append(
                     MilestoneAuditItem(
