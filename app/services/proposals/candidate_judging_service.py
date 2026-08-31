@@ -37,6 +37,22 @@ class CandidateJudgingService:
         baseline = request.job_post_baseline
         proposal = request.candidate_proposal
 
+        # Resolve canonical baseline budget_max and estimated_duration from original_milestones if header properties are null/0/empty
+        if (not baseline.budget_max or baseline.budget_max <= 0) and baseline.original_milestones:
+            ms_sum = sum(m.amount for m in baseline.original_milestones if m.amount)
+            if ms_sum > 0:
+                baseline.budget_max = ms_sum
+            elif baseline.budget_min and baseline.budget_min > 0:
+                baseline.budget_max = baseline.budget_min
+        elif (not baseline.budget_max or baseline.budget_max <= 0) and baseline.budget_min and baseline.budget_min > 0:
+            baseline.budget_max = baseline.budget_min
+
+        if not baseline.estimated_duration or baseline.estimated_duration in ("—", "null"):
+            if baseline.original_milestones:
+                durations = [m.estimated_duration for m in baseline.original_milestones if m.estimated_duration and m.estimated_duration not in ("—", "null")]
+                if durations:
+                    baseline.estimated_duration = " + ".join(durations)
+
         system_prompt = (
             "You are an expert AI Evaluator and Hiring Judge for GigBridge, a freelance marketplace for ALL professional domains (Software Engineering, UI/UX Design, Digital Marketing, Copywriting, Video Production, Finance/Accounting, Consulting, etc.).\n"
             "Evaluate the candidate's proposal offer and screening Q&A answers strictly against the specific client job post baseline requirements.\n\n"
@@ -190,6 +206,8 @@ class CandidateJudgingService:
         return CandidateJudgingResponse(
             proposal_id=proposal.proposal_id,
             job_id=baseline.job_id,
+            job_post_baseline=baseline,
+            proposal_offer=proposal,
             llm_qualitative_evaluation=llm_eval,
             deterministic_calculations=deterministic,
         )

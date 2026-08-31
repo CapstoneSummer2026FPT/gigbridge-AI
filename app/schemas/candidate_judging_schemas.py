@@ -208,6 +208,8 @@ class BatchCandidateJudgingRequest(BaseModel):
 class CandidateJudgingResponse(BaseModel):
     proposal_id: str
     job_id: str
+    job_post_baseline: Optional[JobPostBaselineDto] = None
+    proposal_offer: Optional[ProposalOfferDto] = None
     llm_qualitative_evaluation: LLMQualitativeEvaluation
     deterministic_calculations: DeterministicCalculations
 

@@ -405,3 +405,41 @@ def test_fallback_evaluation_unfulfilled_fulfillment():
     assert fallback_eval.requirement_fulfillment[0].is_fulfilled is False
 
 
+@pytest.mark.anyio
+async def test_response_preserves_input_baseline_and_offer():
+    """Verify CandidateJudgingResponse preserves job_post_baseline and proposal_offer from input without alteration."""
+    from app.services.proposals.candidate_judging_service import CandidateJudgingService
+    from app.schemas.candidate_judging_schemas import CandidateJudgingRequest
+
+    service = CandidateJudgingService()
+    baseline = JobPostBaselineDto(
+        job_id="j_preserve",
+        job_title="Preserve Job",
+        job_description="Description for preservation test",
+        budget_min=3000.0,
+        budget_max=3876.0,
+        estimated_duration="4 weeks",
+    )
+    proposal = ProposalOfferDto(
+        proposal_id="p_preserve",
+        freelancer_id="f_preserve",
+        proposed_budget=3876.0,
+        proposed_duration="4 weeks",
+    )
+
+    req = CandidateJudgingRequest(
+        job_post_baseline=baseline,
+        candidate_proposal=proposal,
+    )
+
+    res = await service.evaluate_candidate(req)
+
+    assert res.job_post_baseline is not None
+    assert res.job_post_baseline.budget_max == 3876.0
+    assert res.job_post_baseline.estimated_duration == "4 weeks"
+    assert res.proposal_offer is not None
+    assert res.proposal_offer.proposed_budget == 3876.0
+    assert res.proposal_offer.proposed_duration == "4 weeks"
+
+
+
