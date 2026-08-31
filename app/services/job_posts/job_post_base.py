@@ -279,7 +279,7 @@ class JobPostBaseService:
         if not milestones or approved_budget <= 0:
             return
 
-        approved_budget = round(float(approved_budget), 2)
+        approved_budget = float(round(float(approved_budget)))
         weights = cls.estimate_milestone_complexity_weights(milestones)
         total_weight = sum(weights)
 
@@ -292,12 +292,12 @@ class JobPostBaseService:
         for i in range(len(milestones) - 1):
             raw_amt = (weights[i] / total_weight) * approved_budget
             rounded_amt = max(step, round(raw_amt / step) * step)
-            milestones[i].amount = float(rounded_amt)
+            milestones[i].amount = float(round(rounded_amt))
 
         remaining = approved_budget - sum(getattr(m, "amount", 0.0) for m in milestones[:-1])
         if remaining < 0:
             remaining = 0.0
-        milestones[-1].amount = float(round(remaining, 2))
+        milestones[-1].amount = float(round(remaining))
 
     @classmethod
     def clamp_milestone_durations(cls, milestones: list, approved_weeks: float) -> None:

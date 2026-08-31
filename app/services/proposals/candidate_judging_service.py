@@ -275,26 +275,36 @@ class CandidateJudgingService:
             return llm_eval
 
         sanitized_qa = []
+        used_eval_indices = set()
+
         for idx, input_qa in enumerate(input_qa_list, start=1):
             input_idx = input_qa.question_index if input_qa.question_index is not None else idx
 
             # Find matching item in LLM screening_qa output by input index or position
             matching_eval = None
-            for eval_item in llm_eval.screening_qa:
-                if eval_item.question_index == input_idx:
+            for eval_idx, eval_item in enumerate(llm_eval.screening_qa):
+                if eval_idx in used_eval_indices:
+                    continue
+                if eval_item.question_index == input_idx or eval_item.question_index == idx:
                     matching_eval = eval_item
+                    used_eval_indices.add(eval_idx)
                     break
 
             # Fallback to positional order if index match fails
-            if not matching_eval and (idx - 1) < len(llm_eval.screening_qa):
-                matching_eval = llm_eval.screening_qa[idx - 1]
+            if not matching_eval:
+                for eval_idx, eval_item in enumerate(llm_eval.screening_qa):
+                    if eval_idx not in used_eval_indices:
+                        matching_eval = eval_item
+                        used_eval_indices.add(eval_idx)
+                        break
 
             if matching_eval:
                 # Copy exact ground-truth question text, candidate answer, and sequential 1-based index (idx)
-                matching_eval.question_index = idx
-                matching_eval.question_text = input_qa.question_text
-                matching_eval.candidate_answer = input_qa.candidate_answer
-                sanitized_qa.append(matching_eval)
+                eval_copy = matching_eval.model_copy(deep=True)
+                eval_copy.question_index = idx
+                eval_copy.question_text = input_qa.question_text
+                eval_copy.candidate_answer = input_qa.candidate_answer
+                sanitized_qa.append(eval_copy)
 
         llm_eval.screening_qa = sanitized_qa
         return llm_eval

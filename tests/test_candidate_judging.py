@@ -442,4 +442,93 @@ async def test_response_preserves_input_baseline_and_offer():
     assert res.proposal_offer.proposed_duration == "4 weeks"
 
 
+def test_sanitize_screening_qa_duplicate_indices():
+    """Verify that _sanitize_screening_qa correctly handles multiple questions with duplicate question_index without overwriting."""
+    from app.services.proposals.candidate_judging_service import CandidateJudgingService
+
+    service = CandidateJudgingService()
+
+    tech = TechnicalSolutionQualitativeEval(
+        requirement_alignment=make_subscore(80.0),
+        technical_correctness=make_subscore(80.0),
+        architecture_quality=make_subscore(80.0),
+        implementation_feasibility=make_subscore(80.0),
+        edge_cases_security=make_subscore(80.0),
+    )
+
+    eval_qas = [
+        QuestionAnswerQualitativeEval(
+            question_index=1,
+            question_text="Q1 text",
+            candidate_answer="A1 text",
+            answer_correctness=make_subscore(90.0),
+            technical_reasoning=make_subscore(90.0),
+            relevance=make_subscore(90.0),
+            depth=make_subscore(90.0),
+            practical_examples=make_subscore(90.0),
+            is_ai_generated=False,
+            ai_detection_reason=None,
+            qualitative_feedback="Eval 1",
+        ),
+        QuestionAnswerQualitativeEval(
+            question_index=1,
+            question_text="Q2 text",
+            candidate_answer="A2 text",
+            answer_correctness=make_subscore(70.0),
+            technical_reasoning=make_subscore(70.0),
+            relevance=make_subscore(70.0),
+            depth=make_subscore(70.0),
+            practical_examples=make_subscore(70.0),
+            is_ai_generated=False,
+            ai_detection_reason=None,
+            qualitative_feedback="Eval 2",
+        ),
+    ]
+
+    llm_eval = LLMQualitativeEvaluation(
+        technical_solution=tech,
+        screening_qa=eval_qas,
+        requirement_fulfillment=[],
+        pricing_realism=make_subscore(80.0),
+        timeline_feasibility=make_subscore(80.0),
+        milestone_structure=make_subscore(80.0),
+        project_specificity=make_subscore(80.0),
+        substance_density=make_subscore(80.0),
+        probing_questions=[],
+    )
+
+    # 2 input questions both having question_index = 1
+    proposal_dup_idx = ProposalOfferDto(
+        proposal_id="p_dup",
+        freelancer_id="f_dup",
+        proposed_budget=1000.0,
+        vetting_qa_answers=[
+            QuestionAnswerPairInput(
+                question_index=1,
+                question_text="What design principles do you consider?",
+                candidate_answer="Visual hierarchy, contrast, typography...",
+            ),
+            QuestionAnswerPairInput(
+                question_index=1,
+                question_text="How many experiences do you have?",
+                candidate_answer="3 years",
+            ),
+        ],
+    )
+
+    sanitized = service._sanitize_screening_qa(llm_eval, proposal_dup_idx)
+
+    assert len(sanitized.screening_qa) == 2
+    # Verify Question 1 is NOT overwritten by Question 2
+    assert sanitized.screening_qa[0].question_index == 1
+    assert sanitized.screening_qa[0].question_text == "What design principles do you consider?"
+    assert sanitized.screening_qa[0].candidate_answer == "Visual hierarchy, contrast, typography..."
+
+    # Verify Question 2 is distinctly assigned to index 2
+    assert sanitized.screening_qa[1].question_index == 2
+    assert sanitized.screening_qa[1].question_text == "How many experiences do you have?"
+    assert sanitized.screening_qa[1].candidate_answer == "3 years"
+
+
+
 
