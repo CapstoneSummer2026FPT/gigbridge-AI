@@ -413,8 +413,8 @@ class JobMatchingService(MatchingBaseService):
                 strengths.append("Strong preferred-skill coverage")
             if verified_work_score >= 45:
                 strengths.append("Relevant verified completed work")
-            if not strengths:
-                strengths.append("Embedding similarity is the primary relevance signal")
+            if not [s for s in strengths if "Cost savings" not in s and "Rate is" not in s]:
+                strengths.append("High semantic profile relevance to job requirements")
 
             reasons: List[str] = []
             if saving_pct is not None:
