@@ -47,7 +47,7 @@ def make_work_items(*specs):
     Each *spec* is a tuple: (title, description, estimated_duration).
     """
     return [
-        SimpleNamespace(title=title, description=description, estimated_duration=dur)
+        SimpleNamespace(title=title, description=description, deliverables="", estimated_duration=dur)
         for title, description, dur in specs
     ]
 
@@ -380,6 +380,17 @@ class TestClampWorkItemDurations:
         _clamp_work_item_durations(items, 7)
         assert items[0].estimated_duration == "3 days"
         assert items[1].estimated_duration == "4 days"
+
+    def test_merges_deliverables_of_dropped_items(self):
+        items = [
+            SimpleNamespace(title="A", description="desc a", deliverables="deliverable A", estimated_duration="1 day"),
+            SimpleNamespace(title="B", description="desc b", deliverables="deliverable B", estimated_duration="1 day"),
+            SimpleNamespace(title="C", description="desc c", deliverables="deliverable C", estimated_duration="1 day"),
+        ]
+        _clamp_work_item_durations(items, 2)
+        assert len(items) == 2
+        assert "deliverable B" in items[1].deliverables
+        assert "deliverable C" in items[1].deliverables
 
 
 # ---------------------------------------------------------------------------

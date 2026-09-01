@@ -24,6 +24,7 @@ class SkillOption(BaseModel):
 class WorkItemGenerationResponse(BaseModel):
     title: str = Field(..., description="Tên hạng mục công việc / Work item title")
     description: str = Field(..., description="Mô tả hạng mục công việc / Work item description")
+    deliverables: str = Field(..., description="Sản phẩm bàn giao / Deliverables for this work item")
     estimated_duration: str = Field(..., description="Thời lượng / Time frame (e.g. '2 days' or '1 week')")
 
 class MilestoneGenerationResponse(BaseModel):

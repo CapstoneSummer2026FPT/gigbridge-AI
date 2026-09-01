@@ -422,7 +422,7 @@ class JobPostBaseService:
             last_kept = work_items[keep_count - 1]
 
             for excess in work_items[keep_count:]:
-                for attr in ("title", "description"):
+                for attr in ("title", "description", "deliverables"):
                     val_kept = getattr(last_kept, attr, "") or ""
                     val_excess = getattr(excess, attr, "") or ""
                     if val_excess and val_excess not in val_kept:
