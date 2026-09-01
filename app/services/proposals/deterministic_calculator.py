@@ -93,6 +93,10 @@ class DeterministicCalculator:
         )
         p1 = round(p1, 2)
 
+        # Zero-Alignment Override: Generic fluff or unaligned proposals with 0.0 alignment score cannot claim requirement coverage
+        if tech.requirement_alignment.score <= 0.0:
+            scope_completeness_percent = 0.0
+
         # 5. Pillar 2: Vetting Screening Q&A Score (30% weight)
         qa_list = llm_eval.screening_qa
         if qa_list and len(qa_list) > 0:

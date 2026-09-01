@@ -350,3 +350,185 @@ def test_sanitize_screening_qa():
     sanitized_zero = service._sanitize_screening_qa(llm_eval, proposal_zero_qa)
     assert len(sanitized_zero.screening_qa) == 0
 
+
+def test_zero_alignment_forces_zero_coverage():
+    """Verify that requirement alignment score of 0.0 forces scope_completeness_percent to 0.0."""
+    tech = TechnicalSolutionQualitativeEval(
+        requirement_alignment=make_subscore(0.0),
+        technical_correctness=make_subscore(0.0),
+        architecture_quality=make_subscore(0.0),
+        implementation_feasibility=make_subscore(0.0),
+        edge_cases_security=make_subscore(0.0),
+    )
+
+    reqs = [
+        RequirementFulfillmentItem(requirement="Req 1", is_fulfilled=True),
+        RequirementFulfillmentItem(requirement="Req 2", is_fulfilled=True),
+    ]
+
+    llm_eval = LLMQualitativeEvaluation(
+        technical_solution=tech,
+        screening_qa=[],
+        requirement_fulfillment=reqs,
+        pricing_realism=make_subscore(10.0),
+        timeline_feasibility=make_subscore(10.0),
+        milestone_structure=make_subscore(10.0),
+        project_specificity=make_subscore(0.0),
+        substance_density=make_subscore(0.0),
+        probing_questions=[],
+    )
+
+    baseline = JobPostBaselineDto(
+        job_id="j_fluff", job_title="Fluff Job", job_description="Desc", budget_max=1000.0
+    )
+    proposal = ProposalOfferDto(
+        proposal_id="p_fluff", freelancer_id="f_fluff", proposed_budget=1000.0
+    )
+
+    res = DeterministicCalculator.calculate(llm_eval, baseline, proposal)
+    assert res.pillar_scores.technical_solution == 0.0
+    assert res.scope_completeness_percent == 0.0
+    assert res.verdict_badge == "high_risk"
+
+
+def test_fallback_evaluation_unfulfilled_fulfillment():
+    """Verify fallback evaluation marks fallback requirement as is_fulfilled=False."""
+    from app.services.proposals.candidate_judging_service import CandidateJudgingService
+
+    service = CandidateJudgingService()
+    proposal = ProposalOfferDto(
+        proposal_id="p_fallback", freelancer_id="f_fallback", proposed_budget=1000.0
+    )
+
+    fallback_eval = service._create_fallback_evaluation(proposal)
+    assert len(fallback_eval.requirement_fulfillment) == 1
+    assert fallback_eval.requirement_fulfillment[0].is_fulfilled is False
+
+
+@pytest.mark.anyio
+async def test_response_preserves_input_baseline_and_offer():
+    """Verify CandidateJudgingResponse preserves job_post_baseline and proposal_offer from input without alteration."""
+    from app.services.proposals.candidate_judging_service import CandidateJudgingService
+    from app.schemas.candidate_judging_schemas import CandidateJudgingRequest
+
+    service = CandidateJudgingService()
+    baseline = JobPostBaselineDto(
+        job_id="j_preserve",
+        job_title="Preserve Job",
+        job_description="Description for preservation test",
+        budget_min=3000.0,
+        budget_max=3876.0,
+        estimated_duration="4 weeks",
+    )
+    proposal = ProposalOfferDto(
+        proposal_id="p_preserve",
+        freelancer_id="f_preserve",
+        proposed_budget=3876.0,
+        proposed_duration="4 weeks",
+    )
+
+    req = CandidateJudgingRequest(
+        job_post_baseline=baseline,
+        candidate_proposal=proposal,
+    )
+
+    res = await service.evaluate_candidate(req)
+
+    assert res.job_post_baseline is not None
+    assert res.job_post_baseline.budget_max == 3876.0
+    assert res.job_post_baseline.estimated_duration == "4 weeks"
+    assert res.proposal_offer is not None
+    assert res.proposal_offer.proposed_budget == 3876.0
+    assert res.proposal_offer.proposed_duration == "4 weeks"
+
+
+def test_sanitize_screening_qa_duplicate_indices():
+    """Verify that _sanitize_screening_qa correctly handles multiple questions with duplicate question_index without overwriting."""
+    from app.services.proposals.candidate_judging_service import CandidateJudgingService
+
+    service = CandidateJudgingService()
+
+    tech = TechnicalSolutionQualitativeEval(
+        requirement_alignment=make_subscore(80.0),
+        technical_correctness=make_subscore(80.0),
+        architecture_quality=make_subscore(80.0),
+        implementation_feasibility=make_subscore(80.0),
+        edge_cases_security=make_subscore(80.0),
+    )
+
+    eval_qas = [
+        QuestionAnswerQualitativeEval(
+            question_index=1,
+            question_text="Q1 text",
+            candidate_answer="A1 text",
+            answer_correctness=make_subscore(90.0),
+            technical_reasoning=make_subscore(90.0),
+            relevance=make_subscore(90.0),
+            depth=make_subscore(90.0),
+            practical_examples=make_subscore(90.0),
+            is_ai_generated=False,
+            ai_detection_reason=None,
+            qualitative_feedback="Eval 1",
+        ),
+        QuestionAnswerQualitativeEval(
+            question_index=1,
+            question_text="Q2 text",
+            candidate_answer="A2 text",
+            answer_correctness=make_subscore(70.0),
+            technical_reasoning=make_subscore(70.0),
+            relevance=make_subscore(70.0),
+            depth=make_subscore(70.0),
+            practical_examples=make_subscore(70.0),
+            is_ai_generated=False,
+            ai_detection_reason=None,
+            qualitative_feedback="Eval 2",
+        ),
+    ]
+
+    llm_eval = LLMQualitativeEvaluation(
+        technical_solution=tech,
+        screening_qa=eval_qas,
+        requirement_fulfillment=[],
+        pricing_realism=make_subscore(80.0),
+        timeline_feasibility=make_subscore(80.0),
+        milestone_structure=make_subscore(80.0),
+        project_specificity=make_subscore(80.0),
+        substance_density=make_subscore(80.0),
+        probing_questions=[],
+    )
+
+    # 2 input questions both having question_index = 1
+    proposal_dup_idx = ProposalOfferDto(
+        proposal_id="p_dup",
+        freelancer_id="f_dup",
+        proposed_budget=1000.0,
+        vetting_qa_answers=[
+            QuestionAnswerPairInput(
+                question_index=1,
+                question_text="What design principles do you consider?",
+                candidate_answer="Visual hierarchy, contrast, typography...",
+            ),
+            QuestionAnswerPairInput(
+                question_index=1,
+                question_text="How many experiences do you have?",
+                candidate_answer="3 years",
+            ),
+        ],
+    )
+
+    sanitized = service._sanitize_screening_qa(llm_eval, proposal_dup_idx)
+
+    assert len(sanitized.screening_qa) == 2
+    # Verify Question 1 is NOT overwritten by Question 2
+    assert sanitized.screening_qa[0].question_index == 1
+    assert sanitized.screening_qa[0].question_text == "What design principles do you consider?"
+    assert sanitized.screening_qa[0].candidate_answer == "Visual hierarchy, contrast, typography..."
+
+    # Verify Question 2 is distinctly assigned to index 2
+    assert sanitized.screening_qa[1].question_index == 2
+    assert sanitized.screening_qa[1].question_text == "How many experiences do you have?"
+    assert sanitized.screening_qa[1].candidate_answer == "3 years"
+
+
+
+
