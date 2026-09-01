@@ -21,6 +21,11 @@ class SkillOption(BaseModel):
     skill_id: str = Field(..., description="The unique database identifier of the skill")
     name: str = Field(..., description="The display name of the skill")
 
+class WorkItemGenerationResponse(BaseModel):
+    title: str = Field(..., description="Tên hạng mục công việc / Work item title")
+    description: str = Field(..., description="Mô tả hạng mục công việc / Work item description")
+    estimated_duration: str = Field(..., description="Thời lượng / Time frame (e.g. '2 days' or '1 week')")
+
 class MilestoneGenerationResponse(BaseModel):
     title: str = Field(..., description="Tên milestone / Milestone title")
     amount: float = Field(..., description="Số tiền / Amount for the milestone")
@@ -29,6 +34,10 @@ class MilestoneGenerationResponse(BaseModel):
     description: str = Field(..., description="Mô tả công việc và kết quả mong đợi / Detailed summary of scope")
     deliverables: str = Field(..., description="Sản phẩm bàn giao / Deliverables list")
     acceptance_criteria: str = Field(..., description="Tiêu chí nghiệm thu / Acceptance criteria")
+    work_items: List[WorkItemGenerationResponse] = Field(
+        default=[],
+        description="A breakdown of concrete work items required to complete this milestone."
+    )
 
 class JobPostGenerationRequest(BaseModel):
     client_prompt: str = Field(

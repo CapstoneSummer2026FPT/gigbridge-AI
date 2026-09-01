@@ -45,8 +45,16 @@ Based on the provided context:
     - description: A brief summary of the scope and expected results for this milestone. (Mô tả, e.g. "Thiết kế và duyệt các màn hình chính").
     - deliverables: Specifically list the files, features, or products the freelancer must hand over. (Sản phẩm bàn giao, e.g. "Tệp Figma và đặc tả giao diện responsive").
     - acceptance_criteria: The criteria the client will use to review and approve the milestone deliverables. (Tiêu chí nghiệm thu).
+    - work_items: A breakdown of 2-5 concrete, non-redundant work items required to complete this milestone.
+    CRITICAL WORK ITEM BREAKDOWN RULE:
+    - Each work item MUST contain: title (a short, concrete task name), description (what the task involves and its expected outcome), and estimated_duration.
+    - The work items for a milestone MUST collectively and logically cover the milestone's description and deliverables — do NOT invent redundant, overlapping, or irrelevant items.
+    - Reuse the same Tier 1/2/3 complexity judgment used for milestone allocation above to decide each work item's relative duration share within its milestone (heavier sub-tasks get more days).
+    - estimated_duration for a work item MUST be expressed in a finer grain than the milestone itself: "N day(s)" or "N week(s)" (e.g. "2 days", "1 week") — never month(s) or year(s).
+    CRITICAL WORK ITEM DURATION RULE:
+    - The sum of all work item estimated_duration values (converted to days) for a milestone MUST NOT exceed that milestone's own estimated_duration (converted to days). Self-check this sum before finalizing your output — a milestone of "1 week" (7 days) can have work items summing to at most 7 days.
     CRITICAL PROPOSAL CLOSING DATE CONSTRAINT:
     - The proposal closing date / deadline for receiving candidate applications MUST NOT exceed 3 weeks (21 days) from today's reference date ({{ current_date }}).
     CRITICAL LANGUAGE RULE:
-    - If the client's prompt is written in Vietnamese, generate all milestone fields (title, estimated_duration, description, deliverables, acceptance_criteria) in Vietnamese.
+    - If the client's prompt is written in Vietnamese, generate all milestone fields (title, estimated_duration, description, deliverables, acceptance_criteria) and all work_items fields (title, description, estimated_duration) in Vietnamese.
     - If the client's prompt is written in English or any other language, generate these fields in English.
