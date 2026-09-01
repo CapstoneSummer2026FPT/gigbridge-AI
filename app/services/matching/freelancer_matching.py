@@ -346,7 +346,7 @@ class FreelancerMatchingService(MatchingBaseService):
             if job_skill_phrases and skill_score >= 60:
                 strengths.append("Strong skill coverage")
             if not strengths:
-                strengths.append("High semantic profile relevance to job requirements")
+                strengths.append("Strong overall fit for this job")
 
             reasons = [
                 f"Algorithmic role/domain alignment: {role_score:.0f}/100",

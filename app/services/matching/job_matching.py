@@ -414,7 +414,7 @@ class JobMatchingService(MatchingBaseService):
             if verified_work_score >= 45:
                 strengths.append("Relevant verified completed work")
             if not [s for s in strengths if "Cost savings" not in s and "Rate is" not in s]:
-                strengths.append("High semantic profile relevance to job requirements")
+                strengths.append("Strong overall fit for this job")
 
             reasons: List[str] = []
             if saving_pct is not None:
