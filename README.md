@@ -39,20 +39,24 @@ non-placeholder `AI_SERVER_API_KEY`, and provide Redis 6.2 or newer (native
 
 ### 2. Local Setup
 We recommend using a Python virtual environment (Python 3.11+):
-```bash
-# Create virtual environment
+--- câu lệnh trỏ tới python lib
+
+$env:Path = "C:\Users\OS\AppData\Local\Programs\Python\Python311;C:\Users\OS\AppData\Local\Programs\Python\Python311\Scripts;" + $env:Path
+
+
+# 1. Create virtual environment
 python -m venv .venv
 
-# Activate it (Windows)
-.venv\Scripts\activate
+# 2. Activate virtual environment
+.\.venv\Scripts\Activate.ps1
 
-# Activate it (macOS/Linux)
-source .venv/bin/activate
-
-# Install dependencies
+# 3. Install required packages
 pip install -r requirements.txt
 
-# Run the dev server
+# 4. Copy .env file
+Copy-Item .env.example .env
+
+# 5. Run the AI server
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 Visit `http://localhost:8000/docs` to view the interactive Swagger API documentation.

@@ -58,16 +58,25 @@ Based on the client's prompt:
    CRITICAL LANGUAGE RULE:
    - If the client's prompt is written in Vietnamese, generate these questions in Vietnamese.
    - If the client's prompt is written in English or any other language, generate these questions in English.
-9. Generate a logical list of milestone plans (milestones) for the job post appropriate for the project's scope, budget, and estimated duration. Typically, propose 2-4 milestones.
-   Today's reference date is: {{ current_date }} (format: mm/dd/yyyy).
-   Each milestone object in the list MUST contain the following properties:
-   - title: Milestone name (Tên milestone).
-   - amount: Allocated budget/amount (Số tiền) for this milestone as a number/float. Propose a logical distribution of funds (e.g. dividing the total estimated budget, or proposing reasonable amounts if the budget is not specified).
-   - estimated_duration: Expected timeframe to complete this specific milestone from its start. (Thời lượng, e.g. "2 weeks", "2 tuần", "1 month", "1 tháng").
-   - due_date: The deadline date when the freelancer must complete and submit the milestone deliverables, formatted strictly as "mm/dd/yyyy". Calculate these dates sequentially based on the milestone durations starting from {{ current_date }}.
-   - description: A brief summary of the scope and expected results for this milestone. (Mô tả, e.g. "Thiết kế và duyệt các màn hình chính").
-   - deliverables: Specifically list the files, features, or products the freelancer must hand over. (Sản phẩm bàn giao, e.g. "Tệp Figma và đặc tả giao diện responsive").
-   - acceptance_criteria: The criteria the client will use to review and approve the milestone deliverables. (Tiêu chí nghiệm thu).
+ 9. Generate a logical list of milestone plans (milestones) for the job post appropriate for the project's scope, budget, and estimated duration. Typically, propose 2-4 milestones.
+    CRITICAL UNIVERSAL MILESTONE COMPLEXITY & DURATION ALLOCATION RULE:
+    - You MUST evaluate the relative scope, workload, and technical/creative complexity of each milestone across any discipline (IT, Design, Writing, Marketing, Media, Business) and assign duration and budget accordingly:
+      - Tier 1 (Low Complexity / Preparatory / Minor Tasks, e.g. environment setup, basic auth/logout, moodboard, article outline, data entry): Allocate lightweight timeline and budget shares (~10-20% of total).
+      - Tier 2 (Medium Complexity / Standard Execution, e.g. standard API endpoints, web page UI, email campaign, standard video edit, financial model): Allocate moderate shares (~25-40% of total).
+      - Tier 3 (High Complexity / Core Architecture & Master Deliverable, e.g. high-scale backend architecture, full design system, long-form whitepaper/strategy, complex 3D animation, M&A valuation model): Allocate dominant shares (~45-65% of total).
+    - NEVER allocate equal durations or budgets to lightweight tasks (e.g., logout or setup) and core heavy tasks (e.g., high-scale architecture or design system).
+    CRITICAL CLEAN ROUNDED MILESTONE BUDGET RULE:
+    - The amount for each milestone MUST be a clean, human-friendly rounded number (e.g., 50, 100, 200, 250, 500, 1000 GC). Do NOT generate odd cents, unrounded figures, or floats like 230.99 or 142.85.
+    - The sum of all milestone amounts MUST be EXACTLY equal to the overall estimated budget.
+    Today's reference date is: {{ current_date }} (format: mm/dd/yyyy).
+    Each milestone object in the list MUST contain the following properties:
+    - title: Milestone name (Tên milestone).
+    - amount: Allocated budget/amount (Số tiền) for this milestone as a clean, rounded number/float.
+    - estimated_duration: Expected timeframe to complete this specific milestone from its start. (Thời lượng, e.g. "2 weeks", "2 tuần", "1 month", "1 tháng").
+    - due_date: The deadline date when the freelancer must complete and submit the milestone deliverables, formatted strictly as "mm/dd/yyyy". Calculate these dates sequentially based on the milestone durations starting from {{ current_date }}.
+    - description: A brief summary of the scope and expected results for this milestone. (Mô tả, e.g. "Thiết kế và duyệt các màn hình chính").
+    - deliverables: Specifically list the files, features, or products the freelancer must hand over. (Sản phẩm bàn giao, e.g. "Tệp Figma và đặc tả giao diện responsive").
+    - acceptance_criteria: The criteria the client will use to review and approve the milestone deliverables. (Tiêu chí nghiệm thu).
    CRITICAL LANGUAGE RULE:
    - If the client's prompt is written in Vietnamese, generate all milestone fields (title, estimated_duration, description, deliverables, acceptance_criteria) in Vietnamese.
    - If the client's prompt is written in English or any other language, generate these fields in English.

@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     APP_ENV: Literal["development", "test", "production"] = "production"
+    ENABLE_MOCK_AI: bool = Field(default=False)
     AI_SERVER_API_KEY: str = Field(default="")
     MAX_INTERVIEW_QUESTIONS: int = 3
 
