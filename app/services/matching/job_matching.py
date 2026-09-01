@@ -399,8 +399,12 @@ class JobMatchingService(MatchingBaseService):
             final_algorithm_score = round(max(0.0, min(100.0, base_score + budget_bonus)), 2)
 
             strengths: List[str] = []
-            if budget_bonus > 0 and saving_pct is not None:
-                strengths.append(f"Cost savings of {saving_pct:.1f}% vs job budget (+{budget_bonus:.1f} pts bonus)")
+            if saving_pct is not None:
+                if budget_bonus > 0 and saving_pct > 0:
+                    strengths.append(f"Cost savings of {saving_pct:.1f}% vs job budget (+{budget_bonus:.1f} pts bonus)")
+                elif saving_pct < 0:
+                    strengths.append(f"Rate is {abs(saving_pct):.1f}% above job budget")
+
             if role_score >= 55:
                 strengths.append("Professional role and domain alignment")
             if task_score >= 45:
@@ -409,12 +413,16 @@ class JobMatchingService(MatchingBaseService):
                 strengths.append("Strong preferred-skill coverage")
             if verified_work_score >= 45:
                 strengths.append("Relevant verified completed work")
-            if not strengths:
-                strengths.append("Embedding similarity is the primary relevance signal")
+            if not [s for s in strengths if "Cost savings" not in s and "Rate is" not in s]:
+                strengths.append("Strong overall fit for this job")
 
             reasons: List[str] = []
-            if budget_bonus > 0 and saving_pct is not None:
-                reasons.append(f"Rewarded +{budget_bonus:.1f} pts bonus ({saving_pct:.1f}% cost savings)")
+            if saving_pct is not None:
+                if budget_bonus > 0 and saving_pct > 0:
+                    reasons.append(f"Rewarded +{budget_bonus:.1f} pts bonus ({saving_pct:.1f}% cost savings)")
+                elif saving_pct < 0:
+                    reasons.append(f"Rate is {abs(saving_pct):.1f}% above job budget (0.0 pts bonus)")
+
             reasons.append(f"Algorithmic role/domain alignment: {role_score:.0f}/100")
             reasons.append(f"Algorithmic task alignment: {task_score:.0f}/100")
             if len(reasons) < 3 and job_skill_phrases:
