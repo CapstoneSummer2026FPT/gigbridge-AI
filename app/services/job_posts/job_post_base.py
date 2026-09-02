@@ -378,6 +378,49 @@ class JobPostBaseService:
         for m, w in zip(milestones, scaled_weeks):
             m.estimated_duration = cls.format_weeks_to_duration(w)
 
+    @classmethod
+    def estimate_work_item_complexity_weights(cls, work_items: list) -> list[float]:
+        """Estimate relative complexity weights for WBS work items based on initial duration estimates,
+        task scope, deliverable density, and multi-domain profession keywords (IT, Design, Writing, Video, Business)."""
+        if not work_items:
+            return []
+
+        initial_days = [cls.parse_duration_to_days(getattr(w, "estimated_duration", "")) for w in work_items]
+        max_day = max(initial_days) if initial_days else 0.0
+        min_day = min(initial_days) if initial_days else 0.0
+
+        if max_day > 0 and (max_day / max(0.5, min_day)) > 1.25:
+            return initial_days
+
+        weights = []
+        low_keywords = {
+            "setup", "logout", "login", "auth", "outline", "draft", "bug fix", "tweak",
+            "config", "export", "data entry", "basic", "brief", "research", "cấu hình", "khởi tạo",
+            "đăng xuất", "đăng nhập", "dàn trang", "sơ thảo", "nhập liệu", "moodboard", "tổng hợp"
+        }
+        high_keywords = {
+            "architecture", "sharding", "system design", "engine", "ai", "pipeline",
+            "real-time", "high-scale", "infrastructure", "design system", "whitepaper",
+            "strategy", "campaign", "valuation", "3d", "vfx", "motion", "prototype",
+            "kiến trúc", "hệ thống lớn", "chiến lược", "chuẩn hóa", "tối ưu hóa", "định giá", "tổng thể"
+        }
+
+        for w in work_items:
+            text = f"{getattr(w, 'title', '')} {getattr(w, 'description', '')} {getattr(w, 'deliverables', '')}".lower()
+            if any(k in text for k in low_keywords) and not any(k in text for k in high_keywords):
+                w_val = 1.0
+            elif any(k in text for k in high_keywords):
+                w_val = 4.0
+            else:
+                w_val = 2.5
+
+            if len(text.strip()) > 80:
+                w_val += 0.5
+
+            weights.append(w_val)
+
+        return weights
+
     @staticmethod
     def parse_duration_to_days(duration_str: str) -> float:
         """Parse human-readable duration string (e.g. '3 days', '1 week') into equivalent days count."""
@@ -403,19 +446,17 @@ class JobPostBaseService:
     @classmethod
     def clamp_work_item_durations(cls, work_items: list, milestone_duration_days: float) -> None:
         """Scale work item estimated_duration strings in-place so their total never exceeds
-        milestone_duration_days, merging excess items into the last kept one if even a 1-day
-        floor per item would still overflow. No-op when already within budget (per product
-        decision: always auto-clamp on overage, never reject)."""
+        milestone_duration_days, dividing days proportionally based on task complexity weights across professions."""
         if not work_items or milestone_duration_days <= 0:
             return
 
         individual_days = [
             max(1.0, cls.parse_duration_to_days(getattr(w, "estimated_duration", ""))) for w in work_items
         ]
-        if sum(individual_days) <= milestone_duration_days:
-            return
-
         target_days = max(1, round(milestone_duration_days))
+
+        if sum(individual_days) <= milestone_duration_days and all(d > 0 for d in individual_days):
+            return
 
         if len(work_items) > target_days:
             keep_count = target_days
@@ -431,9 +472,7 @@ class JobPostBaseService:
 
             del work_items[keep_count:]
 
-        weights = [
-            max(1.0, cls.parse_duration_to_days(getattr(w, "estimated_duration", ""))) for w in work_items
-        ]
+        weights = cls.estimate_work_item_complexity_weights(work_items)
         total_weight = sum(weights) or float(len(work_items))
 
         scaled_days = []
