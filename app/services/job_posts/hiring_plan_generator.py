@@ -70,10 +70,16 @@ class HiringPlanGeneratorService(JobPostBaseService):
             f"- Proposal closing date MUST NOT exceed 3 weeks (21 days) from today (max: {clamped_closing})."
         )
 
+        skills_str = ", ".join(request.skills) if request.skills else "Not specified"
+        category_str = request.category_name or "Not specified"
+        major_str = request.major_name or "Not specified"
+
         combined_prompt = (
             f"Original user requirement:\n{request.client_prompt}\n\n"
             f"Generated/Approved Job Details:\n"
             f"Title: {request.title}\n"
+            f"Major / Category: {major_str} / {category_str}\n"
+            f"Required Skills: {skills_str}\n"
             f"Description: {request.description}\n"
             f"Approved Budget: {approved_budget:.2f} GC\n"
             f"Approved Duration: {request.estimated_duration}"

@@ -66,6 +66,9 @@ class JobPostHiringPlanGenerationRequest(BaseModel):
     budget_max: Optional[float] = Field(None, description="The approved maximum budget")
     estimated_duration: Optional[str] = Field(None, description="The approved estimated duration/timeline")
     proposal_closing_date: str = Field(..., description="The proposal closing date / deadline in YYYY-MM-DD or MM/DD/YYYY format")
+    skills: Optional[List[str]] = Field(default=None, description="The list of required skills for the job post")
+    category_name: Optional[str] = Field(default=None, description="The category name for the job post (e.g. Full-stack Developer)")
+    major_name: Optional[str] = Field(default=None, description="The major name for the job post (e.g. Công nghệ thông tin)")
 
 class JobPostHiringPlanGenerationResponse(BaseModel):
     question_recruitment: List[str] = Field(
