@@ -408,10 +408,14 @@ def test_fallback_evaluation_unfulfilled_fulfillment():
 @pytest.mark.anyio
 async def test_response_preserves_input_baseline_and_offer():
     """Verify CandidateJudgingResponse preserves job_post_baseline and proposal_offer from input without alteration."""
+    from unittest.mock import AsyncMock, MagicMock
     from app.services.proposals.candidate_judging_service import CandidateJudgingService
     from app.schemas.candidate_judging_schemas import CandidateJudgingRequest
 
-    service = CandidateJudgingService()
+    mock_llm = MagicMock()
+    mock_llm.generate = AsyncMock(side_effect=RuntimeError("Trigger fallback"))
+    service = CandidateJudgingService(llm_gateway=mock_llm)
+
     baseline = JobPostBaselineDto(
         job_id="j_preserve",
         job_title="Preserve Job",
@@ -440,6 +444,7 @@ async def test_response_preserves_input_baseline_and_offer():
     assert res.proposal_offer is not None
     assert res.proposal_offer.proposed_budget == 3876.0
     assert res.proposal_offer.proposed_duration == "4 weeks"
+
 
 
 def test_sanitize_screening_qa_duplicate_indices():
