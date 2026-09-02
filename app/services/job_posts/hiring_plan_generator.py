@@ -35,6 +35,7 @@ class HiringPlanGeneratorService(JobPostBaseService):
            - Scale milestone amounts to sum EXACTLY to approved_budget.
            - Scale milestone durations so total weeks equal approved_weeks.
            - Recalculate milestone due dates sequentially starting strictly from current day.
+           - Clamp each milestone's work item durations so their sum never exceeds the milestone's own duration.
         7. Append mandatory compulsory experience question and return.
         """
         logger.info("Generating job hiring plan using RAG pipeline")
@@ -69,10 +70,16 @@ class HiringPlanGeneratorService(JobPostBaseService):
             f"- Proposal closing date MUST NOT exceed 3 weeks (21 days) from today (max: {clamped_closing})."
         )
 
+        skills_str = ", ".join(request.skills) if request.skills else "Not specified"
+        category_str = request.category_name or "Not specified"
+        major_str = request.major_name or "Not specified"
+
         combined_prompt = (
             f"Original user requirement:\n{request.client_prompt}\n\n"
             f"Generated/Approved Job Details:\n"
             f"Title: {request.title}\n"
+            f"Major / Category: {major_str} / {category_str}\n"
+            f"Required Skills: {skills_str}\n"
             f"Description: {request.description}\n"
             f"Approved Budget: {approved_budget:.2f} GC\n"
             f"Approved Duration: {request.estimated_duration}"
@@ -106,6 +113,11 @@ class HiringPlanGeneratorService(JobPostBaseService):
             self.clamp_milestone_budgets(response_data.milestones, approved_budget)
             self.clamp_milestone_durations(response_data.milestones, approved_weeks)
             self.recalculate_due_dates(response_data.milestones, date.today())
+
+            for milestone in response_data.milestones:
+                if milestone.work_items:
+                    milestone_days = self.parse_duration_to_days(milestone.estimated_duration)
+                    self.clamp_work_item_durations(milestone.work_items, milestone_days)
 
         compulsory_question = "Bạn có bao nhiêu kinh nghiệm cho vai trò này?" if target_lang == "Vietnamese" else "How many experiences do you have for this role?"
         raw_questions = response_data.question_recruitment or []

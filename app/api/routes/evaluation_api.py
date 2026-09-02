@@ -641,3 +641,37 @@ async def get_system_stats():
     )
 
 
+@router.post("/eval/rag-query", tags=["RAG Evaluation"])
+async def run_live_rag_eval_query(payload: dict):
+    """Evaluation endpoint to query RAG and calculate metrics without API key requirement on internal dashboard."""
+    from app.schemas.rag import AnswerConfig, QueryResponse
+    from app.schemas.base import StandardResponse
+    from app.services.rag import get_rag_service
+    from app.api.routes.rag import compute_query_metrics
+
+    raw_col = payload.get("collection_name", "general-knowledge")
+    collection_name = "general-knowledge" if raw_col in ("ai-chatbot", "docs", "") else raw_col
+    style = payload.get("style", "precision")
+    history = payload.get("history", [])
+
+    service = get_rag_service()
+    config = AnswerConfig(history=history, collection_name=collection_name, style=style)
+    result = await service.answer_question(question, config)
+    
+    metrics, source_docs = compute_query_metrics(question, result.sources)
+
+    data = QueryResponse(
+        success=True,
+        answer=str(result.answer),
+        context=source_docs,
+        metrics=metrics,
+        retrieved_chunks=source_docs
+    )
+    return StandardResponse(
+        success=True,
+        message="RAG evaluation query completed successfully.",
+        data=data,
+        errors=[]
+    )
+
+

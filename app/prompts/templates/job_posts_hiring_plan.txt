@@ -42,11 +42,23 @@ Based on the provided context:
     - amount: Allocated budget/amount (Số tiền) for this milestone as a clean, rounded number/float.
     - estimated_duration: Expected timeframe to complete this specific milestone from its start. (Thời lượng, e.g. "1 week", "2 weeks", "1 tuần", "2 tuần"). The sum of all milestone estimated durations MUST be EXACTLY equal to the approved estimated duration from Flow 1.
     - due_date: The deadline date when the freelancer must complete and submit the milestone deliverables, formatted strictly as "mm/dd/yyyy". Calculate these dates sequentially based on the milestone durations starting from {{ current_date }}, ensuring that the final milestone's due_date matches the end of the approved estimated duration.
-    - description: A brief summary of the scope and expected results for this milestone. (Mô tả, e.g. "Thiết kế và duyệt các màn hình chính").
-    - deliverables: Specifically list the files, features, or products the freelancer must hand over. (Sản phẩm bàn giao, e.g. "Tệp Figma và đặc tả giao diện responsive").
-    - acceptance_criteria: The criteria the client will use to review and approve the milestone deliverables. (Tiêu chí nghiệm thu).
+    - description: A brief summary of the scope and expected results for this milestone matching the job post role and category.
+    - deliverables: Specifically list the files, code repos, features, or products the freelancer must hand over matching the job requirements.
+    - acceptance_criteria: The criteria the client will use to review and approve the milestone deliverables.
+    - work_items: A breakdown of 2-5 concrete, non-redundant work items required to complete this milestone.
+    CRITICAL WORK ITEM ROLE RELEVANCE & ALIGNMENT RULE:
+    - You MUST generate work items that directly reflect the job's Major, Category, and Required Skills (e.g. ASP.NET Core, EF Core, Angular, React, Figma, Copywriting).
+    - FOR SOFTWARE / WEB / ENGINEERING ROLES (Full-stack, Backend, Frontend, Mobile, DevOps): Work items under engineering and development milestones MUST detail technical implementation tasks (e.g. database schema migrations, REST API endpoint creation, frontend component integration, auth middleware, unit testing) and code deliverables (e.g. GitHub repository code, database scripts, Postman collection) — NEVER generate pure Figma UI mockups or design-only tasks as work items for software engineering milestones.
+    - FOR DESIGN ROLES: Work items MUST detail design tasks (wireframes, Figma component libraries, screen mockups, design tokens).
+    - FOR MARKETING / CONTENT ROLES: Work items MUST detail campaign strategy, keyword research, article drafting, SEO optimization, or analytics.
+    - Each work item MUST contain: title (a short, concrete task name), description (what the task involves and its expected outcome), deliverables (the specific file(s), code repository, feature(s), or output(s) this work item hands over), and estimated_duration.
+    - The work items for a milestone MUST collectively and logically cover the milestone's description and deliverables — do NOT invent redundant, overlapping, or irrelevant items.
+    - Reuse the same Tier 1/2/3 complexity judgment used for milestone allocation above to decide each work item's relative duration share within its milestone (heavier sub-tasks get more days).
+    - estimated_duration for a work item MUST be expressed in a finer grain than the milestone itself: "N day(s)" or "N week(s)" (e.g. "2 days", "1 week") — never month(s) or year(s).
+    CRITICAL WORK ITEM DURATION RULE:
+    - The sum of all work item estimated_duration values (converted to days) for a milestone MUST NOT exceed that milestone's own estimated_duration (converted to days). Self-check this sum before finalizing your output — a milestone of "1 week" (7 days) can have work items summing to at most 7 days.
     CRITICAL PROPOSAL CLOSING DATE CONSTRAINT:
     - The proposal closing date / deadline for receiving candidate applications MUST NOT exceed 3 weeks (21 days) from today's reference date ({{ current_date }}).
     CRITICAL LANGUAGE RULE:
-    - If the client's prompt is written in Vietnamese, generate all milestone fields (title, estimated_duration, description, deliverables, acceptance_criteria) in Vietnamese.
+    - If the client's prompt is written in Vietnamese, generate all milestone fields (title, estimated_duration, description, deliverables, acceptance_criteria) and all work_items fields (title, description, deliverables, estimated_duration) in Vietnamese.
     - If the client's prompt is written in English or any other language, generate these fields in English.

@@ -15,10 +15,13 @@ from app.services.job_posts.job_post_base import JobPostBaseService
 
 _clamp_milestone_budgets = JobPostBaseService.clamp_milestone_budgets
 _clamp_milestone_durations = JobPostBaseService.clamp_milestone_durations
+_clamp_work_item_durations = JobPostBaseService.clamp_work_item_durations
 _recalculate_due_dates = JobPostBaseService.recalculate_due_dates
 _strip_budget_and_timeline_sections = JobPostBaseService.strip_budget_and_timeline_sections
 format_weeks_to_duration = JobPostBaseService.format_weeks_to_duration
 parse_duration_to_weeks = JobPostBaseService.parse_duration_to_weeks
+format_days_to_duration = JobPostBaseService.format_days_to_duration
+parse_duration_to_days = JobPostBaseService.parse_duration_to_days
 
 
 # ---------------------------------------------------------------------------
@@ -35,6 +38,17 @@ def make_milestones(*specs):
     return [
         SimpleNamespace(amount=amt, estimated_duration=dur, due_date="2099-01-01")
         for amt, dur in specs
+    ]
+
+
+def make_work_items(*specs):
+    """Create a list of simple namespace objects that mimic WorkItemGenerationResponse.
+
+    Each *spec* is a tuple: (title, description, estimated_duration).
+    """
+    return [
+        SimpleNamespace(title=title, description=description, deliverables="", estimated_duration=dur)
+        for title, description, dur in specs
     ]
 
 
@@ -253,6 +267,130 @@ class TestClampMilestoneDurations:
         assert sum(m.amount for m in ms) == 1000.0
 
 
+
+# ---------------------------------------------------------------------------
+# parse_duration_to_days
+# ---------------------------------------------------------------------------
+
+class TestParseDurationToDays:
+    def test_days_singular(self):
+        assert parse_duration_to_days("1 day") == pytest.approx(1.0)
+
+    def test_days_plural(self):
+        assert parse_duration_to_days("3 days") == pytest.approx(3.0)
+
+    def test_weeks(self):
+        assert parse_duration_to_days("1 week") == pytest.approx(7.0)
+
+    def test_months(self):
+        assert parse_duration_to_days("1 month") == pytest.approx(30.0)
+
+    def test_years(self):
+        assert parse_duration_to_days("1 year") == pytest.approx(365.0)
+
+    def test_vietnamese_ngay(self):
+        assert parse_duration_to_days("2 ngày") == pytest.approx(2.0)
+
+    def test_empty_string(self):
+        assert parse_duration_to_days("") == 0.0
+
+    def test_unparseable_string(self):
+        assert parse_duration_to_days("a few days") == 0.0
+
+    def test_unknown_unit(self):
+        assert parse_duration_to_days("2 fortnights") == 0.0
+
+
+# ---------------------------------------------------------------------------
+# format_days_to_duration
+# ---------------------------------------------------------------------------
+
+class TestFormatDaysToDuration:
+    def test_singular_one_day(self):
+        assert format_days_to_duration(1.0) == "1 day"
+
+    def test_plural_two_days(self):
+        assert format_days_to_duration(2.0) == "2 days"
+
+    def test_rounds_to_nearest(self):
+        assert format_days_to_duration(2.4) == "2 days"
+        assert format_days_to_duration(2.6) == "3 days"
+
+    def test_minimum_one_day(self):
+        assert format_days_to_duration(0.0) == "1 day"
+        assert format_days_to_duration(0.3) == "1 day"
+
+
+# ---------------------------------------------------------------------------
+# _clamp_work_item_durations
+# ---------------------------------------------------------------------------
+
+class TestClampWorkItemDurations:
+    def test_no_op_when_milestone_duration_zero(self):
+        items = make_work_items(("A", "desc a", "3 days"), ("B", "desc b", "3 days"))
+        _clamp_work_item_durations(items, 0)
+        assert items[0].estimated_duration == "3 days"
+        assert items[1].estimated_duration == "3 days"
+
+    def test_no_op_when_within_limit(self):
+        items = make_work_items(("A", "desc a", "2 days"), ("B", "desc b", "2 days"))
+        _clamp_work_item_durations(items, 7)
+        assert items[0].estimated_duration == "2 days"
+        assert items[1].estimated_duration == "2 days"
+
+    def test_no_op_when_empty(self):
+        items = []
+        _clamp_work_item_durations(items, 7)
+        assert items == []
+
+    def test_reduces_when_over_limit(self):
+        # 4+4 = 8 days, milestone duration = 7 days
+        items = make_work_items(("A", "desc a", "4 days"), ("B", "desc b", "4 days"))
+        _clamp_work_item_durations(items, 7)
+        total = sum(parse_duration_to_days(i.estimated_duration) for i in items)
+        assert total <= 7.0
+
+    def test_total_never_exceeds_milestone_duration(self):
+        items = make_work_items(
+            ("A", "desc a", "5 days"), ("B", "desc b", "5 days"), ("C", "desc c", "5 days")
+        )
+        _clamp_work_item_durations(items, 7)
+        total = sum(parse_duration_to_days(i.estimated_duration) for i in items)
+        assert total <= 7.0
+
+    def test_each_item_minimum_one_day(self):
+        # Even extreme scale-down should leave each item at >= 1 day
+        items = make_work_items(("A", "desc a", "10 days"), ("B", "desc b", "10 days"))
+        _clamp_work_item_durations(items, 2)
+        for item in items:
+            assert parse_duration_to_days(item.estimated_duration) >= 1.0
+
+    def test_merges_excess_items_when_more_items_than_available_days(self):
+        items = make_work_items(
+            ("A", "desc a", "1 day"), ("B", "desc b", "1 day"), ("C", "desc c", "1 day")
+        )
+        _clamp_work_item_durations(items, 2)
+        assert len(items) == 2
+        total = sum(parse_duration_to_days(i.estimated_duration) for i in items)
+        assert total == 2.0
+        assert "C" in items[1].title
+
+    def test_no_op_exact_match(self):
+        items = make_work_items(("A", "desc a", "3 days"), ("B", "desc b", "4 days"))
+        _clamp_work_item_durations(items, 7)
+        assert items[0].estimated_duration == "3 days"
+        assert items[1].estimated_duration == "4 days"
+
+    def test_merges_deliverables_of_dropped_items(self):
+        items = [
+            SimpleNamespace(title="A", description="desc a", deliverables="deliverable A", estimated_duration="1 day"),
+            SimpleNamespace(title="B", description="desc b", deliverables="deliverable B", estimated_duration="1 day"),
+            SimpleNamespace(title="C", description="desc c", deliverables="deliverable C", estimated_duration="1 day"),
+        ]
+        _clamp_work_item_durations(items, 2)
+        assert len(items) == 2
+        assert "deliverable B" in items[1].deliverables
+        assert "deliverable C" in items[1].deliverables
 
 
 # ---------------------------------------------------------------------------
