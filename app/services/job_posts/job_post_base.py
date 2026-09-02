@@ -29,6 +29,25 @@ _WEEKS_PER_UNIT: dict[str, float] = {
     "năm": 52.0,
 }
 
+# Work items are allowed a finer duration grain (day(s)) than milestones, which stay
+# week(s)+ only — this mirrors the .NET side's split between TryParseDurationDays
+# (milestones) and TryParseWorkItemDurationDays (work items).
+_DAYS_PER_UNIT: dict[str, float] = {
+    "day": 1.0,
+    "days": 1.0,
+    "ngày": 1.0,
+    "ngay": 1.0,
+    "week": 7.0,
+    "weeks": 7.0,
+    "tuần": 7.0,
+    "month": 30.0,
+    "months": 30.0,
+    "tháng": 30.0,
+    "year": 365.0,
+    "years": 365.0,
+    "năm": 365.0,
+}
+
 VIETNAMESE_CHARS = set("ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵĐ")
 UNIQUELY_VIETNAMESE_WORDS = {
     "tuyen", "trinh", "vien", "thiet", "phan", "mem", "phat", "trien", "yeu",
@@ -359,7 +378,85 @@ class JobPostBaseService:
         for m, w in zip(milestones, scaled_weeks):
             m.estimated_duration = cls.format_weeks_to_duration(w)
 
+    @staticmethod
+    def parse_duration_to_days(duration_str: str) -> float:
+        """Parse human-readable duration string (e.g. '3 days', '1 week') into equivalent days count."""
+        if not duration_str:
+            return 0.0
+        parts = duration_str.strip().split()
+        if len(parts) < 2:
+            return 0.0
+        try:
+            value = float(parts[0])
+        except ValueError:
+            return 0.0
+        unit = parts[1].lower().rstrip(".")
+        factor = _DAYS_PER_UNIT.get(unit, 0.0)
+        return value * factor
 
+    @staticmethod
+    def format_days_to_duration(days: float) -> str:
+        """Convert float day count into formatted duration string ('N day(s)')."""
+        d = max(1, round(days))
+        return f"{d} day" if d == 1 else f"{d} days"
+
+    @classmethod
+    def clamp_work_item_durations(cls, work_items: list, milestone_duration_days: float) -> None:
+        """Scale work item estimated_duration strings in-place so their total never exceeds
+        milestone_duration_days, merging excess items into the last kept one if even a 1-day
+        floor per item would still overflow. No-op when already within budget (per product
+        decision: always auto-clamp on overage, never reject)."""
+        if not work_items or milestone_duration_days <= 0:
+            return
+
+        individual_days = [
+            max(1.0, cls.parse_duration_to_days(getattr(w, "estimated_duration", ""))) for w in work_items
+        ]
+        if sum(individual_days) <= milestone_duration_days:
+            return
+
+        target_days = max(1, round(milestone_duration_days))
+
+        if len(work_items) > target_days:
+            keep_count = target_days
+            last_kept = work_items[keep_count - 1]
+
+            for excess in work_items[keep_count:]:
+                for attr in ("title", "description", "deliverables"):
+                    val_kept = getattr(last_kept, attr, "") or ""
+                    val_excess = getattr(excess, attr, "") or ""
+                    if val_excess and val_excess not in val_kept:
+                        combined = f"{val_kept} | {val_excess}" if val_kept else val_excess
+                        setattr(last_kept, attr, combined)
+
+            del work_items[keep_count:]
+
+        weights = [
+            max(1.0, cls.parse_duration_to_days(getattr(w, "estimated_duration", ""))) for w in work_items
+        ]
+        total_weight = sum(weights) or float(len(work_items))
+
+        scaled_days = []
+        for w_i in weights[:-1]:
+            d = max(1, round((w_i / total_weight) * target_days))
+            scaled_days.append(d)
+
+        last_d = target_days - sum(scaled_days)
+        if last_d < 1:
+            needed = 1 - last_d
+            last_d = 1
+            for i in range(len(scaled_days) - 1, -1, -1):
+                if scaled_days[i] > 1:
+                    deduct = min(needed, scaled_days[i] - 1)
+                    scaled_days[i] -= deduct
+                    needed -= deduct
+                    if needed <= 0:
+                        break
+
+        scaled_days.append(last_d)
+
+        for w_item, d in zip(work_items, scaled_days):
+            w_item.estimated_duration = cls.format_days_to_duration(d)
 
     @classmethod
     def recalculate_due_dates(cls, milestones: list, start: date) -> None:
