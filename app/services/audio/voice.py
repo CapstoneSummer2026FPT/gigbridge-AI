@@ -145,13 +145,13 @@ class VoiceService:
 
     # ── Confirm tracking ──────────────────────────────────────
 
-    async def mark_confirmed(self, session_id: str) -> None:
-        """Mark session as having a confirmed answer in Redis."""
-        await self.gateway.session.mark_confirmed(session_id)
+    async def mark_confirmed(self, session_id: str, question_index: Optional[int] = None) -> None:
+        """Mark session question as having a confirmed answer in Redis."""
+        await self.gateway.session.mark_confirmed(session_id, question_index)
 
-    async def is_confirmed(self, session_id: str) -> bool:
-        """Check if session already has a confirmed answer in Redis."""
-        return await self.gateway.session.is_confirmed(session_id)
+    async def is_confirmed(self, session_id: str, question_index: Optional[int] = None) -> bool:
+        """Check if session question already has a confirmed answer in Redis."""
+        return await self.gateway.session.is_confirmed(session_id, question_index)
 
     async def verify_audio_access_token(self, session_id: str, token: str) -> bool:
         """Verify authorization token for session TTS audio playback."""
