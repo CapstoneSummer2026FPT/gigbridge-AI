@@ -136,7 +136,7 @@ class InterviewSTTService(InterviewBaseService):
         6. Otherwise, generate next question text, advance question pointer, and return.
         """
         if corrected_text is not None and not corrected_text.strip():
-            raise InvalidAnswerError()
+            corrected_text = "[No answer provided]"
         started_at = time.perf_counter()
         session = await self.voice.load_session(session_id)
         if not session:
@@ -144,18 +144,25 @@ class InterviewSTTService(InterviewBaseService):
 
         draft = await self.voice.consume_draft(session_id)
         if not draft:
-            if await self.voice.is_confirmed(session_id):
+            if await self.voice.is_confirmed(session_id, session.question_index):
                 raise ConfirmConflictError()
-            raise DraftExpiredError()
+            fallback_text = (corrected_text or "").strip() or "[No answer provided]"
+            draft = DraftData(
+                draft_id=f"draft_fallback_{uuid.uuid4().hex}",
+                question_index=session.question_index,
+                transcript=fallback_text,
+                language=session.language,
+                stt_provider="fallback",
+                confidence=1.0,
+                created_at=datetime.datetime.now(timezone.utc).isoformat(),
+            )
 
-        final_answer = (corrected_text or draft.transcript).strip()
-        if not final_answer:
-            raise InvalidAnswerError()
+        final_answer = (corrected_text or draft.transcript).strip() or "[No answer provided]"
 
         await self.voice.add_history(
             session_id, "user", final_answer, draft.language
         )
-        await self.voice.mark_confirmed(session_id)
+        await self.voice.mark_confirmed(session_id, session.question_index)
 
         question_count = len(session.job_questions) or session.question_count
         is_complete = session.question_index >= question_count
