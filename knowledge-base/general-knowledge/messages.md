@@ -60,11 +60,11 @@ Clients can create a schedule with title, date/time, optional details, and optio
 
 ---
 
-## 5. Google Meet
+## 5. Google Meet & Video Call Scheduling (ggmeet, gmeet)
 
-When creating a schedule, the Client can request a Google Meet link after connecting a Google account. The interface checks connection status, offers connect/reconnect, shows pending meeting creation, allows retry after eligible failures, and reveals the join link when ready.
+When creating a schedule in an Invited or Negotiation room, the Client can request a Google Meet (ggmeet, gmeet) link after connecting a Google account in Settings. The interface checks connection status, offers connect/reconnect, shows pending meeting creation, allows retry after eligible failures, and reveals the join link when ready for both Client and Freelancer.
 
-Meet links open in a new browser tab. Selecting Add Google Meet without a valid connection prevents schedule submission.
+Meet links open in a new browser tab. Selecting Add Google Meet without a valid Google Workspace connection prompts the user to connect Google Meet first.
 
 ---
 
