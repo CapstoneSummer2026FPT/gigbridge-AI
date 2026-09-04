@@ -430,6 +430,9 @@ class CandidateJudgingService:
         llm_eval.milestone_audit = sanitized_audits
         return llm_eval
 
+
+# We implemented a Circuit Breaker pattern. If third-party AI APIs (e.g. OpenAI or Gemini) go down or timeout, our system degrades gracefully. It generates a structured fallback evaluation citing service unavailability rather than throwing a HTTP 500 crash.
+
     def _create_fallback_evaluation(
         self, proposal: ProposalOfferDto
     ) -> LLMQualitativeEvaluation:

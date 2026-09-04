@@ -1,12 +1,13 @@
 ---
-title: "GigBridge Wallet & Payments"
+title: "GigBridge Wallet & Payments (vnpay, gigcoin, gcoin)"
 source: "Financial Subsystem Architecture"
-description: "Documentation on deposit channels, G-coins, bank transfer validation, payout withdrawals, and subscription packages."
+description: "Documentation on deposit channels (vnpay, bank transfer, chuyen khoan), GigCoin (gigcoin, gcoin, g-coin), bank transfer validation, payout withdrawals, and subscription packages."
+keywords: "vnpay, gigcoin, gcoin, g-coin, bank transfer, chuyen khoan, deposit, withdrawal, wallet"
 ---
 
-# Wallet & Financial Operations
+# Wallet & Financial Operations (vnpay, gigcoin, gcoin)
 
-GigBridge integrates a multi-currency wallet subsystem allowing users to deposit funds, purchase platform G-coins, pay for contracts, and withdraw earnings.
+GigBridge integrates a multi-currency wallet subsystem allowing users to deposit funds (via vnpay, mock card checkout, or bank transfer), purchase platform G-coins (gigcoin, gcoin, g-coin), pay for contracts, and withdraw earnings.
 
 ---
 

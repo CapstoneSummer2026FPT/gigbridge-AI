@@ -1,12 +1,13 @@
 ---
-title: "GigBridge E-Sign Contracts"
+title: "GigBridge E-Sign Contracts (esign, e-sign)"
 source: "https://gigbridge.id.vn/contracts/esign"
-description: "Repository and status view for electronic contract documents."
+description: "Repository and status view for electronic contract documents, digital signature workflow, and eSign agreements."
+keywords: "esign, e-sign, digital signature, contract signing, electronic signature, ky ten hop dong"
 ---
 
-# E-Sign Contracts
+# E-Sign Contracts (esign, e-sign)
 
-E-Sign Contracts is the participant's document-oriented view of agreements that require or contain electronic signatures. It complements the general Contracts list by emphasizing document availability and who has signed.
+E-Sign Contracts (esign, e-sign) is the participant's document-oriented view of agreements that require or contain electronic digital signatures. It complements the general Contracts list by emphasizing document availability and who has signed.
 
 ---
 
