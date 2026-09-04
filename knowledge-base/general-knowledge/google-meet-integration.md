@@ -1,12 +1,13 @@
 ---
 title: "GigBridge Google Meet OAuth Integration"
 source: "https://gigbridge.id.vn/integrations/google-meet/callback"
-description: "OAuth callback page handling Google Calendar and Google Meet OAuth authorization for interview and project meeting scheduling."
+description: "OAuth callback page handling Google Calendar and Google Meet (ggmeet, gmeet) OAuth authorization for interview, negotiation room, and project meeting scheduling."
+keywords: "ggmeet, gmeet, google meet, negotiation, scheduling, video call, google workspace, oauth"
 ---
 
-# Google Meet OAuth Integration
+# Google Meet Integration (ggmeet, gmeet)
 
-The Google Meet OAuth Integration callback page handles the OAuth 2.0 authorization code redirect flow, allowing Clients and Freelancers to connect their Google Workspace accounts for automated video call scheduling.
+The Google Meet OAuth Integration callback page handles the OAuth 2.0 authorization code redirect flow, allowing Clients and Freelancers to connect their Google Workspace accounts for automated video call scheduling in Messages, Negotiation rooms, AI Interviews, and Project Workspaces.
 
 ---
 

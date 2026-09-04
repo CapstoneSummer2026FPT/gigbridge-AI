@@ -272,7 +272,14 @@ This is the history of your conversation so far with the user:
 And this is the user's current question:
 {question}
 
-Respond only with a short, refined question that you will use to search the Knowledge Base.
+Instructions for query optimization:
+1. Expand and normalize common shorthand, acronyms, and typos to canonical GigBridge feature and integration terms:
+   - "ggmeet", "gg meet", "gmeet" -> "Google Meet video call schedule"
+   - "esign", "e-sign" -> "Electronic Signature eSign contract workflow"
+   - "vnpay", "bank proof", "chuyen khoan" -> "bank transfer deposit payment proof validation"
+   - "gigcoin", "gcoin", "g-coin" -> "GigCoin platform token"
+2. Preserve room or workspace context if specified (e.g., negotiation, invited room, contracts, wallet, settings).
+3. Respond ONLY with a short, refined query string that will best search the Knowledge Base.
 IMPORTANT: Respond ONLY with the precise knowledgebase query, nothing else.
 """
         messages = [{"role": "system", "content": message}]
@@ -289,10 +296,25 @@ IMPORTANT: Respond ONLY with the precise knowledgebase query, nothing else.
 
     async def check_relevance(self, question: str, history: List[Dict[str, str]] = []) -> RelevanceCheck:
         """Check if user query is related to GigBridge services or platform features."""
-        system_prompt = """You are a classifier for the GigBridge assistant.
-Determine if the user's message is a query or statement related to the company GigBridge, its services, features, platform, job posts, talent matching, candidate vetting, or content in the GigBridge knowledge base.
-Greeting messages (like "hello", "hi", "xin chào") or questions about what you can do/what is your purpose are considered RELATED.
-General knowledge questions, history, coding questions not about GigBridge, arithmetic, or requests about unrelated subjects are UNRELATED.
+        system_prompt = """You are a classifier for the GigBridge AI assistant.
+Determine if the user's message is a query or statement related to the company GigBridge, its services, platform features, job posts, talent matching, candidate vetting, or content in the GigBridge knowledge base.
+
+IMPORTANT DOMAIN KNOWLEDGE & INTEGRATIONS:
+GigBridge integrates multiple third-party external services and platform workflows. Queries regarding these tools or features are DIRECTLY RELATED to GigBridge:
+1. Google Workspace & OAuth: Google Meet video call scheduling (used in Messages, Schedules, AI Interviews, Negotiation rooms), Google Calendar integration, Google OAuth 2.0 authorization (`/integrations/google-meet/callback`).
+   Shorthand / Synonyms: "ggmeet", "gg meet", "gmeet", "google meet", "gcal", "google calendar", "google oauth", "google login", "video call".
+2. Electronic Signatures (eSign): Digital contract signing workflows, eSign agreements, e-signature verification.
+   Shorthand / Synonyms: "esign", "e-sign", "digital signature", "ky ten hop dong".
+3. Financial & Wallet Gateways: Bank transfer verification, payment proof upload, VNPay, mock card payments, GigCoin / G-Coin platform tokens, escrow balances, withdrawal requests.
+   Shorthand / Synonyms: "vnpay", "bank transfer", "gigcoin", "gcoin", "g-coin", "chuyen khoan", "nap tien", "rut tien", "escrow".
+4. Voice & Speech-to-Text (STT): AI pre-screening interviews, audio recording, microphone setup, voice hotword resolution.
+   Shorthand / Synonyms: "ai interview", "voice call", "stt", "mic", "phong van ai".
+
+CLASSIFICATION RULES:
+- Greeting messages (like "hello", "hi", "xin chào") or questions about what you can do/what is your purpose are RELATED (related: true).
+- Any question asking how to use, set up, connect, or access ANY integrated feature or external service (such as Google Meet/ggmeet in negotiation, eSign contracts, bank transfers, or wallet deposits) on GigBridge is ALWAYS RELATED (related: true).
+- If you are uncertain whether a user's question refers to a feature or tool integrated into GigBridge, ALWAYS DEFAULT to related: true.
+- General knowledge questions completely unrelated to GigBridge (e.g., world history, arithmetic, cooking recipes, general programming tutorials unrelated to GigBridge) are UNRELATED (related: false).
 
 You must respond ONLY with a JSON object matching this schema:
 {

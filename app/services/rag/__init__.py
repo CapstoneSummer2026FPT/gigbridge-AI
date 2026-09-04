@@ -4,6 +4,8 @@ IMPORTANCE: Critical — Primary entrypoint for RAG domain services across API r
 READING FLOW: app/schemas/rag.py -> app/services/rag/rag_base.py -> app/services/rag/document_processor.py -> app/services/rag/retriever.py -> app/services/rag/query_engine.py -> app/services/rag/__init__.py
 """
 
+import logging
+import asyncio
 from typing import Any, Dict, List, Optional
 from app.clients.db.chroma import ChromaDBClient, get_chroma_client
 from app.clients.llm.gateway import LLMGateway, get_llm_gateway
@@ -15,6 +17,8 @@ from app.services.rag.query_engine import QueryEngineService
 from app.services.rag.memory import MemoryManager, get_memory_manager
 from app.services.rag.hotword_resolver import HotwordResolver, get_hotword_resolver
 from app.services.rag.evaluator import EvidenceEvaluatorService
+
+logger = logging.getLogger(__name__)
 
 
 class RAGService(RAGBaseService):
@@ -96,13 +100,13 @@ class RAGService(RAGBaseService):
     async def auto_ingest_if_empty(self) -> None:
         """Check if Chroma DB collections exist and contain documents; trigger auto-ingestion if empty."""
         try:
-            collections = self.chroma.list_collections()
+            collections = self.chroma.client.list_collections()
             has_docs = False
             for col in collections:
                 col_name = getattr(col, "name", str(col))
                 try:
-                    count = self.chroma.get_collection_count(col_name)
-                    if count > 0:
+                    collection = self.chroma.client.get_collection(col_name)
+                    if collection.count() > 0:
                         has_docs = True
                         break
                 except Exception:

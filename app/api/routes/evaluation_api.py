@@ -3,7 +3,8 @@ from __future__ import annotations
 import os
 from collections import defaultdict
 import psutil
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from app.core.security import verify_api_key
 
 from app.schemas.eval_schemas import (
     RetrievalEvalResponse,
@@ -21,6 +22,16 @@ from evaluation.benchmarks.eval import evaluate_all_retrieval, evaluate_all_answ
 
 router = APIRouter()
 _evaluator_service = EvidenceEvaluatorService()
+
+
+@router.post("/verify-key", tags=["Security"])
+async def verify_key_endpoint(api_key: str = Depends(verify_api_key)):
+    """Verify if the provided X-API-Key is valid."""
+    return {
+        "success": True,
+        "message": "API Key is valid.",
+        "data": {"valid": True}
+    }
 
 
 @router.post("/eval/retrieval", response_model=RetrievalEvalResponse, tags=["RAG Evaluation"])
@@ -643,12 +654,13 @@ async def get_system_stats():
 
 @router.post("/eval/rag-query", tags=["RAG Evaluation"])
 async def run_live_rag_eval_query(payload: dict):
-    """Evaluation endpoint to query RAG and calculate metrics without API key requirement on internal dashboard."""
+    """Evaluation endpoint to query RAG and calculate metrics."""
     from app.schemas.rag import AnswerConfig, QueryResponse
     from app.schemas.base import StandardResponse
     from app.services.rag import get_rag_service
     from app.api.routes.rag import compute_query_metrics
 
+    question = payload.get("question", "")
     raw_col = payload.get("collection_name", "general-knowledge")
     collection_name = "general-knowledge" if raw_col in ("ai-chatbot", "docs", "") else raw_col
     style = payload.get("style", "precision")

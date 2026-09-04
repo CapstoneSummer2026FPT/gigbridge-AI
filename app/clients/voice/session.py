@@ -220,17 +220,18 @@ class VoiceSessionManager:
             logger.error("Failed to parse draft JSON for %s: %s", session_id, exc)
             return None
 
-    async def mark_confirmed(self, session_id: str) -> None:
-        """Mark a session as having a confirmed answer (for conflict detection)."""
+    async def mark_confirmed(self, session_id: str, question_index: Optional[int] = None) -> None:
+        """Mark a question in a session as having a confirmed answer (for conflict detection)."""
         r = self.redis()
-        key = f"confirmed:{session_id}"
+        key = f"confirmed:{session_id}:q_{question_index}" if question_index is not None else f"confirmed:{session_id}"
         await r.set(key, "1")
         await r.expire(key, settings.REDIS_SESSION_TTL)
 
-    async def is_confirmed(self, session_id: str) -> bool:
-        """Check if this session already has a confirmed answer."""
+    async def is_confirmed(self, session_id: str, question_index: Optional[int] = None) -> bool:
+        """Check if a question in this session already has a confirmed answer."""
         r = self.redis()
-        return await r.exists(f"confirmed:{session_id}") > 0
+        key = f"confirmed:{session_id}:q_{question_index}" if question_index is not None else f"confirmed:{session_id}"
+        return await r.exists(key) > 0
 
     async def verify_audio_access_token(self, session_id: str, token: str) -> bool:
         """Verify the per-session audio capability token in constant time."""
