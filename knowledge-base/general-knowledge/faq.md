@@ -32,11 +32,9 @@ No. GigBridge is a web-only platform. There is no native mobile application (iOS
 
 ### How do I post a job?
 
-1. Log in to your Client account and navigate to the "My Jobs" page.
-2. Click "Create New Job Post".
-3. Follow the multi-step form to outline the job title, category, budget (Min/Max in VND/G-coin), estimated duration, required skills, and any optional screening questions.
-4. Set up the contract template and E-Sign requirement parameters.
-5. Click Publish to make the job visible on the public board and trigger the AI Match recommendation system.
+1. From your Dashboard, click "Post a Job".
+2. Fill in Job Details (Job Title, Major, Category, Skills, Description, Budget, Duration, and Screening Questions).
+3. Publish the job post to make it visible to freelancers and activate AI Smart Matching.
 
 ### Can I edit a job after posting it?
 
